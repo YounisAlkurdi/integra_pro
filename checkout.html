@@ -26,6 +26,7 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="checkout-card.css">
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -45,46 +46,142 @@
         <i data-lucide="arrow-left" class="w-4 h-4 text-cyan-400"></i> Abort / Return to Main
     </a>
 
-    <!-- Checkout Container -->
-    <div class="glass-panel w-full max-w-xl rounded-xl p-10 mx-4 relative border border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.05)] z-10 reveal active">
-        <p class="text-cyan-400 text-xs font-mono tracking-widest uppercase mb-4">[ INITIALIZE DEPLOYMENT ]</p>
-        <h2 class="text-3xl font-bold mb-2 tracking-tighter uppercase glitch" data-text="SECURE CHECKOUT">SECURE CHECKOUT</h2>
-        <p class="text-white/30 text-sm font-light mb-8 flex items-center gap-2">
-            <i data-lucide="lock" class="w-3 h-3 text-cyan-400"></i> Encrypted processing via AES-256
-        </p>
+    <!-- Checkout Layout Container -->
+    <div class="flex flex-col lg:grid lg:grid-cols-2 gap-12 max-w-6xl w-full mx-auto p-6 lg:p-12 z-10 relative reveal active">
+        
+        <!-- Left Column: Card Preview -->
+        <div class="flex flex-col items-center lg:items-start sticky top-10 pt-16 lg:pt-16 min-h-[85vh] w-full">
+            <div class="mb-10 w-full text-center lg:text-left">
+                <p class="text-cyan-400 text-[10px] font-mono tracking-[0.5em] uppercase mb-4">/ CARD PREVIEW</p>
+                <h2 class="text-4xl font-extrabold tracking-tighter uppercase glitch" data-text="NEURAL CARD">NEURAL CARD</h2>
+            </div>
+            
+            <!-- Interactive 3D Card -->
+            <div class="card-container mx-auto lg:mx-0">
+                <div class="card-inner" id="card-inner">
+                    <!-- Card Front - The Absolute Command Center -->
+                    <div class="card-front group">
+                        <div class="card-texture"></div>
+                        <div class="card-flare"></div>
+                        
+                        <div class="flex flex-col h-full justify-between z-10 w-full relative">
+                            <!-- Top: Branding -->
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="active-node-indicator"></div>
+                                        <span class="font-mono text-[13px] font-bold tracking-tighter uppercase text-white/95 leading-none">Integra<span class="text-cyan-400 font-black">Core</span></span>
+                                    </div>
+                                    <span class="text-[6.5px] font-mono text-cyan-400/60 tracking-[0.4em] uppercase">Gen 4 Neural Link</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase">Glass Edition</span>
+                                </div>
+                            </div>
 
-        <form onsubmit="event.preventDefault(); window.location.href='index.html';">
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3">Cardholder Name</label>
-                    <input type="text" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none transition-all" placeholder="JANE DOE" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3">Card Number</label>
-                    <div class="relative">
-                        <input type="text" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 pl-12 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all" placeholder="0000 0000 0000 0000" maxlength="19" required>
-                        <i data-lucide="credit-card" class="absolute left-4 top-4 text-white/30 w-5 h-5"></i>
+                            <!-- Middle Stack: Chip -> Label -> Number (Absolute Calibration) -->
+                            <div class="flex flex-col gap-2 mt-2">
+                                <div class="card-chip mb-2 scale-90 -ml-1"></div>
+                                <div class="flex flex-col gap-1.5 overflow-hidden">
+                                    <p class="text-[7px] font-mono text-cyan-400/40 uppercase tracking-[0.45em] text-left">Encrypted Access Identifier</p>
+                                    <!-- Forced Single-Line Identifier -->
+                                    <div id="card-number-display" class="tabular-nums text-left leading-none">0000 0000 0000 0000</div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom: Personnel Identity -->
+                            <div class="flex justify-between items-end">
+                                <div class="space-y-1">
+                                    <p class="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em]">Operator Profile</p>
+                                    <p id="card-holder-display" class="text-[12px] font-bold tracking-[0.25em] font-mono uppercase text-white/95">JANE DOE</p>
+                                </div>
+                                <!-- Masterbrand Hybrid -->
+                                <div class="flex -space-x-3 mb-1.5 opacity-90 transition-all hover:scale-105">
+                                    <div class="w-7 h-7 rounded-full bg-[#eb001b] mix-blend-screen shadow-[0_0_15px_rgba(235,0,27,0.4)]"></div>
+                                    <div class="w-7 h-7 rounded-full bg-[#ff5f00] mix-blend-screen shadow-[0_0_15px_rgba(255,95,0,0.4)]"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3">Expiry Date</label>
-                        <input type="text" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all" placeholder="MM/YY" maxlength="5" required>
+
+                    <!-- Card Back - Ultra Pro Layout -->
+                    <div class="card-back">
+                        <div class="card-texture opacity-10"></div>
+                        
+                        <!-- Magnetic Stripe + CVC Integration -->
+                        <div class="w-full h-12 bg-black/95 mt-6 border-y border-white/5 flex items-center justify-end px-8">
+                            <span id="card-cvc-display" class="text-base font-mono tracking-[0.5em] text-white/90 italic drop-shadow-md">•••</span>
+                        </div>
+
+                        <!-- Signature / Expiry Strip -->
+                        <div class="signature-strip relative flex items-center justify-end px-6 mt-4">
+                            <div class="flex flex-col justify-center text-right leading-tight">
+                                <span class="text-[7px] font-mono text-cyan-400/40 uppercase tracking-widest">Expiration</span>
+                                <span id="card-expiry-display" class="text-xs font-mono text-white/90">MM/YY</span>
+                            </div>
+                        </div>
+
+                        <div class="px-9 flex flex-col gap-6 relative z-10">
+                            <div class="mt-8 border-t border-white/5 pt-4 flex justify-between items-end">
+                                <div class="opacity-20 text-[6px] font-mono leading-[1.8] max-w-[220px] uppercase">
+                                    Property of Integra Labs. Encryption: MIL-SPEC 4096.<br>
+                                    NODE ID: 409-XP // GLASS-LINK.INT
+                                </div>
+                                <div class="text-[9px] font-black text-white/10 tracking-[0.4em]">INTEGRA</div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3">CVC</label>
-                        <input type="password" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all" placeholder="•••" maxlength="4" required>
-                    </div>
-                </div>
-                
-                <div class="pt-6 border-t border-white/5 mt-8">
-                    <button type="submit" class="w-full py-4 bg-cyan-400 text-obsidian text-sm uppercase tracking-widest font-bold hover:bg-white hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all rounded-sm">Confirm Purchase</button>
                 </div>
             </div>
-        </form>
+
+            <!-- Encryption Badge -->
+            <div class="mt-12 bg-white/5 border border-white/10 rounded-lg p-6 w-full lg:w-[440px]">
+                <div class="flex items-center gap-4 text-xs font-mono text-white/40">
+                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    SECURE ENCRYPTION ACTIVE [AES-256]
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Payment Form -->
+        <div class="glass-panel rounded-2xl p-10 relative border border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.05)]">
+            <p class="text-cyan-400 text-xs font-mono tracking-widest uppercase mb-4">[ INITIALIZE PAYMENT ]</p>
+            <h2 class="text-3xl font-bold mb-8 tracking-tighter uppercase">Transaction Info</h2>
+
+            <form id="checkout-form" onsubmit="event.preventDefault(); window.location.href='index.html';">
+                <div class="space-y-6">
+                    <div class="group">
+                        <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3 transition-colors group-focus-within:text-cyan-400">Cardholder Name</label>
+                        <input type="text" id="input-holder" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="JANE DOE" required>
+                    </div>
+                    <div class="group">
+                        <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3 transition-colors group-focus-within:text-cyan-400">Card Number</label>
+                        <div class="relative">
+                            <input type="text" id="input-number" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 pl-12 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all placeholder:text-white/10" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            <i data-lucide="credit-card" class="absolute left-4 top-4 text-white/30 w-5 h-5 transition-colors group-focus-within:text-cyan-400"></i>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="group">
+                            <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3 transition-colors group-focus-within:text-cyan-400">Expiry Date</label>
+                            <input type="text" id="input-expiry" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all placeholder:text-white/10" placeholder="MM/YY" maxlength="5" required>
+                        </div>
+                        <div class="group">
+                            <label class="block text-[10px] font-mono text-white/30 uppercase tracking-widest mb-3 transition-colors group-focus-within:text-cyan-400">CVC</label>
+                            <input type="password" id="input-cvc" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-sm p-4 text-sm text-white focus:border-cyan-400 outline-none font-mono transition-all placeholder:text-white/10" placeholder="•••" maxlength="4" required>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-6 border-t border-white/5 mt-8">
+                        <button type="submit" class="w-full py-4 bg-cyan-400 text-obsidian text-sm uppercase tracking-widest font-bold hover:bg-white hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all rounded-sm">Finalize Transaction</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="script.js"></script>
+    <script src="checkout.js"></script>
     <script>
         lucide.createIcons();
     </script>
