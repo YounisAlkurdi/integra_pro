@@ -135,23 +135,54 @@
         </section>
 
         <!-- Secondary Features: Visual & Behavioral -->
-        <section class="py-24 relative border-b border-white/5">
+        <section class="py-24 relative border-b border-white/5 bg-[#020617]">
             <div class="max-w-[95%] mx-auto px-6">
-                <div class="grid md:grid-cols-2 gap-px bg-white/5 border border-white/5 overflow-hidden rounded-2xl">
-                    <div class="p-12 reveal bg-obsidian/80 hover:bg-white/[0.02] transition-colors border-r border-white/5 group hover-target">
-                        <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mb-12 group-hover:border-cyan-400 group-hover:text-cyan-400 transition-colors">
-                            <i data-lucide="eye" class="w-5 h-5"></i>
+                <!-- Visual Detection Container (Text Left, Image Right) -->
+                <div class="grid md:grid-cols-2 bg-white/5 border border-white/5 overflow-hidden rounded-3xl reveal mb-px group">
+                    <!-- Column 1: Visual Detection Content (Left) -->
+                    <div class="p-16 flex flex-col justify-center bg-obsidian group-hover:bg-white/[0.01] transition-colors order-2 md:order-1">
+                        <div class="w-14 h-14 rounded-full border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-10 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+                            <i data-lucide="eye" class="w-6 h-6"></i>
                         </div>
-                        <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Visual Detection</h3>
-                        <p class="text-white/40 text-sm leading-relaxed font-light">Scan video for frame inconsistencies, GAN artifacts, and micro-expression anomalies entirely invisible to the human eye.</p>
+                        <h3 class="text-4xl font-bold mb-6 uppercase tracking-tighter text-white">Visual Detection</h3>
+                        <p class="text-white/50 text-lg leading-relaxed font-light max-w-md">
+                            Scan video for frame inconsistencies, GAN artifacts, and micro-expression anomalies entirely invisible to the human eye. 
+                        </p>
+                        
+                        <div class="mt-12 flex gap-4">
+                            <div class="px-4 py-2 border border-white/5 rounded-full text-[10px] uppercase tracking-widest text-white/30 font-mono">
+                                [ GAN_ANALYSIS_ACTIVE ]
+                            </div>
+                            <div class="px-4 py-2 border border-cyan-500/10 bg-cyan-500/5 rounded-full text-[10px] uppercase tracking-widest text-cyan-400 font-mono">
+                                [ FRAME_SAMPLING_120HZ ]
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="p-12 reveal bg-obsidian/80 hover:bg-white/[0.02] transition-colors group hover-target" style="transition-delay: 0.1s;">
-                        <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mb-12 group-hover:border-white group-hover:text-white transition-colors">
-                            <i data-lucide="fingerprint" class="w-5 h-5"></i>
+                    <!-- Column 2: Image (Right) - Clean, no contrast/grayscale shift -->
+                    <div class="relative min-h-[400px] bg-black overflow-hidden border-l border-white/5 order-1 md:order-2">
+                        <img src="images/cv.png" alt="Visual Detection Interface" class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000">
+                        <div class="absolute inset-0 bg-gradient-to-l from-obsidian/40 via-transparent to-transparent"></div>
+                    </div>
+                </div>
+
+                <!-- Behavioral Biometrics (Full width extension) -->
+                <div class="grid md:grid-cols-1 bg-white/5 border border-white/5 overflow-hidden rounded-3xl reveal group">
+                    <div class="p-16 bg-obsidian flex flex-col md:flex-row items-center justify-between gap-12 group-hover:bg-white/[0.01] transition-all">
+                        <div class="flex items-center gap-10">
+                            <div class="w-14 h-14 rounded-full border border-white/10 text-white flex items-center justify-center group-hover:border-white group-hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all">
+                                <i data-lucide="fingerprint" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold mb-2 uppercase tracking-tighter text-white">Behavioral Biometrics</h3>
+                                <p class="text-white/40 text-sm leading-relaxed font-light max-w-xl">
+                                    Verify identity continuously through interaction patterns, keystroke dynamics, and habitual digital signatures.
+                                </p>
+                            </div>
                         </div>
-                        <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter">Behavioral Biometrics</h3>
-                        <p class="text-white/40 text-sm leading-relaxed font-light">Verify identity continuously through interaction patterns, keystroke dynamics, and habitual digital signatures.</p>
+                        <button class="px-8 py-4 border border-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-white/50 hover:bg-white hover:text-black hover:border-white transition-all whitespace-nowrap">
+                            Learn Biometrics
+                        </button>
                     </div>
                 </div>
             </div>
