@@ -68,23 +68,94 @@
 </head>
 <body>
 
+    <!-- Section ABOVE video -->
+    <section class="max-w-5xl mx-auto py-24 px-8">
+        <h1 class="text-5xl font-bold mb-8 text-white">Integra AI Identity Security</h1>
+        <div class="space-y-6 text-gray-400 text-lg leading-relaxed">
+            <p>
+                Welcome to the future of identity verification. Our advanced AI-driven systems provide a seamless and secure experience for users and organizations alike. By leveraging state-of-the-art machine learning models, we ensure that every identity verified through our platform meets the highest standards of accuracy and reliability. This introductory section serves to provide context on why high-fidelity video verification is the cornerstone of modern security protocols.
+            </p>
+            <p>
+                In an era where digital threats are constantly evolving, standing still is not an option. Integra AI stays ahead of the curve by integrating multi-modal biometric analysis with real-time liveness detection. The video scrubbing interaction you are about to experience below demonstrates the precision and fluidity we bring to digital interactions. Each frame represents a data point, meticulously analyzed to ensure the integrity of the user's presence.
+            </p>
+            <p>
+                As you scroll down, you will engage with our interactive identity reveal engine. This isn't just a video player; it's a window into the core logic of our verification suite. We encourage you to explore the nuances of the visual data, observing how the system responds to your direct input. This level of transparency and control is what defines the Integra experience—security that feels natural, yet remains impenetrable.
+            </p>
+            <p>
+                The journey toward a more secure digital world starts with understanding. By educating our users on the mechanisms of AI verification, we build a foundation of trust. Behind every line of code and every pixel on this screen is a commitment to protecting your most valuable asset: your identity. Continue scrolling to see the technology in motion.
+            </p>
+        </div>
+    </section>
+
     <div class="scroll-container">
         <div class="sticky-wrapper">
-            <div class="integra-video-frame">
-                <!-- Optimal video configuration (From all guides) -->
-                <video 
-                    id="scrollVideo"
-                    muted 
-                    playsinline 
-                    webkit-playsinline
-                    preload="auto"
-                >
-                    <source src="face.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+            <div class="flex flex-col md:flex-row gap-8 w-full max-w-7xl px-8">
+                
+                <!-- Left Column: Sticky Video -->
+                <div class="md:w-3/5">
+                    <div class="integra-video-frame shadow-2xl">
+                        <video 
+                            id="scrollVideo"
+                            muted 
+                            playsinline 
+                            webkit-playsinline
+                            preload="auto"
+                        >
+                            <source src="face.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+
+                <!-- Right Column: Placeholder/Content Box -->
+                <div class="md:w-2/5 flex flex-col justify-center">
+                    <div class="glass-panel p-10 border border-white/10 rounded-3xl bg-white/[0.02] backdrop-blur-xl h-full flex flex-col justify-center">
+                        <p class="text-red-500 text-xs font-mono tracking-widest uppercase mb-4">[ ANALYZING_STREAM ]</p>
+                        <h3 class="text-3xl font-bold text-white mb-6 uppercase tracking-tighter">Identity Metadata</h3>
+                        
+                        <div class="space-y-6">
+                            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                                <span class="text-white/40 text-sm uppercase font-mono">Status</span>
+                                <span class="text-cyan-400 text-sm font-mono animate-pulse">ACTIVE_SCAN</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                                <span class="text-white/40 text-sm uppercase font-mono">Frame_Depth</span>
+                                <span class="text-white text-sm font-mono">1080p_INTRA</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                                <span class="text-white/40 text-sm uppercase font-mono">Analysis_Mode</span>
+                                <span class="text-white text-sm font-mono">NEURAL_SYNC</span>
+                            </div>
+                        </div>
+
+                        <p class="mt-8 text-white/30 text-sm leading-relaxed italic">
+                            "The system is currently observing micro-expressions and frame-by-frame integrity to verify liveness in real-time."
+                        </p>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
+
+    <!-- Section BELOW video -->
+    <section class="max-w-5xl mx-auto py-24 px-8 pb-48">
+        <h2 class="text-4xl font-bold mb-8 text-white">Beyond the Verification</h2>
+        <div class="space-y-6 text-gray-400 text-lg leading-relaxed">
+            <p>
+                What happens once an identity is confirmed? With Integra AI, the verification is just the beginning. The verified data transitions into a secure, encrypted vault, accessible only to authorized entities and the user themselves. We follow a strict zero-knowledge architecture, ensuring that your biometric signatures never leave your control in a readable format.
+            </p>
+            <p>
+                Our ecosystem is designed for scalability and integration. Whether you are a small startup or a global enterprise, our API-first approach allows for rapid deployment of high-level security features within your existing infrastructure. The scrubbing technology you saw above is a mirror of the granularity we apply to our data processing—fast, responsive, and incredibly detailed.
+            </p>
+            <p>
+                We believe that privacy is a fundamental human right. Therefore, our AI models are trained with fairness and non-bias at their core. By utilizing diverse datasets, we minimize the risk of algorithmic discrimination, ensuring a consistent experience for every individual, regardless of their background or appearance. This commitment to ethics is what sets us apart in the crowded field of AI security.
+            </p>
+            <p>
+                Thank you for taking the time to explore the Integra AI verification showcase. We are constantly innovating and pushing the boundaries of what's possible in digital identity. If you're interested in learning more or integrating our solutions into your workflow, our team is ready to assist you. The future is secure, and it starts with Integra.
+            </p>
+        </div>
+    </section>
 
     <script>
         /**
@@ -101,13 +172,21 @@
                 targetTime: 0,
                 currentTime: 0,
                 isAnimating: false,
-                duration: 0,
-                maxScroll: 0
+                isActive: false,       // Only active when in viewport
+                duration: 0
             },
 
             init(videoId) {
                 this.video = document.getElementById(videoId);
+                this.container = document.querySelector('.scroll-container');
                 
+                // Intersection Observer: Only work when visible
+                const observer = new IntersectionObserver((entries) => {
+                    this.state.isActive = entries[0].isIntersecting;
+                    if (this.state.isActive) this.syncTarget();
+                }, { threshold: 0 });
+                observer.observe(this.container);
+
                 if (this.video.readyState >= 1) {
                     this.setup();
                 } else {
@@ -117,32 +196,33 @@
 
             setup() {
                 this.state.duration = this.video.duration;
-                this.updateMaxScroll();
                 this.setupListeners();
-                
-                // Initial sync
                 this.syncTarget();
-                this.render();
-            },
-
-            updateMaxScroll() {
-                this.state.maxScroll = document.documentElement.scrollHeight - window.innerHeight;
             },
 
             setupListeners() {
-                // Passive listener for peak scroll performance
-                window.addEventListener('scroll', () => this.syncTarget(), { passive: true });
+                window.addEventListener('scroll', () => {
+                    if (this.state.isActive) this.syncTarget();
+                }, { passive: true });
                 
-                // Handle resize
                 window.addEventListener('resize', () => {
-                    this.updateMaxScroll();
-                    this.syncTarget();
+                    if (this.state.isActive) this.syncTarget();
                 });
             },
 
             syncTarget() {
-                const scrollPercent = window.scrollY / this.state.maxScroll;
-                this.state.targetTime = scrollPercent * (this.state.duration || 0);
+                if (!this.container || !this.video.duration) return;
+
+                const rect = this.container.getBoundingClientRect();
+                const containerHeight = rect.height;
+                const viewHeight = window.innerHeight;
+                
+                // Progress is relative to the container's top entering and bottom leaving
+                // Since it's a sticky container, we calculate based on its total height
+                const scrollProgress = Math.abs(rect.top) / (containerHeight - viewHeight);
+                const clampedProgress = Math.max(0, Math.min(1, scrollProgress));
+                
+                this.state.targetTime = clampedProgress * this.state.duration;
                 
                 if (!this.state.isAnimating) {
                     this.state.isAnimating = true;
@@ -161,7 +241,7 @@
                     this.video.currentTime = this.state.currentTime;
                 }
 
-                if (Math.abs(delta) > this.settings.threshold) {
+                if (Math.abs(delta) > this.settings.threshold && this.state.isActive) {
                     requestAnimationFrame(() => this.render());
                 } else {
                     this.state.isAnimating = false;

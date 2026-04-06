@@ -45,7 +45,116 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 4. Init Fake Dashboard 
     initDashboard();
+
+    // 5. Initialize FramePlayer (Canvas Scroll Engine)
+    if (document.getElementById('integra-canvas')) {
+        new FramePlayer({ id: 'integra-canvas', totalFrames: 61 });
+    }
+
+    // 6. Initialize 3D Hover Effect for Pricing Cards
+    init3DHover();
 });
+
+/**
+ * FramePlayer Class - Optimized for Zero-Latency Scrubbing
+ */
+class FramePlayer {
+    constructor(config) {
+        this.canvas = document.getElementById(config.id);
+        this.ctx = this.canvas.getContext('2d');
+        this.totalFrames = config.totalFrames;
+        this.frames = [];
+        this.currentFrame = -1;
+        this.isLoaded = false;
+        this.isActive = false;
+        this.config = config;
+        
+        this.state = {
+            targetProgress: 0,
+            currentProgress: 0,
+            lerpFactor: 0.2, // Increased speed (from 0.1 to 0.2)
+            isAnimating: false
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.container = document.querySelector('.scroll-container');
+        if (!this.container) return;
+
+        // Preload
+        let loadedCount = 0;
+        for (let i = 1; i <= this.totalFrames; i++) {
+            const img = new Image();
+            // Using the extracted frames from the frames/ folder
+            img.src = `./frames/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
+            img.onload = () => {
+                loadedCount++;
+                if (loadedCount === this.totalFrames) {
+                    this.isLoaded = true;
+                    this.onResize(); // Set canvas size
+                    this.syncTarget();
+                    this.render();
+                }
+            };
+            this.frames.push(img);
+        }
+
+        // Intersection Observer for performance
+        const observer = new IntersectionObserver((entries) => {
+            this.isActive = entries[0].isIntersecting;
+            if (this.isActive) this.syncTarget();
+        }, { threshold: 0 });
+        observer.observe(this.container);
+
+        window.addEventListener('scroll', () => {
+            if (this.isActive && this.isLoaded) this.syncTarget();
+        }, { passive: true });
+        
+        window.addEventListener('resize', () => this.onResize());
+    }
+
+    onResize() {
+        if (this.frames[0]) {
+            this.canvas.width = this.frames[0].naturalWidth;
+            this.canvas.height = this.frames[0].naturalHeight;
+        }
+        if (this.isActive) this.syncTarget();
+    }
+
+    syncTarget() {
+        const rect = this.container.getBoundingClientRect();
+        const progress = Math.abs(rect.top) / (rect.height - window.innerHeight);
+        this.state.targetProgress = Math.max(0, Math.min(1, progress));
+        
+        if (!this.state.isAnimating) {
+            this.state.isAnimating = true;
+            requestAnimationFrame(() => this.render());
+        }
+    }
+
+    render() {
+        if (!this.isLoaded) return;
+
+        const delta = this.state.targetProgress - this.state.currentProgress;
+        this.state.currentProgress += delta * this.state.lerpFactor;
+
+        const frameIndex = Math.floor(this.state.currentProgress * (this.totalFrames - 1));
+        
+        if (frameIndex !== this.currentFrame) {
+            this.currentFrame = frameIndex;
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.drawImage(this.frames[frameIndex], 0, 0);
+        }
+
+        if (Math.abs(delta) > 0.0001 && this.isActive) {
+            requestAnimationFrame(() => this.render());
+        } else {
+            this.state.isAnimating = false;
+        }
+    }
+}
 
 // --- Modal Controls ---
 function toggleModal(modalId) {
@@ -203,4 +312,39 @@ function initDashboard() {
 
     setInterval(appendLog, 1500);
     appendLog();
+}
+
+/**
+ * 3D Hover Effect for Pricing Cards
+ */
+function init3DHover() {
+    const cards = document.querySelectorAll('#pricing .reveal');
+    
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // Limit tilt intensity
+            const rotateX = (y - centerY) / 10; 
+            const rotateY = (centerX - x) / 10;
+            
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+            card.style.zIndex = "10";
+            card.style.boxShadow = "0 25px 50px -12px rgba(0, 255, 255, 0.2)";
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            card.style.zIndex = "1";
+            card.style.boxShadow = "none";
+        });
+        
+        // Ensure smooth return
+        card.style.transition = 'transform 0.15s ease-out, box-shadow 0.3s ease';
+    });
 }
