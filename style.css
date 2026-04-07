@@ -315,3 +315,17 @@ body {
     will-change: transform;
     pointer-events: none;
 }
+
+/* Billing Selection Styles */
+.active-billing {
+    border-color: #22d3ee !important;
+    background: rgba(34, 211, 238, 0.05) !important;
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
+}
+.radio-inner {
+    box-shadow: 0 0 10px #22d3ee;
+}
+.billing-card {
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+

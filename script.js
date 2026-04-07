@@ -51,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
         new FramePlayer({ id: 'integra-canvas', totalFrames: 61 });
     }
 
-    // 6. Initialize 3D Hover Effect for Pricing Cards
-    init3DHover();
+    // 6. Load Pricing Data from JSON
+    loadPricing();
 });
 
 /**
@@ -211,6 +211,96 @@ function simulateLogout() {
     }, 400);
 }
 
+// --- Pricing Data Fetch & Render ---
+async function loadPricing() {
+    const grid = document.getElementById('pricing-grid');
+    if (!grid) return;
+
+    try {
+        const response = await fetch('pricing.json');
+        const data = await response.json();
+        const plans = data.pricing_data.plans;
+
+        grid.innerHTML = ''; // Clear skeleton
+
+        plans.forEach((plan, index) => {
+            const card = document.createElement('div');
+            const delay = index * 0.1;
+            
+            // Special classes for highlighted plan
+            const highlightClasses = plan.highlight ? 'relative lg:z-10' : '';
+            const borderClasses = plan.highlight ? 'border-t-4 border-cyan-400' : '';
+            const titleClasses = plan.highlight ? 'text-cyan-400' : 'text-white';
+            const buttonClasses = plan.highlight 
+                ? 'bg-cyan-400 text-obsidian border-cyan-400 hover:bg-white' 
+                : 'border-white/20 hover:bg-white hover:text-black';
+
+            card.className = `bg-obsidian p-12 reveal hover-target ${highlightClasses}`;
+            card.style.transitionDelay = `${delay}s`;
+            
+            card.innerHTML = `
+                ${plan.highlight ? `<div class="absolute top-0 left-0 w-full h-1 bg-cyan-400"></div>` : ''}
+                ${plan.badge ? `<div class="absolute top-8 right-8 text-[9px] uppercase tracking-widest font-bold text-obsidian bg-cyan-400 px-3 py-1 rounded-full">${plan.badge}</div>` : ''}
+                
+                <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter ${titleClasses}">${plan.name}</h3>
+                <p class="text-white/40 text-sm font-light mb-12 pb-8 border-b border-white/5 lowercase first-letter:uppercase">${plan.tagline}</p>
+                
+                <div class="mb-12 h-20 flex items-baseline">
+                    ${plan.monthly.price === 'Custom' ? `
+                        <span class="text-4xl font-bold tracking-tighter text-white">Custom</span>
+                    ` : `
+                        <span class="text-3xl font-light text-white/50">$</span>
+                        <span class="text-6xl font-bold tracking-tighter price-val ${plan.highlight ? 'text-white' : ''}" 
+                              data-monthly="${plan.monthly.price}" 
+                              data-yearly="${plan.yearly.price}">
+                              ${isYearly ? plan.yearly.price : plan.monthly.price}
+                        </span>
+                        <span class="text-white/40 font-mono text-xs uppercase tracking-widest ml-2">/mo</span>
+                    `}
+                </div>
+
+                <ul class="space-y-6 mb-12 text-sm text-white/70 font-light">
+                    ${plan.features.map(f => `
+                        <li class="flex items-center gap-4"><div class="w-1 h-1 bg-cyan-400 rounded-full"></div> ${f}</li>
+                    `).join('')}
+                </ul>
+
+                <button class="w-full py-4 border text-xs uppercase tracking-widest font-bold transition-all rounded-full ${buttonClasses}" 
+                        onclick="window.location.href='checkout.html?plan=${plan.id}'">
+                    ${plan.button_text}
+                </button>
+            `;
+
+            grid.appendChild(card);
+        });
+
+        // Initialize animations and hover effects for new elements
+        lucide.createIcons();
+        const newRevealElements = grid.querySelectorAll('.reveal');
+        newRevealElements.forEach(el => el.classList.add('active')); // Immediate activation for loaded cards
+        
+        init3DHover(); // Re-init hover for new cards
+        initCursorForNewElements(); // Update cursor
+
+    } catch (error) {
+        console.error("Critical Security Breach: Failed to load pricing protocols.", error);
+        grid.innerHTML = `<div class="col-span-3 py-20 text-center text-red-500 font-mono">[ ERROR: PRICING_PROTOCOL_OFFLINE ]</div>`;
+    }
+}
+
+function initCursorForNewElements() {
+    const cursor = document.getElementById('cursor');
+    if (!cursor) return;
+    const hoverTargets = document.querySelectorAll('.hover-target, button, a, input');
+    
+    hoverTargets.forEach(target => {
+        target.removeEventListener('mouseenter', () => cursor.classList.add('hovering'));
+        target.removeEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+        target.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
+        target.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+    });
+}
+
 // --- Pricing Toggle Logic ---
 let isYearly = false;
 
@@ -226,11 +316,13 @@ function toggleBilling() {
         knob.style.transform = 'translateX(24px)';
         billingBtn.classList.replace('bg-slate-800', 'bg-cyan-500');
         billingBtn.classList.replace('border-slate-700', 'border-cyan-400');
-        labelMonthly.style.color = '#64748b'; // slate-500
+        labelMonthly.style.color = '#64748b'; 
         labelYearly.style.color = '#fff';
 
         priceAmounts.forEach(price => {
-            animateValue(price, parseInt(price.dataset.monthly), parseInt(price.dataset.yearly), 300);
+            const start = parseInt(price.dataset.monthly);
+            const end = parseInt(price.dataset.yearly);
+            animateValue(price, start, end, 400);
         });
     } else {
         knob.style.transform = 'translateX(0)';
@@ -240,7 +332,9 @@ function toggleBilling() {
         labelYearly.style.color = '#64748b';
 
         priceAmounts.forEach(price => {
-            animateValue(price, parseInt(price.dataset.yearly), parseInt(price.dataset.monthly), 300);
+            const start = parseInt(price.dataset.yearly);
+            const end = parseInt(price.dataset.monthly);
+            animateValue(price, start, end, 400);
         });
     }
 }
@@ -250,7 +344,9 @@ function animateValue(obj, start, end, duration) {
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.innerHTML = Math.floor(progress * (end - start) + start);
+        // Easing function for smoother feel
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        obj.innerHTML = Math.floor(easeProgress * (end - start) + start);
         if (progress < 1) {
             window.requestAnimationFrame(step);
         }

@@ -1,136 +1,186 @@
-/**
- * checkout.js - Interactive Credit Card Logic
- * Handles real-time updates and 3D flip animations
- */
+let stripe, elements, card;
+let currentPlan = null;
+let billingMode = 'monthly'; // default
+let planId = new URLSearchParams(window.location.search).get('plan') || 'starter';
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Input Elements
-    const inputNumber = document.getElementById('input-number');
-    const inputHolder = document.getElementById('input-holder');
-    const inputExpiry = document.getElementById('input-expiry');
-    const inputCvc = document.getElementById('input-cvc');
+// Dynamic Initialization Node
+async function initializeStripe() {
+    const endpoints = [
+        'http://localhost:8000/config',
+        'http://127.0.0.1:8000/config'
+    ];
 
-    // Display Elements
-    const displayNumber = document.getElementById('card-number-display');
-    const displayHolder = document.getElementById('card-holder-display');
-    const displayExpiry = document.getElementById('card-expiry-display');
-    const displayCvc = document.getElementById('card-cvc-display');
+    let publishableKey = null;
 
-    const cardInner = document.getElementById('card-inner');
-
-    // --- 3D Tilt & Glow Logic (State Driven) ---
-    const cardContainer = document.querySelector('.card-container');
-    const cardGlow = document.querySelector('.card-glow');
-    
-    let isFlipped = false;
-    let isHovering = false;
-    let isFlipping = false;
-    let rotation = { x: 0, y: 0 };
-
-    function updateTransform() {
-        const baseY = isFlipped ? 180 : 0;
-        
-        // Disable tilt while in the middle of a 180-degree flip
-        const targetX = (isHovering && !isFlipping) ? rotation.x : 0;
-        const targetY = (isHovering && !isFlipping) ? (baseY + rotation.y) : baseY;
-        
-        // Final stable transform - rotate only
-        cardInner.style.transform = `rotateY(${targetY}deg) rotateX(${targetX}deg)`;
+    for (let url of endpoints) {
+        try {
+            console.log(`=> Neural Link: Attempting connection via ${url}`);
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                publishableKey = data.publishableKey;
+                console.log(`=> Neural Link: Success via ${url}`);
+                break;
+            }
+        } catch (e) {
+            continue;
+        }
     }
 
-    cardContainer.addEventListener('mousemove', (e) => {
-        isHovering = true;
-        const rect = cardContainer.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+    if (publishableKey) {
+        stripe = Stripe(publishableKey);
+    } else {
+        console.warn("=> Neural Link: Backend Unreachable. Using Fallback.");
+        stripe = Stripe('pk_test_placeholder');
+    }
 
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-
-        // Subtle tilt (1/25 ratio)
-        rotation.x = (centerY - y) / 25;
-        rotation.y = (x - centerX) / 25;
-
-        if (!isFlipping) {
-            // Very short transition for reactive feel
-            cardInner.style.transition = 'transform 0.1s linear';
-            updateTransform();
-        }
-        
-        // Glow effect
-        if (cardGlow) {
-            cardGlow.style.opacity = '1';
-            cardGlow.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(34, 211, 238, 0.15), transparent 60%)`;
+    elements = stripe.elements();
+    card = elements.create('card', {
+        style: {
+            base: {
+                color: '#ffffff',
+                fontFamily: '"Space Mono", monospace',
+                fontSize: '14px',
+                '::placeholder': { color: 'rgba(255, 255, 255, 0.1)' },
+                iconColor: '#22d3ee'
+            },
+            invalid: { color: '#ef4444' }
         }
     });
 
-    cardContainer.addEventListener('mouseleave', () => {
-        isHovering = false;
-        if (!isFlipping) {
-            // Smooth return to base
-            cardInner.style.transition = 'transform 0.5s ease';
-            rotation.x = 0;
-            rotation.y = 0;
-            updateTransform();
+    card.mount('#card-element');
+    
+    // Load Plan Details
+    loadPlanData();
+}
+
+async function loadPlanData() {
+    try {
+        const response = await fetch('pricing.json');
+        const data = await response.json();
+        currentPlan = data.pricing_data.plans.find(p => p.id === planId);
+
+        if (currentPlan) {
+            updatePriceDisplays();
         }
-        if (cardGlow) cardGlow.style.opacity = '0';
-    });
+    } catch (e) {
+        console.error("=> Identity Breach: Failed to load pricing protocols.", e);
+    }
+}
 
-    // --- Flip Function ---
-    const flip = (back) => {
-        if (isFlipped === back) return;
-        
-        isFlipped = back;
-        isFlipping = true;
-        
-        // Clean, stable transition for the flip
-        cardInner.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-        updateTransform();
-        
-        if (back) cardInner.classList.add('flipped');
-        else cardInner.classList.remove('flipped');
+function updatePriceDisplays() {
+    if (!currentPlan) return;
 
-        // Lock out tilt interactions during animation
-        setTimeout(() => {
-            isFlipping = false;
-        }, 600);
-    };
+    const monthlyDisplay = document.getElementById('monthly-price-display');
+    const yearlyDisplay = document.getElementById('yearly-price-display');
 
-    // --- Form Inputs Listeners ---
-    inputCvc.addEventListener('focus', () => flip(true));
-    inputExpiry.addEventListener('focus', () => flip(true));
-    inputNumber.addEventListener('focus', () => flip(false));
-    inputHolder.addEventListener('focus', () => flip(false));
+    if (currentPlan.monthly.price === 'Custom') {
+        monthlyDisplay.textContent = 'Custom Tier';
+        yearlyDisplay.textContent = 'Custom Tier';
+    } else {
+        monthlyDisplay.textContent = `$${currentPlan.monthly.price}.00/month + tax`;
+        const totalYearly = currentPlan.yearly.price * 12;
+        yearlyDisplay.textContent = `$${totalYearly}.00/year + tax`;
+    }
+}
 
-    // Card Number Formatting
-    inputNumber.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, ''); 
-        let formattedValue = '';
-        for (let i = 0; i < value.length; i++) {
-            if (i > 0 && i % 4 === 0) formattedValue += ' ';
-            formattedValue += value[i];
-        }
-        e.target.value = formattedValue.substring(0, 19);
-        displayNumber.textContent = e.target.value || '0000 0000 0000 0000';
-    });
+function selectBilling(mode) {
+    billingMode = mode;
+    
+    // UI Update
+    document.getElementById('billing-monthly').classList.toggle('active-billing', mode === 'monthly');
+    document.getElementById('billing-yearly').classList.toggle('active-billing', mode === 'yearly');
+}
 
-    // Holder Name
-    inputHolder.addEventListener('input', (e) => {
-        displayHolder.textContent = e.target.value.toUpperCase() || 'JANE DOE';
-    });
+initializeStripe();
 
-    // Expiry
-    inputExpiry.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2, 4);
-        }
-        e.target.value = value;
-        displayExpiry.textContent = value || 'MM/YY';
-    });
+// 3D Experience (Physics Engine)
+const cardInner = document.getElementById('card-inner');
+const cardContainer = document.querySelector('.card-container');
 
-    // CVC
-    inputCvc.addEventListener('input', (e) => {
-        displayCvc.textContent = e.target.value.replace(/./g, '•') || '•••';
-    });
+cardContainer.addEventListener('mousemove', (e) => {
+    const rect = cardContainer.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    cardInner.style.transition = 'transform 0.1s linear';
+    cardInner.style.transform = `rotateX(${-y * 25}deg) rotateY(${x * 25}deg)`;
 });
+
+cardContainer.addEventListener('mouseleave', () => {
+    cardInner.style.transition = 'transform 0.6s ease';
+    cardInner.style.transform = 'rotateY(0deg) rotateX(0deg)';
+});
+
+// Identity Sync
+const holderInput = document.getElementById('card-holder-name');
+const holderDisplay = document.getElementById('card-holder-display');
+
+holderInput.addEventListener('input', (e) => {
+    holderDisplay.textContent = e.target.value.toUpperCase() || 'JANE DOE';
+});
+
+// Force Handle
+const form = document.getElementById('payment-form');
+const button = document.getElementById('submit-button');
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    button.textContent = 'AUTHENTICATING...';
+
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: card,
+        billing_details: { name: holderInput.value }
+    });
+
+    if (error) {
+        document.getElementById('card-errors').textContent = error.message;
+        button.disabled = false;
+        button.textContent = 'Confirm Secure Transaction';
+    } else {
+        await processPayment(paymentMethod.id);
+    }
+});
+
+async function processPayment(paymentMethodId) {
+    if (!currentPlan) return;
+
+    let amount = 0;
+    if (currentPlan.monthly.price === 'Custom') {
+        alert("Consultation required for Enterprise Tier.");
+        button.disabled = false;
+        button.textContent = 'Contact Sales';
+        return;
+    }
+
+    // Stripe amount is in cents
+    if (billingMode === 'monthly') {
+        amount = currentPlan.monthly.price * 100;
+    } else {
+        amount = currentPlan.yearly.price * 12 * 100;
+    }
+
+    try {
+        const response = await fetch('http://127.0.0.1:8000/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                payment_method_id: paymentMethodId, 
+                amount: amount,
+                plan_id: planId,
+                billing_cycle: billingMode
+            })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            window.location.href = 'index.html?status=success&plan=' + planId;
+        } else {
+            alert('Security Link Severed: ' + result.message);
+        }
+    } catch (err) {
+        console.error("=> System Critical Error: ", err);
+        button.disabled = false;
+        button.textContent = 'Retry Handshake';
+    }
+}

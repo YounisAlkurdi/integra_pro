@@ -1,0 +1,71 @@
+{
+  "pricing_data": {
+    "plans": [
+      {
+        "id": "starter",
+        "name": "Starter",
+        "tagline": "For small teams securing initial hires.",
+        "monthly": {
+          "price": 99,
+          "billing_period": "monthly"
+        },
+        "yearly": {
+          "price": 79,
+          "billing_period": "billed annually"
+        },
+        "features": [
+          "Up to 500 scans/mo",
+          "Basic Visual Detection",
+          "Standard Support"
+        ],
+        "button_text": "Select Plan",
+        "highlight": false
+      },
+      {
+        "id": "professional",
+        "name": "Professional",
+        "tagline": "Advanced metrics for growing organizations.",
+        "monthly": {
+          "price": 299,
+          "billing_period": "monthly"
+        },
+        "yearly": {
+          "price": 239,
+          "billing_period": "billed annually"
+        },
+        "features": [
+          "Unlimited scans",
+          "Voice & Behavioral Biometrics",
+          "API Access included",
+          "Priority 24/7 Support"
+        ],
+        "button_text": "Upgrade to Pro",
+        "highlight": true,
+        "badge": "Most Popular"
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "tagline": "Custom deployments for high-security scaling.",
+        "monthly": {
+          "price": "Custom",
+          "billing_period": "custom"
+        },
+        "yearly": {
+          "price": "Custom",
+          "billing_period": "custom"
+        },
+        "features": [
+          "On-premise deployment",
+          "Custom AI model training",
+          "SLA guarantees",
+          "Dedicated Security Engineer"
+        ],
+        "button_text": "Contact Sales",
+        "highlight": false
+      }
+    ],
+    "currency": "USD",
+    "section_title": "SCALABLE SECURITY"
+  }
+}
