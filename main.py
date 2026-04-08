@@ -17,8 +17,14 @@ app = FastAPI(title="Integra | Core Control Node")
 # Global CORS Protocol
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5500", "http://127.0.0.1:5500",
-                   "http://localhost:5501", "http://127.0.0.1:5501"],
+    allow_origins=[
+        "http://localhost:5500", "http://127.0.0.1:5500",
+        "http://localhost:5501", "http://127.0.0.1:5501",
+        "http://localhost:8080", "http://127.0.0.1:8080",
+        "http://localhost:3000", "http://127.0.0.1:3000",
+        # NOTE: "null" (file:// origin) removed — use a local dev server instead.
+        # Run: python -m http.server 8080  or use Live Server extension.
+    ],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     allow_credentials=True,

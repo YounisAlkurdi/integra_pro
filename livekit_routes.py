@@ -1,5 +1,6 @@
 import os
-from fastapi import APIRouter, HTTPException
+import datetime
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 # ── LiveKit Token Module ─────────────────────────────────────────────────────
@@ -7,24 +8,31 @@ from pydantic import BaseModel
 #     LIVEKIT_API_KEY and LIVEKIT_API_SECRET are read here from .env (via dotenv
 #     loaded in main.py). They are NEVER returned to the client — only a
 #     short-lived signed JWT token is.
+#
+# v3 Fixes:
+#   - Token TTL set to 30 minutes (1800s) — prevents long-lived tokens being abused
+#   - Added DELETE /api/livekit/room/{roomName} endpoint so the dashboard can
+#     forcibly terminate rooms via the LiveKit Server API
 # ────────────────────────────────────────────────────────────────────────────
 
 router = APIRouter(prefix="/api/livekit", tags=["LiveKit"])
 
-VALID_ROLES = {"hr", "candidate"}
+VALID_ROLES   = {"hr", "candidate"}
+TOKEN_TTL_SEC = 1800  # 30 minutes
 
 
 class TokenRequest(BaseModel):
-    roomName: str
+    roomName:        str
     participantName: str
-    role: str               # "hr" | "candidate"
+    role:            str  # "hr" | "candidate"
 
 
-def _build_token(api_key: str, api_secret: str, req: TokenRequest) -> str:
+def _build_token(api_key: str, api_secret: str, req: "TokenRequest") -> str:
     """
     LiveKit Token Factory.
     Generates a signed JWT that the frontend uses to join a LiveKit room.
-    The token expires in 1 hour and carries the participant's role as metadata.
+    Token expires in TOKEN_TTL_SEC seconds and carries the participant's role
+    as metadata.
     """
     try:
         from livekit.api import AccessToken, VideoGrants
@@ -38,6 +46,7 @@ def _build_token(api_key: str, api_secret: str, req: TokenRequest) -> str:
         AccessToken(api_key, api_secret)
         .with_identity(req.participantName)
         .with_name(req.participantName)
+        .with_ttl(datetime.timedelta(seconds=TOKEN_TTL_SEC))
         .with_metadata(f'{{"role":"{req.role}"}}')
         .with_grants(
             VideoGrants(
@@ -60,7 +69,7 @@ async def get_livekit_token(req: TokenRequest):
     Reads credentials from .env (backend only) and returns a signed JWT.
 
     Request body: { roomName, participantName, role }
-    Response:     { token, url, roomName, participantName, role }
+    Response:     { token, url, roomName, participantName, role, ttl }
     """
     # --- Validation ---
     if not req.roomName.strip() or not req.participantName.strip():
@@ -76,8 +85,8 @@ async def get_livekit_token(req: TokenRequest):
         )
 
     # --- Read secrets from env (NEVER return these to the client) ---
-    api_key    = os.getenv("LIVEKIT_API_KEY")
-    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    api_key     = os.getenv("LIVEKIT_API_KEY")
+    api_secret  = os.getenv("LIVEKIT_API_SECRET")
     livekit_url = os.getenv("LIVEKIT_URL")
 
     if not api_key or not api_secret:
@@ -88,8 +97,13 @@ async def get_livekit_token(req: TokenRequest):
 
     # --- Generate token ---
     try:
-        req.role = req.role.lower()
-        token = _build_token(api_key, api_secret, req)
+        normalized_role = req.role.lower()
+        token_req = TokenRequest(
+            roomName=req.roomName,
+            participantName=req.participantName,
+            role=normalized_role,
+        )
+        token = _build_token(api_key, api_secret, token_req)
     except HTTPException:
         raise
     except Exception as e:
@@ -99,13 +113,48 @@ async def get_livekit_token(req: TokenRequest):
             f.write(err_out)
         raise HTTPException(
             status_code=500,
-            detail=f"Token generation failed. See livekit_error.txt",
+            detail="Token generation failed. See livekit_error.txt",
         )
 
     return {
-        "token": token,              # JWT the frontend uses to connect
-        "url":   livekit_url,        # wss:// address (public, not a secret)
+        "token":           token,              # JWT the frontend uses to connect
+        "url":             livekit_url,        # wss:// address (public, not a secret)
         "roomName":        req.roomName,
         "participantName": req.participantName,
-        "role":            req.role,
+        "role":            normalized_role,
+        "ttl":             TOKEN_TTL_SEC,      # inform frontend of expiry
     }
+
+
+@router.delete("/room/{room_name}")
+async def end_room(room_name: str):
+    """
+    Force-terminate a LiveKit room.
+    Kicks all participants and closes the room immediately.
+    Called from the dashboard to end an active session.
+    """
+    api_key    = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    livekit_url = os.getenv("LIVEKIT_URL", "").replace("wss://", "https://").replace("ws://", "http://")
+
+    if not api_key or not api_secret or not livekit_url:
+        raise HTTPException(
+            status_code=500,
+            detail="LiveKit credentials not configured on the server.",
+        )
+
+    try:
+        from livekit.api import LiveKitAPI, DeleteRoomRequest
+        async with LiveKitAPI(livekit_url, api_key, api_secret) as lk_api:
+            await lk_api.room.delete_room(DeleteRoomRequest(room=room_name))
+        return {"deleted": True, "room": room_name}
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="LiveKit API SDK not installed. Run: pip install livekit-api",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete room: {str(e)}",
+        )

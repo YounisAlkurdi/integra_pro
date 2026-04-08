@@ -1,193 +1,176 @@
 /**
- * stt.js — Browser Speech-to-Text Engine
- * Uses the native Web Speech API (Chrome/Edge).
- * Fires custom DOM events so LiveKit and UI layers stay decoupled.
+ * stt.js — Speech-to-Text Engine v3
  *
- * Events dispatched on window:
- *   'stt:interim'  → { text, identity, name }   (live, not final)
- *   'stt:final'    → { text, identity, name }    (committed sentence)
- *   'stt:started'  → {}
- *   'stt:stopped'  → {}
- *   'stt:error'    → { error }
+ * Uses Web Speech API (SpeechRecognition).
+ * Fires DOM events:
+ *   stt:final   → { text, identity, name }
+ *   stt:interim → { text, identity, name }
+ *
+ * Fixes vs v2:
+ *  - Exponential backoff on restart (300ms → 600ms → 1200ms → ... → 5000ms max)
+ *    prevents hot-loop when browser's STT service rejects repeated restarts.
+ *  - Retry counter resets on successful speech result (not just on start()).
+ *  - Noise gate: ignores result strings under 2 characters (button presses, noise).
+ *  - setMuted() now properly resets backoff so unmute is instant.
  */
 
 const STTEngine = (() => {
-    // ── State ──────────────────────────────────────────────────────────────
-    let recognition   = null;
-    let isRunning     = false;
-    let isMuted       = false;
-    let restartTimer  = null;
-    let identity      = 'local';
-    let displayName   = 'User';
-    let lang          = 'ar-SA';   // default Arabic; caller can override
 
-    // ── Browser Support Check ──────────────────────────────────────────────
-    const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    let recognition    = null;
+    let currentSession = null;   // { identity, name }
+    let running        = false;
+    let muted          = false;
+    let restartTimer   = null;
+    let retryCount     = 0;      // For exponential backoff
+    const MAX_DELAY_MS = 5000;   // Cap at 5 seconds between restart attempts
+    const BASE_DELAY_MS = 300;
 
     function isSupported() {
         return !!SpeechRecognition;
     }
 
-    // ── Internal: fire custom event ────────────────────────────────────────
-    function dispatch(name, detail = {}) {
-        window.dispatchEvent(new CustomEvent(name, { detail }));
+    function dispatch(eventName, text) {
+        if (!currentSession) return;
+        window.dispatchEvent(new CustomEvent(eventName, {
+            detail: {
+                text,
+                identity: currentSession.identity,
+                name:     currentSession.name,
+            }
+        }));
     }
 
-    // ── Internal: build & wire recognition instance ────────────────────────
-    function createRecognition() {
+    /** Calculate backoff delay: 300 * 2^retryCount, capped at MAX_DELAY_MS */
+    function getBackoffDelay() {
+        return Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
+    }
+
+    function buildRecognition(lang) {
         if (!SpeechRecognition) return null;
 
-        const rec       = new SpeechRecognition();
-        rec.lang        = lang;
-        rec.continuous  = true;
-        rec.interimResults = true;
-        rec.maxAlternatives = 1;
+        const r = new SpeechRecognition();
+        r.continuous       = true;   // keep listening across silences
+        r.interimResults   = true;   // fire partial results immediately
+        r.maxAlternatives  = 1;      // single best match
 
-        rec.onstart = () => {
-            isRunning = true;
-            dispatch('stt:started');
-        };
+        // Support Arabic + English code-switching (common in interviews)
+        r.lang = lang;
 
-        rec.onresult = (event) => {
-            if (isMuted) return;
-
-            let interim = '';
-            let final   = '';
+        r.onresult = (event) => {
+            if (muted) return;
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    final += transcript;
+                const result = event.results[i];
+                const text   = result[0].transcript.trim();
+
+                // Noise gate: skip empty or single-char noise (clicks, pops)
+                if (text.length < 2) continue;
+
+                if (result.isFinal) {
+                    retryCount = 0; // Reset backoff — we got real speech
+                    dispatch('stt:final', text);
                 } else {
-                    interim += transcript;
+                    dispatch('stt:interim', text);
                 }
             }
+        };
 
-            if (final) {
-                dispatch('stt:final', { text: final.trim(), identity, name: displayName });
-            } else if (interim) {
-                dispatch('stt:interim', { text: interim.trim(), identity, name: displayName });
+        r.onerror = (event) => {
+            // 'no-speech' and 'aborted' are normal — retry with backoff
+            if (event.error === 'no-speech' || event.error === 'aborted') {
+                scheduleRestart();
+                return;
+            }
+            // 'not-allowed': user blocked mic — don't retry
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                console.warn('[STT] Mic permission denied. STT disabled.');
+                running = false;
+                return;
+            }
+            // Other errors: retry with backoff
+            console.warn('[STT] Error:', event.error);
+            retryCount++;
+            scheduleRestart();
+        };
+
+        r.onend = () => {
+            // SpeechRecognition stops automatically on silence — always restart
+            if (running && !muted) {
+                scheduleRestart();
             }
         };
 
-        rec.onerror = (event) => {
-            // ignore non-critical errors
-            if (['aborted', 'no-speech'].includes(event.error)) return;
-
-            dispatch('stt:error', { error: event.error });
-
-            if (event.error === 'not-allowed') {
-                isRunning = false;
-                dispatch('stt:stopped');
-            }
-        };
-
-        rec.onend = () => {
-            isRunning = false;
-            // Auto-restart unless explicitly stopped or muted
-            if (!isMuted && recognition) {
-                restartTimer = setTimeout(() => {
-                    try { recognition.start(); } catch (_) {}
-                }, 800);
-            } else {
-                dispatch('stt:stopped');
-            }
-        };
-
-        return rec;
+        return r;
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────
+    function scheduleRestart() {
+        if (!running || muted) return;
+        clearTimeout(restartTimer);
+        const delay = getBackoffDelay();
+        restartTimer = setTimeout(() => {
+            if (running && !muted && recognition) {
+                try {
+                    recognition.start();
+                } catch (_) {
+                    // Already running or aborted — retry next cycle
+                    retryCount++;
+                    scheduleRestart();
+                }
+            }
+        }, delay);
+    }
 
-    /**
-     * start({ identity, name, lang })
-     * Begin speech recognition.
-     */
-    function start(opts = {}) {
-        if (!isSupported()) {
-            console.warn('[STT] Web Speech API not supported in this browser.');
-            dispatch('stt:error', { error: 'not-supported' });
-            return;
-        }
+    function start({ identity, name, lang = 'ar-SA' } = {}) {
+        if (!SpeechRecognition) return;
+        stop(); // Clean up any previous session
 
-        if (opts.identity)  identity    = opts.identity;
-        if (opts.name)      displayName = opts.name;
-        if (opts.lang)      lang        = opts.lang;
+        currentSession = { identity, name };
+        muted          = false;
+        running        = true;
+        retryCount     = 0; // Reset backoff on fresh start
 
-        isMuted = false;
-
-        if (!recognition) {
-            recognition = createRecognition();
-        }
-
+        recognition = buildRecognition(lang);
         try {
             recognition.start();
         } catch (e) {
-            // already started — OK
+            console.warn('[STT] Could not start:', e);
+            scheduleRestart();
         }
     }
 
-    /**
-     * stop()
-     * Permanently stop (clears auto-restart).
-     */
     function stop() {
-        isMuted = true;
+        running        = false;
+        muted          = false;
+        currentSession = null;
+        retryCount     = 0;
         clearTimeout(restartTimer);
 
         if (recognition) {
-            try { recognition.stop(); } catch (_) {}
+            try { recognition.abort(); } catch (_) {}
             recognition = null;
         }
-
-        isRunning = false;
-        dispatch('stt:stopped');
     }
 
-    /**
-     * setMuted(bool)
-     * Pause/resume transcription without destroying the engine.
-     * When muted the mic stays open but results are ignored.
-     */
-    function setMuted(muted) {
-        isMuted = muted;
+    // Mute pauses recognition without destroying state.
+    // When unmuted, recognition resumes immediately (no backoff delay).
+    function setMuted(isMuted) {
+        muted = isMuted;
+        if (!recognition || !running) return;
 
-        if (muted) {
-            clearTimeout(restartTimer);
-            // Don't call recognition.stop() — avoids the restart loop being killed
-            // Results will be silently discarded in onresult
+        if (isMuted) {
+            try { recognition.abort(); } catch (_) {}
         } else {
-            // If we're not running, restart
-            if (!isRunning && recognition) {
-                try { recognition.start(); } catch (_) {}
-            } else if (!isRunning) {
-                recognition = createRecognition();
-                try { recognition.start(); } catch (_) {}
-            }
+            retryCount = 0; // Instant restart after unmute — no backoff
+            scheduleRestart();
         }
     }
 
-    /**
-     * setLang(langCode)
-     * Change language at runtime (e.g. 'en-US', 'ar-SA').
-     * Restarts the engine so the new language takes effect.
-     */
-    function setLang(langCode) {
-        lang = langCode;
-        if (isRunning) {
-            stop();
-            setTimeout(() => start(), 500);
-        }
-    }
+    function isActive() { return running && !muted; }
 
-    function getState() {
-        return { isRunning, isMuted, lang, identity, displayName };
-    }
+    return { start, stop, setMuted, isSupported, isActive };
 
-    // ── Expose ─────────────────────────────────────────────────────────────
-    return { start, stop, setMuted, setLang, getState, isSupported };
 })();
 
-// Make globally available
 window.STTEngine = STTEngine;

@@ -113,9 +113,9 @@
                     <p id="join-error" class="mt-4 text-[10px] font-mono text-red-400 hidden"></p>
                 </div>
 
-                <!-- Remote Participant Area -->
-                <div id="remote-area" class="w-full h-full flex items-center justify-center">
-                    <div id="remote-placeholder" class="flex flex-col items-center justify-center">
+                <!-- Remote Participant Area — panels are injected dynamically by integra-session.js -->
+                <div id="remote-area" class="w-full h-full relative">
+                    <div id="remote-placeholder" class="absolute inset-0 flex flex-col items-center justify-center">
                         <div class="relative">
                             <div class="absolute -inset-4 bg-cyan-400/5 rounded-full blur-2xl animate-pulse"></div>
                             <div class="w-32 h-32 rounded-full bg-cyan-400/10 flex items-center justify-center mb-6 border border-cyan-400/20">
@@ -124,8 +124,6 @@
                         </div>
                         <p class="text-[11px] font-mono text-white/30 uppercase tracking-[0.5em] animate-flicker">Awaiting remote participant...</p>
                     </div>
-                    <!-- Remote video is injected here by livekit-session.js -->
-                    <video id="remote-video" autoplay playsinline class="w-full h-full object-cover rounded-[2rem] hidden"></video>
                 </div>
 
                 <!-- Local HR Perspective (Camera PiP) -->
@@ -165,17 +163,21 @@
 
             <!-- Bottom Controls -->
             <div class="h-24 glass-panel rounded-3xl border border-white/5 flex items-center justify-between px-10">
-                <div class="flex items-center gap-5">
-                    <button id="btn-toggle-mic"  title="Toggle Microphone" class="control-btn hover-target">
+                <div class="flex items-center gap-3">
+                    <button id="btn-toggle-mic" title="Toggle Microphone"
+                            class="control-btn w-13 h-13 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/60 hover:bg-cyan-400/10 hover:border-cyan-400/30 hover:text-cyan-400 transition-all">
                         <i data-lucide="mic" class="w-5 h-5"></i>
                     </button>
-                    <button id="btn-toggle-cam"  title="Toggle Camera"    class="control-btn hover-target">
+                    <button id="btn-toggle-cam" title="Toggle Camera"
+                            class="control-btn w-13 h-13 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/60 hover:bg-cyan-400/10 hover:border-cyan-400/30 hover:text-cyan-400 transition-all">
                         <i data-lucide="video" class="w-5 h-5"></i>
                     </button>
-                    <button id="btn-screenshare" title="Share Screen"      class="control-btn hover-target">
+                    <button id="btn-screenshare" title="Share Screen"
+                            class="control-btn w-13 h-13 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/60 hover:bg-cyan-400/10 hover:border-cyan-400/30 hover:text-cyan-400 transition-all">
                         <i data-lucide="monitor" class="w-5 h-5"></i>
                     </button>
-                    <button id="btn-toggle-stt"  title="Toggle Transcription" class="control-btn hover-target relative">
+                    <button id="btn-toggle-stt" title="Toggle Transcription"
+                            class="control-btn w-13 h-13 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/60 hover:bg-cyan-400/10 hover:border-cyan-400/30 hover:text-cyan-400 transition-all relative">
                         <i data-lucide="message-square" class="w-5 h-5"></i>
                         <div id="stt-active-dot" class="absolute top-2 right-2 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#22d3ee] hidden"></div>
                     </button>
@@ -186,7 +188,7 @@
                         <span id="connection-badge" class="text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest">Offline</span>
                     </div>
                     <button id="btn-end-session" onclick="endSession()"
-                            class="h-14 px-10 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] hover:bg-red-500 hover:text-white transition-all control-btn shadow-lg">
+                            class="h-14 px-10 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] hover:bg-red-500 hover:text-white transition-all shadow-lg">
                         End Session
                     </button>
                 </div>
@@ -224,7 +226,7 @@
                         <div class="flex items-center justify-between px-2">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-sm font-black border border-white/10 uppercase italic">A</div>
-                                <span class="text-[11px] font-black uppercase tracking-widest">Admin Feed</span>
+                                <span id="admin-feed-label" class="text-[11px] font-black uppercase tracking-widest">HR Feed</span>
                             </div>
                             <span id="admin-status" class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
                         </div>
@@ -241,7 +243,7 @@
                         <div class="flex items-center justify-between px-2">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-cyan-400/10 flex items-center justify-center text-sm font-black border border-cyan-400/20 text-cyan-400 uppercase italic">C</div>
-                                <span class="text-[11px] font-black uppercase tracking-widest">Candidate Feed</span>
+                                <span id="candidate-feed-label" class="text-[11px] font-black uppercase tracking-widest">Candidate Feed</span>
                             </div>
                             <span id="candidate-status" class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
                         </div>
