@@ -175,7 +175,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden sm:block">ID: ${s.room_id.substring(0, 8)}</span>
                         <div class="flex items-center gap-3">
                             <span class="px-3 py-1 bg-cyan-400/5 border border-cyan-400/20 text-cyan-400 text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
-                            <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all"><i data-lucide="link" class="w-4 h-4"></i></button>
+                            <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all" title="Copy Candidate Link"><i data-lucide="link" class="w-4 h-4"></i></button>
+                            <button onclick="terminateSession('${s.room_id}')" class="p-2 hover:text-red-500 transition-all" title="Terminate Session"><i data-lucide="x" class="w-4 h-4"></i></button>
                             <button onclick="joinAsHR('${s.room_id}')" class="px-4 py-2 bg-white/5 hover:bg-white text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target"><i data-lucide="play" class="w-3 h-3 inline mr-1"></i> Join</button>
                         </div>
                     </div>
@@ -284,6 +285,69 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast("Synchronizing Neural Buffer...", "system");
         await renderInterviews();
         await updateStats();
+    };
+
+    window.terminateSession = async (rid) => {
+        const modal = document.getElementById('confirm-modal');
+        const btnConfirm = document.getElementById('confirm-proceed');
+        const btnCancel = document.getElementById('confirm-cancel');
+
+        // Show Modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        lucide.createIcons();
+
+        // Promise-based response logic
+        const userChoice = await new Promise((resolve) => {
+            const handleConfirm = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                cleanup();
+                resolve(true);
+            };
+            const handleCancel = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                cleanup();
+                resolve(false);
+            };
+            const cleanup = () => {
+                btnConfirm.removeEventListener('click', handleConfirm);
+                btnCancel.removeEventListener('click', handleCancel);
+            };
+
+            btnConfirm.addEventListener('click', handleConfirm);
+            btnCancel.addEventListener('click', handleCancel);
+        });
+
+        if (!userChoice) return;
+
+        try {
+            showToast("INITIATING PURGE...", "system");
+            const auth = await getAuthHeader();
+            
+            // 1. Terminate LiveKit Room
+            const lkRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/livekit/room/${rid}`), {
+                method: 'DELETE',
+                headers: { 'Authorization': auth }
+            });
+
+            // 2. Remove from Local Registry
+            const nodeRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/nodes/${rid}`), {
+                method: 'DELETE',
+                headers: { 'Authorization': auth }
+            });
+
+            if (nodeRes.ok) {
+                showToast("System Purge Complete", "success");
+                await renderInterviews();
+                await updateStats();
+            } else {
+                showToast("Purge Signal Interrupted", "error");
+            }
+        } catch (e) {
+            showToast("Critical Failure in Termination Module", "error");
+        }
     };
 
     function init3DTilt() {

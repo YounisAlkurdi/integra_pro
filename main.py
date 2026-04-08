@@ -25,7 +25,7 @@ app.add_middleware(
         # NOTE: "null" (file:// origin) removed — use a local dev server instead.
         # Run: python -m http.server 8080  or use Live Server extension.
     ],
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     allow_credentials=True,
 )
@@ -46,6 +46,14 @@ async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)
 async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
     return get_active_streams()
+
+@app.delete("/api/nodes/{room_id}")
+async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
+    """Node Deletion Protocol."""
+    from nodes import delete_node
+    if delete_node(room_id):
+        return {"status": "PURGED", "room_id": room_id}
+    raise HTTPException(status_code=404, detail="Node not found")
 
 @app.get("/api/stats")
 async def sys_stats(user: dict = Depends(get_current_user)):

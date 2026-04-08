@@ -31,6 +31,14 @@ def get_active_streams():
     """
     return NODE_STORAGE
 
+def delete_node(room_id: str):
+    """
+    Purges a node from the neural buffer.
+    """
+    global NODE_STORAGE
+    NODE_STORAGE = [n for n in NODE_STORAGE if n['room_id'] != room_id]
+    return True
+
 def get_node_stats():
     """
     Calculates telemetry across all active nodes.
