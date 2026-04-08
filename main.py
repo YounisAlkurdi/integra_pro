@@ -5,7 +5,7 @@ from utils import get_env_safe
 from auth import get_current_user, get_user_profile_data
 from payments import PaymentRequest, execute_payment
 from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
-import livekit as livekit_module
+import livekit_routes
 import os
 from dotenv import load_dotenv
 
@@ -47,8 +47,8 @@ async def sys_stats(user: dict = Depends(get_current_user)):
     return get_node_stats()
 
 # --- 4. LiveKit Endpoints (Token Generator) ---
-# All logic lives in livekit.py — same pattern as payments.py
-app.include_router(livekit_module.router)
+# All logic lives in livekit_routes.py — same pattern as payments.py
+app.include_router(livekit_routes.router)
 
 @app.get("/config")
 async def get_config():

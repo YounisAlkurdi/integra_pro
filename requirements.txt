@@ -4,3 +4,4 @@ PyJWT
 python-dotenv
 stripe
 pydantic
+livekit-api

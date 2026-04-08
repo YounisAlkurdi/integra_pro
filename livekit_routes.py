@@ -28,10 +28,10 @@ def _build_token(api_key: str, api_secret: str, req: TokenRequest) -> str:
     """
     try:
         from livekit.api import AccessToken, VideoGrants
-    except ImportError:
+    except ImportError as e:
         raise HTTPException(
             status_code=500,
-            detail="LiveKit SDK not installed. Run: pip install livekit-api",
+            detail=f"LiveKit SDK Error: {str(e)}. Run: pip install livekit-api",
         )
 
     token = (
@@ -93,9 +93,13 @@ async def get_livekit_token(req: TokenRequest):
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        err_out = traceback.format_exc()
+        with open("livekit_error.txt", "w") as f:
+            f.write(err_out)
         raise HTTPException(
             status_code=500,
-            detail=f"Token generation failed: {str(e)}",
+            detail=f"Token generation failed. See livekit_error.txt",
         )
 
     return {

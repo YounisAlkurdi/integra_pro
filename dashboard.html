@@ -226,8 +226,24 @@
     <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- Core Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        import { supabase } from './supabase-client.js';
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                console.warn("No active identity found. Routing to entry point...");
+                window.location.href = 'index.html';
+            }
+            
+            // Allow logout
+            window.logoutHR = async () => {
+                await supabase.auth.signOut();
+                window.location.href = 'index.html';
+            };
+        });
+    </script>
     <script src="settings.js"></script>
-    <script type="module" src="supabase-client.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>

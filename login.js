@@ -1,6 +1,13 @@
 import { supabase } from './supabase-client.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- Session Persistence Check ---
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        window.location.href = 'dashboard.html';
+        return;
+    }
+
     const googleBtn = document.getElementById('google-btn');
     const emailForm = document.getElementById('email-form');
     const userEmailInput = document.getElementById('user-email');
