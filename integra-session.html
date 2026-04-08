@@ -45,11 +45,16 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-    
+    <link rel="stylesheet" href="integra-session.css">
+
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <link rel="stylesheet" href="integra-session.css">
+
+    <!-- LiveKit Client SDK (public CDN — no secrets here) -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+    <!-- App Config (change backend URL here, NEVER put secrets) -->
+    <script src="config.js"></script>
 </head>
 <body class="bg-obsidian text-white overflow-hidden h-screen flex flex-col font-sans">
     
@@ -90,26 +95,47 @@
         <div class="flex-1 flex flex-col gap-6">
             <div class="video-container flex-1 relative group">
                 <div class="scanner-line"></div>
-                
-                <!-- Remote Candidate Simulation -->
-                <div class="video-placeholder flex flex-col items-center justify-center">
-                    <div class="relative">
-                        <div class="absolute -inset-4 bg-cyan-400/5 rounded-full blur-2xl animate-pulse"></div>
-                        <div class="w-32 h-32 rounded-full bg-cyan-400/10 flex items-center justify-center mb-6 border border-cyan-400/20 relative">
-                            <i data-lucide="user" class="w-12 h-12 text-cyan-400/40"></i>
+
+                <!-- Hidden inputs — values set from URL params by initLobby() -->
+                <input id="input-room" type="hidden">
+                <input id="input-name" type="hidden">
+                <input id="input-role" type="hidden" value="hr">
+
+                <!-- Connecting overlay — shown briefly while LiveKit handshakes -->
+                <div id="join-lobby" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-obsidian/95 backdrop-blur-xl rounded-[2rem]">
+                    <div class="relative mb-6">
+                        <div class="absolute -inset-6 bg-cyan-400/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div class="w-20 h-20 rounded-full bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
+                            <i data-lucide="zap" class="w-8 h-8 text-cyan-400 animate-pulse"></i>
                         </div>
                     </div>
-                    <p class="text-[11px] font-mono text-white/30 uppercase tracking-[0.5em] animate-flicker">Tracking biometric signature...</p>
+                    <p class="text-[11px] font-mono text-cyan-400 uppercase tracking-[0.4em] animate-pulse">Establishing Secure Link...</p>
+                    <p id="join-error" class="mt-4 text-[10px] font-mono text-red-400 hidden"></p>
                 </div>
 
-                <!-- Local HR Perspective (Camera) -->
+                <!-- Remote Participant Area -->
+                <div id="remote-area" class="w-full h-full flex items-center justify-center">
+                    <div id="remote-placeholder" class="flex flex-col items-center justify-center">
+                        <div class="relative">
+                            <div class="absolute -inset-4 bg-cyan-400/5 rounded-full blur-2xl animate-pulse"></div>
+                            <div class="w-32 h-32 rounded-full bg-cyan-400/10 flex items-center justify-center mb-6 border border-cyan-400/20">
+                                <i data-lucide="user" class="w-12 h-12 text-cyan-400/40"></i>
+                            </div>
+                        </div>
+                        <p class="text-[11px] font-mono text-white/30 uppercase tracking-[0.5em] animate-flicker">Awaiting remote participant...</p>
+                    </div>
+                    <!-- Remote video is injected here by livekit-session.js -->
+                    <video id="remote-video" autoplay playsinline class="w-full h-full object-cover rounded-[2rem] hidden"></video>
+                </div>
+
+                <!-- Local HR Perspective (Camera PiP) -->
                 <div class="camera-overlay glass-panel group-hover:scale-105">
                     <video id="local-video" autoplay playsinline muted></video>
                     <div id="camera-off-placeholder" class="absolute inset-0 bg-black flex items-center justify-center hidden">
                         <i data-lucide="video-off" class="w-10 h-10 text-white/20"></i>
                     </div>
                     <div class="absolute bottom-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-xl rounded-lg text-[9px] font-mono uppercase tracking-widest border border-white/5">
-                        <span class="text-cyan-400 font-bold mr-2">●</span> Interviewer
+                        <span class="text-cyan-400 font-bold mr-2">●</span> <span id="local-label">Interviewer</span>
                     </div>
                 </div>
 
@@ -140,32 +166,27 @@
             <!-- Bottom Controls -->
             <div class="h-24 glass-panel rounded-3xl border border-white/5 flex items-center justify-between px-10">
                 <div class="flex items-center gap-5">
-                    <button class="control-btn hover-target" id="btn-toggle-mic" title="Mic">
+                    <button id="btn-toggle-mic"  title="Toggle Microphone" class="control-btn hover-target">
                         <i data-lucide="mic" class="w-5 h-5"></i>
                     </button>
-                    <button class="control-btn hover-target relative" id="btn-toggle-stt" title="Neural Transcription">
-                        <i data-lucide="message-square" class="w-5 h-5"></i>
-                        <div id="stt-active-dot" class="absolute top-2 right-2 w-1.5 h-1.5 bg-cyan-400 rounded-full hidden shadow-[0_0_10px_#22d3ee]"></div>
-                    </button>
-                    <button class="control-btn hover-target" id="btn-toggle-cam" title="Camera">
+                    <button id="btn-toggle-cam"  title="Toggle Camera"    class="control-btn hover-target">
                         <i data-lucide="video" class="w-5 h-5"></i>
                     </button>
-                    <button class="w-14 h-14 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all control-btn">
-                        <i data-lucide="monitor" class="w-6 h-6"></i>
+                    <button id="btn-screenshare" title="Share Screen"      class="control-btn hover-target">
+                        <i data-lucide="monitor" class="w-5 h-5"></i>
                     </button>
-                    <button class="w-14 h-14 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all control-btn">
-                        <i data-lucide="settings" class="w-6 h-6"></i>
+                    <button id="btn-toggle-stt"  title="Toggle Transcription" class="control-btn hover-target relative">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                        <div id="stt-active-dot" class="absolute top-2 right-2 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#22d3ee] hidden"></div>
                     </button>
                 </div>
 
                 <div class="flex items-center gap-8">
-                    <div class="flex items-center gap-8 mr-4">
-                        <button class="flex items-center gap-3 group px-4 py-2 rounded-xl transition-all hover:bg-white/5">
-                            <i data-lucide="users" class="w-5 h-5 text-white/40 group-hover:text-cyan-400 transition-colors"></i>
-                            <span class="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">People</span>
-                        </button>
+                    <div class="flex items-center gap-3">
+                        <span id="connection-badge" class="text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest">Offline</span>
                     </div>
-                    <button class="h-14 px-10 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] hover:bg-red-500 hover:text-white transition-all control-btn shadow-lg" onclick="window.location.href='dashboard.html'">
+                    <button id="btn-end-session" onclick="endSession()"
+                            class="h-14 px-10 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] hover:bg-red-500 hover:text-white transition-all control-btn shadow-lg">
                         End Session
                     </button>
                 </div>
@@ -198,19 +219,20 @@
                         </div>
                     </div>
 
-                    <!-- Admin Feed -->
+                    <!-- Admin / HR Feed -->
                     <div class="space-y-4">
                         <div class="flex items-center justify-between px-2">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-sm font-black border border-white/10 uppercase italic">A</div>
                                 <span class="text-[11px] font-black uppercase tracking-widest">Admin Feed</span>
                             </div>
-                            <span class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
+                            <span id="admin-status" class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
                         </div>
                         <div class="p-6 transcription-panel rounded-3xl border-l-[3px] border-cyan-400 relative overflow-hidden">
                             <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-400/5 blur-3xl rounded-full"></div>
-                            <p class="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] mb-3 italic">Awaiting Admin speech...</p>
-                            <p class="text-xs text-white/50 leading-relaxed font-medium">Capture system initialization complete. Waiting for vocal input from authorized source.</p>
+                            <div id="admin-feed" class="space-y-2">
+                                <p class="text-xs text-white/30 font-mono italic">Awaiting Admin speech...</p>
+                            </div>
                         </div>
                     </div>
 
@@ -221,11 +243,12 @@
                                 <div class="w-9 h-9 rounded-xl bg-cyan-400/10 flex items-center justify-center text-sm font-black border border-cyan-400/20 text-cyan-400 uppercase italic">C</div>
                                 <span class="text-[11px] font-black uppercase tracking-widest">Candidate Feed</span>
                             </div>
-                            <span class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
+                            <span id="candidate-status" class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">OFFLINE</span>
                         </div>
                         <div class="p-6 transcription-panel rounded-3xl border-l-[3px] border-white/10 relative">
-                            <p class="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] mb-3 italic">Awaiting Candidate speech...</p>
-                            <p class="text-xs text-white/50 leading-relaxed font-medium">Remote biometric signal detected. No semantic segments processed yet.</p>
+                            <div id="candidate-feed" class="space-y-2">
+                                <p class="text-xs text-white/30 font-mono italic">Awaiting Candidate speech...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -343,8 +366,58 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-10 right-10 flex flex-col gap-3 z-[100]"></div>
 
-    <!-- Core Logic -->
-    <script src="settings.js"></script>
-    <script src="integra-session.js"></script>
+    <!-- Core Logic — ORDER MATTERS -->
+    <script src="stt.js"></script>           <!-- 1. STT engine (standalone) -->
+    <script src="livekit-session.js"></script> <!-- 2. LiveKit client (uses stt.js + config.js) -->
+    <script src="settings.js"></script>       <!-- 3. Settings -->
+    <script src="integra-session.js"></script> <!-- 4. UI controller -->
+
+    <script>
+        // ── Read URL params → auto-connect silently ──────────────────────────
+        (function initLobby() {
+            const params   = new URLSearchParams(window.location.search);
+            const room     = params.get('room') || 'integra-room-01';
+            const name     = params.get('name') || 'HR Operator';
+            const role     = params.get('role') || 'hr';
+
+            document.getElementById('input-room').value = room;
+            document.getElementById('input-name').value = name;
+            document.getElementById('input-role').value = role;
+
+            // Auto-connect on load (whether params present or defaults used)
+            window.addEventListener('load', () => setTimeout(joinSession, 600));
+        })();
+
+        async function joinSession() {
+            const room  = document.getElementById('input-room').value.trim();
+            const name  = document.getElementById('input-name').value.trim();
+            const role  = document.getElementById('input-role').value;
+            const errEl = document.getElementById('join-error');
+
+            if (!room || !name) {
+                errEl.textContent = 'Room and name params missing.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            await window.LiveKitSession.connect({ roomName: room, participantName: name, role });
+        }
+
+        function endSession() {
+            window.LiveKitSession.disconnect();
+            window.location.href = 'dashboard.html';
+        }
+
+        function copyInviteLink() {
+            const room   = document.getElementById('input-room').value.trim() || 'integra-room-01';
+            const base   = window.location.origin + window.location.pathname.replace('integra-session.html', '');
+            const link   = `${base}integra-session.html?room=${room}&role=candidate`;
+            navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!', 'success'));
+        }
+
+        function triggerCognitiveTest() {
+            showToast('Cognitive Challenge Protocol Initiated', 'info');
+        }
+    </script>
 </body>
 </html>

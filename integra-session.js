@@ -1,197 +1,425 @@
 /**
- * integra-session.js
- * Core logic for the interview session UI
+ * integra-session.js — UI Controller
+ *
+ * This file ONLY handles the DOM / UI layer.
+ * All LiveKit logic is in livekit-session.js
+ * All STT logic is in stt.js
+ *
+ * Listens to custom events from both modules and updates the UI.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Lucide Icons
-    if (window.lucide) {
-        window.lucide.createIcons();
+
+    // ── Init icons ───────────────────────────────────────────────────────────
+    if (window.lucide) window.lucide.createIcons();
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let micEnabled    = true;
+    let camEnabled    = true;
+    let screenSharing = false;
+    let sttEnabled    = false;
+    let sessionSeconds = 0;
+    let timerInterval  = null;
+    let localRole      = 'hr';
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const localVideo       = $('local-video');
+    const remoteVideo      = $('remote-video');
+    const remotePlaceholder= $('remote-placeholder');
+    const joinLobby        = $('join-lobby');
+    const adminFeed        = $('admin-feed');
+    const candidateFeed    = $('candidate-feed');
+    const adminStatus      = $('admin-status');
+    const candidateStatus  = $('candidate-status');
+    const connectionBadge  = $('connection-badge');
+    const sttActiveDot     = $('stt-active-dot');
+    const timerEl          = $('timer');
+    const logList          = $('log-list');
+    const camOffPlaceholder = $('camera-off-placeholder');
+
+    // ── Timer ────────────────────────────────────────────────────────────────
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            sessionSeconds++;
+            const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+            const s = String(sessionSeconds % 60).padStart(2, '0');
+            if (timerEl) timerEl.textContent = `${m}:${s}`;
+        }, 1000);
     }
 
-    // Camera Access
-    const videoElement = document.getElementById('local-video');
-    const cameraPlaceholder = document.getElementById('camera-off-placeholder');
-    let stream = null;
+    // ── Toast Notification ───────────────────────────────────────────────────
+    window.showToast = function(message, type = 'info') {
+        const colors = {
+            success: 'border-green-500/30 text-green-400',
+            error:   'border-red-500/30   text-red-400',
+            info:    'border-cyan-400/30  text-cyan-400',
+        };
+        const container = $('toast-container');
+        if (!container) return;
 
-    async function startCamera() {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 1280, height: 720 }, 
-                audio: false 
-            });
-            videoElement.srcObject = stream;
-        } catch (err) {
-            console.error("Error accessing camera:", err);
-            cameraPlaceholder.classList.remove('hidden');
-            videoElement.classList.add('hidden');
-        }
-    }
-
-    startCamera();
-
-    // Controls
-    let isMicOn = true;
-    let isVideoOn = true;
-
-    const micBtn = document.getElementById('toggle-mic');
-    const videoBtn = document.getElementById('toggle-video');
-
-    micBtn.addEventListener('click', () => {
-        isMicOn = !isMicOn;
-        micBtn.innerHTML = isMicOn ? '<i data-lucide="mic" class="w-6 h-6"></i>' : '<i data-lucide="mic-off" class="w-6 h-6 text-red-500"></i>';
-        window.lucide.createIcons();
-        micBtn.classList.toggle('bg-red-500/10', !isMicOn);
-    });
-
-    videoBtn.addEventListener('click', () => {
-        isVideoOn = !isVideoOn;
-        if (stream) {
-            stream.getVideoTracks().forEach(track => track.enabled = isVideoOn);
-        }
-        videoBtn.innerHTML = isVideoOn ? '<i data-lucide="video" class="w-6 h-6"></i>' : '<i data-lucide="video-off" class="w-6 h-6 text-red-500"></i>';
-        window.lucide.createIcons();
-        videoBtn.classList.toggle('bg-red-500/10', !isVideoOn);
-        
-        cameraPlaceholder.classList.toggle('hidden', isVideoOn);
-        videoElement.classList.toggle('hidden', !isVideoOn);
-    });
-
-    // Timer Logic
-    let seconds = 30;
-    const timerElement = document.getElementById('timer');
-
-    function updateTimer() {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        timerElement.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        seconds++;
-    }
-
-    setInterval(updateTimer, 1000);
-
-    // Sidebar Tab Switching
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabs = {
-        stt: document.getElementById('stt-tab'),
-        intel: document.getElementById('intel-tab')
+        const toast = document.createElement('div');
+        toast.className = `glass-panel px-6 py-3 rounded-2xl border ${colors[type] || colors.info} text-[10px] font-mono uppercase tracking-widest animate-slide-up`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
     };
 
-    tabBtns.forEach(btn => {
+    // ── Add Intel Log Entry ──────────────────────────────────────────────────
+    function addLog(message, type = 'system') {
+        if (!logList) return;
+        const colors = { system: 'text-white/40', audio: 'text-cyan-400', video: 'text-purple-400', error: 'text-red-400' };
+        const empty = logList.querySelector('[data-empty]');
+        if (empty) empty.remove();
+
+        const el = document.createElement('div');
+        el.className = `${colors[type] || colors.system} flex items-start gap-2`;
+        el.innerHTML = `<span class="text-white/20 shrink-0">${new Date().toLocaleTimeString('en', { hour12: false })}</span>${message}`;
+        logList.appendChild(el);
+        logList.scrollTop = logList.scrollHeight;
+    }
+
+    // ── Append Transcription to a Feed ──────────────────────────────────────
+    function appendTranscription(feedEl, text, isFinal, statusEl) {
+        if (!feedEl) return;
+
+        // Update status badge
+        if (statusEl) {
+            statusEl.textContent = 'LIVE';
+            statusEl.className = 'text-[9px] font-mono text-cyan-400 uppercase tracking-[0.3em] animate-pulse';
+        }
+
+        // Find or create interim bubble
+        let bubble = feedEl.querySelector('[data-interim]');
+
+        if (!isFinal) {
+            if (!bubble) {
+                bubble = document.createElement('div');
+                bubble.setAttribute('data-interim', '1');
+                bubble.className = 'text-xs text-white/40 font-mono leading-relaxed italic border-l-2 border-white/10 pl-3';
+                feedEl.appendChild(bubble);
+            }
+            bubble.textContent = text;
+        } else {
+            // Remove interim bubble
+            if (bubble) bubble.remove();
+
+            const el = document.createElement('div');
+            el.className = 'text-xs text-white/80 font-medium leading-relaxed border-l-2 border-cyan-400/40 pl-3 animate-slide-up';
+            el.innerHTML = `<span class="text-white/20 text-[9px] font-mono mr-2">${new Date().toLocaleTimeString('en', { hour12: false })}</span>${text}`;
+            feedEl.appendChild(el);
+            feedEl.scrollTop = feedEl.scrollHeight;
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // LiveKit events → UI
+    // ────────────────────────────────────────────────────────────────────────
+
+    window.addEventListener('lk:connected', (e) => {
+        const { participantName, role, roomName } = e.detail;
+        localRole = role;
+
+        // Hide lobby, show session
+        if (joinLobby) joinLobby.style.display = 'none';
+
+        // Update connection badge
+        if (connectionBadge) {
+            connectionBadge.textContent = 'LIVE';
+            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 uppercase tracking-widest animate-pulse';
+        }
+
+        // Update local label
+        const localLabel = $('local-label');
+        if (localLabel) localLabel.textContent = participantName;
+
+        // Update admin status (local user is HR or candidate)
+        if (role === 'hr' && adminStatus) {
+            adminStatus.textContent = 'LIVE';
+            adminStatus.className = 'text-[9px] font-mono text-cyan-400 uppercase tracking-[0.3em] animate-pulse';
+        } else if (role === 'candidate' && candidateStatus) {
+            candidateStatus.textContent = 'LIVE';
+            candidateStatus.className = 'text-[9px] font-mono text-cyan-400 uppercase tracking-[0.3em] animate-pulse';
+        }
+
+        addLog(`Connected to room: ${roomName} as ${role.toUpperCase()}`);
+        startTimer();
+        showToast(`Connected as ${participantName}`, 'success');
+
+        // Start STT
+        if (window.STTEngine?.isSupported()) {
+            window.STTEngine.start({
+                identity: participantName,
+                name: participantName,
+                lang: window.APP_CONFIG?.sttLang || 'ar-SA',
+            });
+            sttEnabled = true;
+            if (sttActiveDot) sttActiveDot.classList.remove('hidden');
+        }
+
+        // Attach local video stream from camera
+        try {
+            const room = window.LiveKitSession.getRoom();
+            if (room?.localParticipant) {
+                // Find camera track
+                room.localParticipant.trackPublications.forEach((pub) => {
+                    if (pub.track && pub.source === 'camera') {
+                        const stream = new MediaStream([pub.track.mediaStreamTrack]);
+                        if (localVideo) {
+                            localVideo.srcObject = stream;
+                            if (camOffPlaceholder) camOffPlaceholder.classList.add('hidden');
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('[UI] Could not attach local video:', e);
+        }
+    });
+
+    window.addEventListener('lk:disconnected', () => {
+        clearInterval(timerInterval);
+
+        if (connectionBadge) {
+            connectionBadge.textContent = 'OFFLINE';
+            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
+        }
+
+        addLog('Session disconnected', 'error');
+        showToast('Session ended', 'error');
+    });
+
+    window.addEventListener('lk:participant-joined', (e) => {
+        const { name, role } = e.detail;
+        addLog(`${name} joined as ${role.toUpperCase()}`, 'audio');
+        showToast(`${name} joined the session`, 'success');
+
+        if (role === 'candidate' && candidateStatus) {
+            candidateStatus.textContent = 'LIVE';
+            candidateStatus.className = 'text-[9px] font-mono text-cyan-400 uppercase tracking-[0.3em] animate-pulse';
+        }
+    });
+
+    window.addEventListener('lk:participant-left', (e) => {
+        const { name } = e.detail;
+        addLog(`${name} left the session`, 'system');
+        showToast(`${name} disconnected`, 'error');
+
+        // Hide remote video
+        if (remoteVideo) remoteVideo.classList.add('hidden');
+        if (remotePlaceholder) remotePlaceholder.classList.remove('hidden');
+    });
+
+    window.addEventListener('lk:track-subscribed', (e) => {
+        const { identity, kind, track, element } = e.detail;
+        addLog(`Track subscribed: ${kind} from ${identity}`, 'video');
+
+        if (kind === 'video' && remoteVideo) {
+            // Attach to our statically defined remote-video element
+            const stream = new MediaStream([track.mediaStreamTrack]);
+            remoteVideo.srcObject = stream;
+            remoteVideo.classList.remove('hidden');
+            if (remotePlaceholder) remotePlaceholder.classList.add('hidden');
+        }
+
+        if (kind === 'audio' && element) {
+            // Append hidden audio element to body so it plays
+            element.style.display = 'none';
+            document.body.appendChild(element);
+        }
+    });
+
+    window.addEventListener('lk:track-unsubscribed', (e) => {
+        if (e.detail.kind === 'video') {
+            if (remoteVideo) remoteVideo.classList.add('hidden');
+            if (remotePlaceholder) remotePlaceholder.classList.remove('hidden');
+        }
+    });
+
+    window.addEventListener('lk:speaking-changed', (e) => {
+        const { speakers } = e.detail;
+        // Could add visual speaking indicator here
+        speakers.forEach(id => {
+            const el = document.querySelector(`[data-identity="${id}"]`);
+            if (el) el.classList.add('speaking');
+        });
+    });
+
+    window.addEventListener('lk:error', (e) => {
+        const { message } = e.detail;
+        addLog(`Error: ${message}`, 'error');
+        showToast(message, 'error');
+
+        // Re-enable join button
+        const joinBtn = $('btn-join');
+        if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.textContent = 'Connect to Session';
+        }
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Transcriptions → feed UI
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Local STT (my own speech)
+    window.addEventListener('stt:final', (e) => {
+        const { text } = e.detail;
+        const { localRole: role } = window.LiveKitSession?.getState?.() || {};
+        const myRole = role || localRole;
+        const feed = myRole === 'candidate' ? candidateFeed : adminFeed;
+        const status = myRole === 'candidate' ? candidateStatus : adminStatus;
+        appendTranscription(feed, text, true, status);
+    });
+
+    window.addEventListener('stt:interim', (e) => {
+        const { text } = e.detail;
+        const { localRole: role } = window.LiveKitSession?.getState?.() || {};
+        const myRole = role || localRole;
+        const feed = myRole === 'candidate' ? candidateFeed : adminFeed;
+        appendTranscription(feed, text, false, null);
+    });
+
+    // Remote participant transcriptions (via LiveKit data channel)
+    window.addEventListener('lk:transcription', (e) => {
+        const { identity, name, text, isFinal } = e.detail;
+        const room = window.LiveKitSession?.getRoom();
+        const localId = room?.localParticipant?.identity;
+
+        // Determine if sender is candidate or HR (from their metadata)
+        let remoteRole = 'unknown';
+        if (room) {
+            const p = room.remoteParticipants.get(identity);
+            if (p?.metadata) {
+                try { remoteRole = JSON.parse(p.metadata).role || 'unknown'; } catch (_) {}
+            }
+        }
+
+        const feed = remoteRole === 'candidate' ? candidateFeed : adminFeed;
+        const status = remoteRole === 'candidate' ? candidateStatus : adminStatus;
+        appendTranscription(feed, text, isFinal, status);
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Control Bar
+    // ────────────────────────────────────────────────────────────────────────
+
+    $('btn-toggle-mic')?.addEventListener('click', async () => {
+        const newState = await window.LiveKitSession?.toggleMic();
+        micEnabled = newState ?? !micEnabled;
+        updateControlBtn('btn-toggle-mic', micEnabled, 'mic', 'mic-off');
+        window.STTEngine?.setMuted(!micEnabled);
+        addLog(micEnabled ? 'Microphone enabled' : 'Microphone muted');
+    });
+
+    $('btn-toggle-cam')?.addEventListener('click', async () => {
+        const newState = await window.LiveKitSession?.toggleCamera();
+        camEnabled = newState ?? !camEnabled;
+        updateControlBtn('btn-toggle-cam', camEnabled, 'video', 'video-off');
+        if (camOffPlaceholder) camOffPlaceholder.classList.toggle('hidden', camEnabled);
+    });
+
+    $('btn-screenshare')?.addEventListener('click', async () => {
+        const newState = await window.LiveKitSession?.toggleScreenShare();
+        screenSharing = newState ?? !screenSharing;
+        updateControlBtn('btn-screenshare', !screenSharing, 'monitor', 'monitor-x');
+        showToast(screenSharing ? 'Screen share started' : 'Screen share stopped', 'info');
+    });
+
+    $('btn-toggle-stt')?.addEventListener('click', () => {
+        if (!window.STTEngine?.isSupported()) {
+            showToast('Speech recognition not supported in this browser', 'error');
+            return;
+        }
+        sttEnabled = !sttEnabled;
+        if (sttEnabled) {
+            const state = window.LiveKitSession?.getState();
+            window.STTEngine.start({
+                identity: state?.localIdentity || 'local',
+                name: state?.localName || 'User',
+                lang: window.APP_CONFIG?.sttLang || 'ar-SA',
+            });
+            if (sttActiveDot) sttActiveDot.classList.remove('hidden');
+            showToast('Transcription engine active', 'success');
+        } else {
+            window.STTEngine.stop();
+            if (sttActiveDot) sttActiveDot.classList.add('hidden');
+            showToast('Transcription paused', 'info');
+        }
+    });
+
+    // ── Helper: update icon + active state of a control button ───────────────
+    function updateControlBtn(id, isActive, iconOn, iconOff) {
+        const btn = $(id);
+        if (!btn) return;
+        const icon = btn.querySelector('i[data-lucide]');
+        if (icon) {
+            icon.setAttribute('data-lucide', isActive ? iconOn : iconOff);
+            window.lucide?.createIcons({ nodes: [icon] });
+        }
+        btn.classList.toggle('border-cyan-400/40', isActive);
+        btn.classList.toggle('text-cyan-400', isActive);
+    }
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const targetId = btn.getAttribute('data-tab');
-            
-            // Toggle Buttons
-            tabBtns.forEach(b => {
-                b.classList.remove('active', 'text-white');
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
                 b.classList.add('text-white/30');
             });
-            btn.classList.add('active', 'text-white');
+            btn.classList.add('active');
             btn.classList.remove('text-white/30');
-            
-            // Toggle Content
-            Object.keys(tabs).forEach(id => {
-                if (id === targetId) {
-                    tabs[id].classList.remove('hidden');
-                    tabs[id].classList.add('block');
-                } else {
-                    tabs[id].classList.add('hidden');
-                    tabs[id].classList.remove('block');
-                }
-            });
+
+            document.querySelectorAll('[id$="-tab"]').forEach(el => el.classList.add('hidden'));
+            const target = $(`${tab}-tab`);
+            if (target) target.classList.remove('hidden');
         });
     });
 
-    // Generate Audio Bars
-    const audioBarsContainer = document.getElementById('audio-bars');
-    const barCount = 40;
-    for (let i = 0; i < barCount; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'flex-1 bg-white/5 rounded-full transition-all duration-300';
-        const height = Math.random() * 80 + 20;
-        bar.style.height = `${height}%`;
-        if (i % 5 === 0) {
-            bar.classList.add('bg-cyan-400/20', 'animate-pulse');
-            bar.style.animationDelay = `${i * 0.1}s`;
+    // ── Audio Visualizer Bars ────────────────────────────────────────────────
+    const audioBars = $('audio-bars');
+    if (audioBars) {
+        for (let i = 0; i < 48; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'flex-1 rounded-full bg-cyan-400/40 transition-all duration-100';
+            bar.style.height = '4px';
+            audioBars.appendChild(bar);
         }
-        audioBarsContainer.appendChild(bar);
+
+        function animateBars() {
+            audioBars.querySelectorAll('div').forEach(bar => {
+                const h = sttEnabled && micEnabled
+                    ? Math.random() * 100 + 4
+                    : Math.random() * 8 + 2;
+                bar.style.height = `${h}%`;
+                bar.style.opacity = sttEnabled && micEnabled ? '0.6' : '0.15';
+            });
+            requestAnimationFrame(animateBars);
+        }
+        animateBars();
     }
 
-    // Simulate Dynamic Bars
-    setInterval(() => {
-        const bars = audioBarsContainer.querySelectorAll('div');
-        bars.forEach(bar => {
-            if (!bar.classList.contains('bg-cyan-400/20')) {
-                const height = Math.random() * 60 + 10;
-                bar.style.height = `${height}%`;
+    // ── Initial camera preview (before joining) ──────────────────────────────
+    async function initPreviewCamera() {
+        try {
+            if (!navigator.mediaDevices) return;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            if (localVideo) {
+                localVideo.srcObject = stream;
             }
-        });
-    }, 150);
+        } catch (e) {
+            // Camera denied before join — OK
+            console.warn('[Preview] Camera not available pre-join');
+        }
+    }
+    initPreviewCamera();
 
-    // Initial Logs
-    addSystemLog("SYSTEM: Forensic kernel initialized.");
-    addSystemLog("AUDIO: High-fidelity capture stream active.");
-    addSystemLog("VIDEO: Neural face mapping calibration pending.");
-});
-
-// Utility: Copy link
-function copyInviteLink() {
-    const sessionUrl = window.location.href;
-    navigator.clipboard.writeText(sessionUrl).then(() => {
-        showToast("Session link secured and copied");
-    });
-}
-
-// Forensic Logic
-function triggerCognitiveTest() {
-    addSystemLog("INTEL: Triggering Cognitive Challenge Protocol...");
-    showToast("Cognitive challenge sequence initiated");
-    
-    // Simulate some logic
-    setTimeout(() => {
-        addSystemLog("INTEL: Monitoring turn-latency for anomalies.");
-    }, 1000);
-}
-
-function addSystemLog(message) {
-    const logList = document.getElementById('log-list');
-    if (!logList) return;
-
-    // Clear placeholder if first log
-    if (logList.innerHTML.includes('Initializing')) {
-        logList.innerHTML = '';
+    // ── Initial log ──────────────────────────────────────────────────────────
+    if (logList) {
+        logList.innerHTML = ''; // clear placeholder
+        addLog('System initialized. Awaiting session...');
     }
 
-    const logEntry = document.createElement('div');
-    logEntry.className = 'py-1 border-b border-white/5 flex items-start gap-3 opacity-0 translate-x-4 animate-in slide-in-from-right fade-in fill-mode-forwards duration-500';
-    
-    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    logEntry.innerHTML = `
-        <span class="text-white/20 shrink-0">[${time}]</span>
-        <span class="${message.includes('INTEL') ? 'text-cyan-400' : 'text-white/60'}">${message}</span>
-    `;
-    
-    logList.insertBefore(logEntry, logList.firstChild);
-}
-
-// Simple Toast Utility
-function showToast(message) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = 'glass-panel px-8 py-5 rounded-2xl border border-cyan-400/20 text-[10px] font-mono text-cyan-400 uppercase tracking-widest font-black shadow-2xl animate-in slide-in-from-right fade-in duration-500';
-    toast.innerHTML = `
-        <div class="flex items-center gap-4">
-            <div class="w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"></div>
-            ${message}
-        </div>
-    `;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('animate-out', 'fade-out', 'slide-out-to-right');
-        setTimeout(() => toast.remove(), 500);
-    }, 4000);
-}
+});

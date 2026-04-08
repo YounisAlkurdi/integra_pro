@@ -212,21 +212,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (result) {
             createdInterview = result;
-            document.getElementById('interviewLink').value = `${window.location.origin}/interview.html?room=${result.room_id}&role=candidate`;
-            document.getElementById('interviewCreatedResult').classList.remove('hidden');
-            
-            btn.disabled = false;
-            text.textContent = 'LINK ESTABLISHED';
-            
-            showToast("Secure Node Initialized", "success");
-            renderInterviews();
-            updateStats();
+
+            if (!toggleSchedule.checked) {
+                // ── Instant session: go directly to the room ──
+                showToast("Secure Node Initialized — Entering Room...", "success");
+                await window.joinAsHR(result.room_id);
+            } else {
+                // ── Scheduled: show shareable link panel ──
+                document.getElementById('interviewLink').value = `${window.location.origin}/integra-session.html?room=${result.room_id}&role=candidate`;
+                document.getElementById('interviewCreatedResult').classList.remove('hidden');
+
+                btn.disabled = false;
+                text.textContent = 'LINK ESTABLISHED';
+
+                showToast("Secure Node Initialized", "success");
+                renderInterviews();
+                updateStats();
+            }
         } else {
             showToast("Connection Interrupted: Node Failed", "error");
             btn.disabled = false;
             text.textContent = 'RETRY INITIALIZATION';
         }
     });
+
 
     // --- 7. Utility Functions ---
     function formatDate(dateStr) {
@@ -254,10 +263,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     };
 
-    window.joinAsHR = (id) => {
+    window.joinAsHR = async (id) => {
         const rid = id || (createdInterview ? createdInterview.room_id : '');
         if (!rid) return;
-        window.location.href = `interview.html?room=${rid}&role=hr&name=Command_Operator`;
+
+        // Fetch current user name to pre-fill session
+        let hrName = 'HR Operator';
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                hrName = user.user_metadata?.full_name || user.email?.split('@')[0] || hrName;
+            }
+        } catch (_) {}
+
+        const params = new URLSearchParams({ room: rid, role: 'hr', name: hrName });
+        window.location.href = `integra-session.html?${params.toString()}`;
     };
 
     window.refreshInterviews = async () => {
