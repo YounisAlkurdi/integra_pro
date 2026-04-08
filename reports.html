@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTEGRA | Neural Analysis Reports</title>
+    
+    <!-- Tailwind & Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="reports.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-obsidian text-white relative min-h-screen">
+    
+    <div class="bg-noise"></div>
+    <div class="grid-lines fixed inset-0 opacity-10"></div>
+
+    <!-- Vertical Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
+        <!-- Logo Node -->
+        <div class="mb-12">
+            <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                <span class="text-obsidian font-black text-xl">I</span>
+            </div>
+        </div>
+
+        <!-- Navigation Nodes -->
+        <nav class="flex-1 flex flex-col gap-8">
+            <a href="dashboard.html" class="sidebar-link hover-target" title="Console">
+                <i data-lucide="terminal" class="w-5 h-5"></i>
+            </a>
+            <a href="reports.html" class="sidebar-link active hover-target" title="Archives">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </a>
+            <a href="#" class="sidebar-link hover-target" title="Analytics">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+            </a>
+            <a href="#" class="sidebar-link hover-target" title="Security labs">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </a>
+        </nav>
+
+        <!-- System Actions -->
+        <div class="flex flex-col gap-6 items-center">
+            <a href="#" class="sidebar-link hover-target" title="Settings">
+                <i data-lucide="settings" class="w-5 h-5 text-white/40"></i>
+            </a>
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform overflow-hidden" id="user-avatar">
+                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold uppercase">YA</div>
+            </div>
+            <a href="index.html" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Log out">
+                <i data-lucide="power" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </aside>
+
+    <main class="ml-20 pt-10 px-8 w-[calc(100%-5rem)] relative z-10">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Page Header -->
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+                <div>
+                    <h1 class="text-4xl font-black uppercase tracking-tighter italic">Neural Archive <span class="text-cyan-400">Reports</span></h1>
+                    <p class="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mt-2">AI-Generated Intelligence Briefings & Telemetry</p>
+                </div>
+                <div id="report-actions" class="hidden gap-3 flex-wrap animate-in fade-in slide-in-from-right-4 duration-500">
+                    <button class="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2" onclick="window.print()">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Export Archive
+                    </button>
+                    <button class="px-6 py-4 bg-cyan-400 text-obsidian rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white hover:shadow-[0_0_40px_rgba(34,211,238,0.2)] transition-all flex items-center gap-2" id="btn-pdf">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Download Protocol
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-8">
+                <!-- Session Sidebar -->
+                <div class="lg:col-span-3">
+                    <div class="glass-panel rounded-[2rem] border border-white/5 overflow-hidden">
+                        <div class="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                            <h3 class="text-[10px] font-mono text-white/40 uppercase tracking-widest">Recent Nodes</h3>
+                            <button onclick="window.location.reload()" class="hover:rotate-180 transition-transform duration-700">
+                                <i data-lucide="refresh-ccw" class="w-3 h-3 text-white/20"></i>
+                            </button>
+                        </div>
+                        <div class="divide-y divide-white/5 max-h-[60vh] overflow-y-auto custom-scrollbar" id="interviews-sidebar-list">
+                            <!-- Populated via JS -->
+                            <div class="p-10 text-center opacity-40">
+                                <div class="animate-spin w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                <p class="text-[9px] font-mono uppercase tracking-widest">Accessing Data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Terminal -->
+                <div class="lg:col-span-9">
+                    <div id="empty-report" class="glass-panel h-[600px] rounded-[3rem] border border-white/5 flex flex-col items-center justify-center text-center p-12">
+                        <div class="w-24 h-24 bg-cyan-400/5 rounded-full flex items-center justify-center mb-8 border border-cyan-400/10 animate-pulse">
+                            <i data-lucide="shield" class="w-10 h-10 text-cyan-400/20"></i>
+                        </div>
+                        <h3 class="text-2xl font-black uppercase italic tracking-tighter">Initialize Analysis Buffer</h3>
+                        <p class="text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mt-3 max-w-sm leading-relaxed">System standby. Select a recorded node from the encrypted archive to begin deep analysis protocol.</p>
+                    </div>
+
+                    <div id="report-detail" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        <!-- Summary Header Card -->
+                        <div class="glass-panel p-10 rounded-[3rem] border border-white/5 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <i data-lucide="cpu" class="w-40 h-40"></i>
+                            </div>
+                            
+                            <div class="flex items-start justify-between relative z-10 mb-12">
+                                <div class="flex items-center gap-8">
+                                    <div id="rep-avatar" class="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center text-4xl font-black text-obsidian shadow-[0_20px_50px_rgba(34,211,238,0.2)]">?</div>
+                                    <div>
+                                        <h2 id="rep-name" class="text-4xl font-black tracking-tighter uppercase italic leading-none mb-2">Candidate Name</h2>
+                                        <div class="flex items-center gap-4">
+                                            <p id="rep-position" class="text-[11px] font-mono text-cyan-400 uppercase tracking-[.2em] bg-cyan-400/10 px-3 py-1 rounded-md">Position • Department</p>
+                                            <p id="rep-date" class="text-[10px] font-mono text-white/30 uppercase tracking-widest">Timestamp: --</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="rep-risk-badge" class="px-8 py-3 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-[0.3em] bg-white/5">-- Risk</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-3xl hover:border-cyan-400/30 transition-all duration-500">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Overall Sync</p>
+                                    <div class="flex items-baseline gap-2">
+                                        <span id="rep-overall" class="text-5xl font-black text-white tracking-tighter">0</span>
+                                        <span class="text-[10px] font-mono text-white/20">/100</span>
+                                    </div>
+                                </div>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Neural Confidence</p>
+                                    <span id="rep-confidence" class="text-5xl font-black tracking-tighter text-cyan-400">0%</span>
+                                </div>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Integrity Risk</p>
+                                    <span id="rep-fraud" class="text-5xl font-black tracking-tighter text-red-500">0%</span>
+                                </div>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Gaze Stability</p>
+                                    <span id="rep-eye" class="text-5xl font-black tracking-tighter text-blue-400">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid lg:grid-cols-2 gap-8">
+                            <!-- Neural Metrics -->
+                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5">
+                                <div class="flex items-center gap-4 mb-12">
+                                    <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                                        <i data-lucide="activity" class="text-cyan-400 w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="text-xl font-black uppercase italic tracking-tighter">Detailed Analysis</h3>
+                                </div>
+                                <div class="space-y-10" id="metrics-container">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Recommendations -->
+                            <div class="space-y-8">
+                                <div class="glass-panel p-10 rounded-[2.5rem] border border-white/5">
+                                    <h3 class="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mb-8">AI Directives</h3>
+                                    <ul id="recommendations-list" class="space-y-6">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+
+                                <div class="glass-panel p-10 rounded-[2.5rem] border border-red-500/10 bg-red-500/[0.01]">
+                                    <h3 class="text-[10px] font-mono text-red-500/50 uppercase tracking-[0.4em] mb-6">Threat Log</h3>
+                                    <div id="alerts-container" class="space-y-4">
+                                        <!-- Populated via JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Global Toast -->
+    <div id="toast" class="fixed bottom-10 right-10 z-[100] transform translate-y-20 transition-all duration-500">
+        <div class="bg-obsidian border border-white/10 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4">
+            <div id="toast-indicator" class="w-2 h-2 rounded-full"></div>
+            <p id="toast-msg" class="text-[10px] font-mono uppercase tracking-widest"></p>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+    <script src="supabase-client.js" type="module"></script>
+    <script src="reports.js" type="module"></script>
+</body>
+</html>

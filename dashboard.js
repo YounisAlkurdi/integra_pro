@@ -10,6 +10,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.lucide) lucide.createIcons();
     const cursor = document.getElementById('cursor');
 
+    // --- Sidebar Active State Management ---
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            if (link.getAttribute('href') === '#') e.preventDefault();
+            sidebarLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+
     // System State
     let createdInterview = null;
 
@@ -21,6 +31,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.history.replaceState({}, document.title, cleanUrl);
             showToast("Neural link established. Evidence purged.", "system");
         }, 500);
+    }
+
+    // --- 0.1 Fetch User Data for Sidebar ---
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const avatar = document.getElementById('user-avatar');
+            if (avatar) {
+                const initials = user.user_metadata?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || user.email[0].toUpperCase();
+                avatar.innerHTML = `<div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">${initials}</div>`;
+                if (user.user_metadata?.avatar_url) {
+                    avatar.innerHTML = `<img src="${user.user_metadata.avatar_url}" class="w-full h-full object-cover">`;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load user intelligence for sidebar.");
     }
 
     // --- 1.1 Schedule Toggle ---
