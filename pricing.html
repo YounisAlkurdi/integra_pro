@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integra | Strategic Security Tiers</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#020617', 
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"Space Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-obsidian text-white relative min-h-screen">
+    
+    <div class="bg-noise"></div>
+    <div class="scanlines"></div>
+    <div class="grid-lines fixed inset-0 opacity-20"></div>
+
+    <!-- Interactive Cursor -->
+    <div class="custom-cursor hidden md:block" id="cursor"></div>
+
+    <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 backdrop-blur-xl bg-obsidian/30">
+        <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target">
+                INTEGRA<span class="text-cyan-400">.</span>
+            </a>
+            
+            <nav class="hidden md:flex gap-12 text-[10px] uppercase tracking-[0.2em] font-semibold text-white/50">
+                <a href="index.html#features" class="hover:text-white transition-all hover-target">Features</a>
+                <a href="index.html#platform" class="hover:text-white transition-all hover-target">Platform</a>
+                <a href="pricing.html" class="text-white tracking-[0.25em] hover-target">Pricing</a>
+            </nav>
+
+            <a href="login.html" class="text-[10px] uppercase tracking-[0.2em] font-bold border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all hover-target hidden sm:block">
+                Authenticate
+            </a>
+        </div>
+    </header>
+
+    <main class="pt-40 pb-32 relative z-10">
+        <div class="max-w-7xl mx-auto px-6">
+            
+            <!-- Hero Section -->
+            <div class="text-center mb-24 reveal active">
+                <p class="text-cyan-400 text-[10px] font-mono tracking-[0.5em] uppercase mb-6 opacity-70">/ SECURE INVESTMENT NODES</p>
+                <h1 class="text-6xl md:text-8xl font-black tracking-tighter uppercase italic mb-12">
+                    Strategic <span class="text-outline">Tiers.</span>
+                </h1>
+                
+                <!-- Billing Toggle -->
+                <div class="flex items-center justify-center gap-8 text-[10px] uppercase font-bold tracking-[0.3em] hover-target">
+                    <span id="label-monthly" class="text-white">Monthly</span>
+                    <button id="billing-toggle" class="w-16 h-8 rounded-full bg-slate-800 relative border border-slate-700 transition-all duration-500" onclick="toggleBilling()">
+                        <div class="w-6 h-6 bg-white rounded-full absolute top-1 left-1 shadow-md transition-all duration-500" id="toggle-knob"></div>
+                    </button>
+                    <span id="label-yearly" class="text-slate-500">Yearly</span>
+                </div>
+            </div>
+
+            <!-- Pricing Grid -->
+            <div id="pricing-grid" class="grid lg:grid-cols-3 gap-px bg-white/5 border border-white/5 overflow-hidden rounded-3xl reveal active">
+                
+                <!-- Starter -->
+                <div class="bg-obsidian/80 p-12 hover:bg-white/[0.02] transition-all duration-500 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-white/10 group-hover:bg-cyan-400/30 transition-colors"></div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-white/50 group-hover:text-white transition-colors">Starter</h3>
+                    <p class="text-white/30 text-sm font-light mb-16 h-10">For small teams securing initial hires.</p>
+                    
+                    <div class="mb-12 h-24 flex items-baseline">
+                        <span class="text-3xl font-light text-white/20">$</span>
+                        <span class="text-7xl font-black tracking-tighter price-val" data-monthly="99" data-yearly="79">99</span>
+                        <span class="text-white/20 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
+                    </div>
+
+                    <ul class="space-y-6 mb-16 text-sm text-white/50 font-light">
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div> Up to 500 scans/mo</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> Basic Visual Detection</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> Standard Support</li>
+                    </ul>
+
+                    <button class="w-full py-5 border border-white/10 text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:text-black hover:border-white hover-target" onclick="window.location.href='login.html'">
+                        Identify Node
+                    </button>
+                    
+                    <div class="absolute -bottom-10 -right-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <i data-lucide="shield" class="w-40 h-40"></i>
+                    </div>
+                </div>
+
+                <!-- Professional -->
+                <div class="bg-obsidian/90 p-12 relative lg:scale-105 z-20 border-x border-white/5 shadow-[0_0_100px_rgba(34,211,238,0.05)] group">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-cyan-400"></div>
+                    <div class="absolute top-8 right-8 bg-cyan-400 text-obsidian text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-tighter shadow-[0_0_20px_rgba(34,211,238,0.4)]">Most Popular</div>
+                    
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-cyan-400">Professional</h3>
+                    <p class="text-white/40 text-sm font-light mb-16 h-10">Advanced metrics for growing organizations.</p>
+                    
+                    <div class="mb-12 h-24 flex items-baseline">
+                        <span class="text-3xl font-light text-white/20">$</span>
+                        <span class="text-7xl font-black tracking-tighter text-white price-val" data-monthly="299" data-yearly="239">299</span>
+                        <span class="text-cyan-400 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
+                    </div>
+
+                    <ul class="space-y-6 mb-16 text-sm text-white/80 font-light">
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div> Unlimited scans</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Voice & Behavioral Biometrics</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> API Access included</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Priority 24/7 Support</li>
+                    </ul>
+
+                    <button class="w-full py-5 bg-cyan-400 text-obsidian text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover-target" onclick="window.location.href='login.html'">
+                        Upgrade to Pro
+                    </button>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="bg-obsidian/80 p-12 hover:bg-white/[0.02] transition-all duration-500 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-white/10 group-hover:bg-white/40 transition-colors"></div>
+                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-white/50 group-hover:text-white transition-colors">Enterprise</h3>
+                    <p class="text-white/30 text-sm font-light mb-16 h-10">Custom deployments for high-security scaling.</p>
+                    
+                    <div class="mb-12 h-24 flex items-center">
+                        <span class="text-5xl font-black tracking-tighter text-white">Custom</span>
+                    </div>
+
+                    <ul class="space-y-6 mb-16 text-sm text-white/50 font-light">
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> On-premise deployment</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> Custom AI model training</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> SLA guarantees</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> Dedicated Security Engineer</li>
+                    </ul>
+
+                    <button class="w-full py-5 border border-white/10 text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:text-black hover:border-white hover-target" onclick="window.location.href='login.html'">
+                        Contact Sales
+                    </button>
+                    
+                    <div class="absolute -bottom-10 -right-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <i data-lucide="globe" class="w-40 h-40"></i>
+                    </div>
+                </div>
+
+            </div>
+
+            <p class="text-center mt-20 text-[10px] font-mono text-white/20 uppercase tracking-[0.5em]">Global Security Infrastructure Verified</p>
+        </div>
+    </main>
+
+    <footer class="bg-obsidian border-t border-white/5 py-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p class="text-xs font-mono text-white/30 uppercase tracking-widest">&copy; 2026 Integra Security Systems</p>
+            <div class="flex gap-8">
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Privacy</a>
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Terms</a>
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Primary Page Engine -->
+    <script src="pricing.js"></script>
+</body>
+</html>

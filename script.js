@@ -53,6 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 6. Load Pricing Data from JSON
     loadPricing();
+
+    // 7. Enable 3D Motion Protocols
+    init3DHover();
 });
 
 /**

@@ -1,0 +1,298 @@
+/**
+ * Integra Command Console - Core Engine
+ * Manages interview streams, node initialization, and system telemetry.
+ */
+
+// --- 1. Global Setup ---
+// Supabase is already initialized in script.js (referenced in dashboard.html)
+
+document.addEventListener("DOMContentLoaded", async () => {
+    if (window.lucide) lucide.createIcons();
+    const cursor = document.getElementById('cursor');
+
+    // System State
+    let questions = [
+        "Outline your expertise in strategic defense systems.",
+        "Why is your neural node optimal for this protocol?",
+        "Describe a decryption challenge you successfully bypassed."
+    ];
+    let createdInterview = null;
+
+    // --- 2. Interactive Cursor ---
+    document.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+    });
+
+    document.body.addEventListener('mouseover', (e) => {
+        if (['BUTTON', 'A', 'INPUT', 'SELECT'].includes(e.target.tagName) || e.target.closest('.hover-target')) {
+            cursor.classList.add('hovering');
+        }
+    });
+
+    document.body.addEventListener('mouseout', (e) => {
+        cursor.classList.remove('hovering');
+    });
+
+    // --- 3. Backend Communication Engine ---
+    async function getAuthHeader() {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session ? `Bearer ${session.access_token}` : null;
+    }
+
+    async function fetchNodeStats() {
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch('http://localhost:8000/api/stats', {
+                headers: { 'Authorization': auth }
+            });
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    async function fetchNodes() {
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch('http://localhost:8000/api/nodes', {
+                headers: { 'Authorization': auth }
+            });
+            return await res.json();
+        } catch (e) { return []; }
+    }
+
+    async function saveNodeToBackend(nodeData) {
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch('http://localhost:8000/api/nodes', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': auth,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(nodeData)
+            });
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    // --- 4. UI Rendering Engine ---
+    async function updateStats() {
+        const stats = await fetchNodeStats();
+        if (stats) {
+            document.getElementById('stat-total').textContent = stats.total;
+            document.getElementById('stat-active').textContent = stats.active;
+            document.getElementById('stat-completed').textContent = stats.completed;
+            document.getElementById('stat-flagged').textContent = stats.threats.toString().padStart(2, '0');
+        }
+    }
+
+    async function renderInterviews() {
+        const list = document.getElementById('interviews-list');
+        const sessions = await fetchNodes();
+
+        if (!sessions || sessions.length === 0) {
+            list.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 opacity-20">
+                    <i data-lucide="inbox" class="w-12 h-12 mb-4"></i>
+                    <p class="text-xs font-mono uppercase tracking-[0.3em]">No streams detected</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        list.innerHTML = sessions.map(s => `
+            <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl hover:bg-white/[0.03] hover:border-cyan-400/20 transition-all duration-500 overflow-hidden reveal active cursor-pointer">
+                <div class="flex justify-between items-center gap-6 relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-cyan-400/10 rounded-full flex items-center justify-center text-cyan-400 font-mono text-xs border border-cyan-400/20">
+                            ${(s.candidate_name || 'N').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">${s.candidate_name || 'Unknown'}</h4>
+                            <div class="flex items-center gap-3 mt-1">
+                                <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">${s.position || 'N/A'}</p>
+                                <span class="text-[8px] text-white/10">•</span>
+                                <p class="text-[9px] font-mono text-cyan-400/40 uppercase tracking-[0.2em]">📅 ${formatDate(s.scheduled_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-6">
+                        <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden sm:block">ID: ${s.room_id.substring(0, 8)}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-cyan-400/5 border border-cyan-400/20 text-cyan-400 text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
+                            <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all"><i data-lucide="link" class="w-4 h-4"></i></button>
+                            <button onclick="joinAsHR('${s.room_id}')" class="px-4 py-2 bg-white/5 hover:bg-white text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target"><i data-lucide="play" class="w-3 h-3 inline mr-1"></i> Join</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:via-transparent transition-all duration-700"></div>
+            </div>
+        `).join('');
+        
+        lucide.createIcons();
+        init3DTilt();
+    }
+
+    // --- 5. Protocol Handlers ---
+    window.renderQuestions = () => {
+        const container = document.getElementById('questions-list');
+        container.innerHTML = questions.map((q, i) => `
+            <div class="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl group transition-all hover:border-white/10">
+                <p class="text-[10px] text-white/60 font-medium truncate pr-4">${q}</p>
+                <button type="button" onclick="removeQuestion(${i})" class="text-white/20 hover:text-red-400 transition-colors">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    };
+
+    window.addQuestion = () => {
+        const input = document.getElementById('new-question-input');
+        if (input.value.trim()) {
+            questions.push(input.value.trim());
+            input.value = '';
+            renderQuestions();
+        }
+    };
+
+    window.removeQuestion = (i) => {
+        questions.splice(i, 1);
+        renderQuestions();
+    };
+
+    // --- 6. Form Submission Protocol ---
+    document.getElementById('createInterviewForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btn-create');
+        const text = document.getElementById('create-btn-text');
+        
+        btn.disabled = true;
+        text.textContent = 'ESTABLISHING LINK...';
+
+        const nodeData = {
+            candidate_name: document.getElementById('candidateName').value,
+            candidate_email: document.getElementById('candidateEmail').value,
+            position: document.getElementById('position').value,
+            questions: questions,
+            scheduled_at: document.getElementById('scheduledAt').value
+        };
+
+        const result = await saveNodeToBackend(nodeData);
+
+        if (result) {
+            createdInterview = result;
+            document.getElementById('interviewLink').value = `${window.location.origin}/interview.html?room=${result.room_id}&role=candidate`;
+            document.getElementById('interviewCreatedResult').classList.remove('hidden');
+            
+            btn.disabled = false;
+            text.textContent = 'LINK ESTABLISHED';
+            
+            showToast("Secure Node Initialized", "success");
+            renderInterviews();
+            updateStats();
+        } else {
+            showToast("Connection Interrupted: Node Failed", "error");
+            btn.disabled = false;
+            text.textContent = 'RETRY INITIALIZATION';
+        }
+    });
+
+    // --- 7. Utility Functions ---
+    function formatDate(dateStr) {
+        if (!dateStr) return 'TBD';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            month: '2-digit', day: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    window.copyInterviewLink = () => {
+        const input = document.getElementById('interviewLink');
+        input.select();
+        document.execCommand('copy');
+        document.getElementById('btn-copy').textContent = 'COPIED';
+        showToast("Link Securely Copied", "info");
+        setTimeout(() => document.getElementById('btn-copy').textContent = 'COPY', 2000);
+    };
+
+    window.copyLink = (id) => {
+        const link = `${window.location.origin}/interview.html?room=${id}&role=candidate`;
+        navigator.clipboard.writeText(link).then(() => {
+            showToast("Session Hash Copied", "info");
+        });
+    };
+
+    window.joinAsHR = (id) => {
+        const rid = id || (createdInterview ? createdInterview.room_id : '');
+        if (!rid) return;
+        window.location.href = `interview.html?room=${rid}&role=hr&name=Command_Operator`;
+    };
+
+    window.refreshInterviews = async () => {
+        showToast("Synchronizing Neural Buffer...", "system");
+        await renderInterviews();
+        await updateStats();
+    };
+
+    function init3DTilt() {
+        const cards = document.querySelectorAll('#interviews-list .group');
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 25; 
+                const rotateY = (centerX - x) / 25;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            });
+            card.style.transition = 'transform 0.1s ease-out';
+        });
+    }
+
+    // --- 8. Initial Initialization ---
+    renderQuestions();
+    await renderInterviews();
+    await updateStats();
+});
+
+// --- Toast Notification Protocol ---
+function showToast(msg, type = "success") { 
+    const container = document.getElementById('toast-container') || createToastContainer(); 
+    const toast = document.createElement('div'); 
+    
+    // Aesthetic Palette
+    const colors = {
+        success: 'border-cyan-400 text-cyan-400 bg-cyan-400/5',
+        error: 'border-red-500 text-red-500 bg-red-400/5',
+        system: 'border-white/20 text-white bg-white/5',
+        info: 'border-white/40 text-white/80 bg-white/5'
+    };
+
+    toast.className = `px-6 py-4 border rounded-xl backdrop-blur-xl animate-in slide-in-from-right-10 flex items-center gap-4 text-[10px] font-mono uppercase tracking-[0.2em] mb-3 pointer-events-auto shadow-2xl ${colors[type] || colors.success}`; 
+    toast.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-current ${type === 'success' ? 'animate-pulse' : ''}"></div> ${msg}`; 
+    
+    container.appendChild(toast); 
+    
+    setTimeout(() => {
+        toast.classList.add('animate-out', 'fade-out', 'slide-out-to-right-10');
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+} 
+
+function createToastContainer() { 
+    const div = document.createElement('div'); 
+    div.id = 'toast-container'; 
+    div.className = 'fixed bottom-10 right-10 z-[100] flex flex-col gap-3'; 
+    document.body.appendChild(div); 
+    return div; 
+}

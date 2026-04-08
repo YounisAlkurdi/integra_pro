@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integra | Command Console</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#020617', 
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"Space Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-obsidian text-white relative min-h-screen">
+    
+    <div class="bg-noise"></div>
+    <div class="scanlines"></div>
+    <div class="grid-lines fixed inset-0 opacity-10"></div>
+
+    <!-- Interactive Cursor -->
+    <div class="custom-cursor hidden md:block" id="cursor"></div>
+
+    <!-- Header / Nav -->
+    <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 backdrop-blur-xl bg-obsidian/30">
+        <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target">
+                    INTEGRA<span class="text-cyan-400">.</span>
+                </a>
+                <div class="h-6 w-px bg-white/10 mx-2"></div>
+                <span class="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em]">Command Console</span>
+            </div>
+            
+            <div class="flex items-center gap-8">
+                <div id="connection-status" class="flex items-center gap-2 text-[8px] font-mono text-cyan-400 uppercase tracking-widest bg-cyan-400/5 px-4 py-2 rounded-full border border-cyan-400/20">
+                    <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_#22d3ee]"></div>
+                    Neural Link Active
+                </div>
+                <a href="index.html" class="text-[10px] uppercase tracking-[0.2em] font-bold text-white/50 hover:text-white transition-all hover-target">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-20 relative z-10 px-6">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Dashboard Stats -->
+            <div class="grid md:grid-cols-4 gap-6 mb-12 stagger">
+                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-cyan-400/30 transition-all duration-500 reveal active">
+                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-4">Total Nodes</p>
+                    <div class="flex items-end justify-between">
+                        <span class="text-4xl font-black tracking-tighter" id="stat-total">128</span>
+                        <div class="text-cyan-400 mb-1"><i data-lucide="activity" class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-cyan-400/30 transition-all duration-500 reveal active" style="transition-delay: 0.1s;">
+                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-4">Live Sessions</p>
+                    <div class="flex items-end justify-between">
+                        <span class="text-4xl font-black tracking-tighter text-cyan-400" id="stat-active">14</span>
+                        <div class="w-2 h-2 bg-cyan-400 rounded-full animate-ping mb-4"></div>
+                    </div>
+                </div>
+                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-cyan-400/30 transition-all duration-500 reveal active" style="transition-delay: 0.2s;">
+                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-4">Completed</p>
+                    <div class="flex items-end justify-between">
+                        <span class="text-4xl font-black tracking-tighter" id="stat-completed">842</span>
+                        <div class="text-white/20 mb-1"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-red-400/30 transition-all duration-500 reveal active" style="transition-delay: 0.3s;">
+                    <p class="text-[9px] font-mono text-red-400/50 uppercase tracking-[0.3em] mb-4">Threat Vectors</p>
+                    <div class="flex items-end justify-between">
+                        <span class="text-4xl font-black tracking-tighter text-red-500" id="stat-flagged">03</span>
+                        <div class="text-red-500 mb-1 animate-pulse"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-10">
+                
+                <!-- Create Section -->
+                <div class="lg:col-span-1">
+                    <div class="glass-panel p-10 rounded-3xl border border-white/5 reveal active">
+                        <div class="flex items-center gap-4 mb-10">
+                            <i data-lucide="plus-circle" class="text-cyan-400 w-6 h-6"></i>
+                            <h2 class="text-xl font-black uppercase tracking-tighter italic">Initialize Node</h2>
+                        </div>
+                        
+                        <form id="createInterviewForm" class="space-y-6">
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Candidate Name</label>
+                                <input type="text" id="candidateName" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="IDENTIFY_SUBJECT" required>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Subject Email</label>
+                                <input type="email" id="candidateEmail" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="SECURE_ADDRESS@NODE.NET">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Assigned Role</label>
+                                <input type="text" id="position" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="LEVEL_4_ENGINEER" required>
+                            </div>
+                            
+                            <!-- Question Manager -->
+                            <div class="space-y-4 pt-4">
+                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Protocol Questions</label>
+                                <div id="questions-list" class="space-y-3 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                    <!-- Populated via JS -->
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="new-question-input" class="flex-1 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 text-xs focus:border-cyan-400 outline-none transition-all" placeholder="ADD_QUERENT">
+                                    <button type="button" onclick="addQuestion()" class="p-3 bg-white/5 rounded-xl hover:bg-cyan-400 hover:text-obsidian transition-all hover-target">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 pt-2">
+                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Scheduled Protocol Time</label>
+                                <input type="datetime-local" id="scheduledAt" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs font-mono text-white/60 focus:border-cyan-400 outline-none transition-all custom-datetime-input" required>
+                            </div>
+
+                            <button type="submit" class="w-full py-5 bg-cyan-400 text-obsidian text-[10px] uppercase tracking-[0.4em] font-black rounded-2xl hover:bg-white hover:shadow-[0_0_40px_rgba(34,211,238,0.2)] transition-all mt-8 hover-target" id="btn-create">
+                                <span id="create-btn-text">Establish Secure Link</span>
+                            </button>
+                        </form>
+
+                        <div id="interviewCreatedResult" class="hidden mt-8 p-6 bg-cyan-400/5 border border-cyan-400/20 rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <p class="text-[9px] font-mono text-cyan-400 uppercase tracking-widest mb-4">Link Generated Successfully</p>
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" id="interviewLink" readonly class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-[10px] font-mono text-white/60 outline-none">
+                                <button onclick="copyInterviewLink()" class="px-4 py-2 bg-cyan-400 text-obsidian text-[10px] font-black uppercase rounded-lg hover:bg-white transition-all hover-target" id="btn-copy">Copy</button>
+                            </div>
+                            <button onclick="joinAsHR()" class="w-full text-[9px] font-mono text-white/40 hover:text-white uppercase tracking-widest underline underline-offset-4 decoration-cyan-400/30 transition-all hover-target">Enter Observer Mode</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions List Section -->
+                <div class="lg:col-span-2">
+                    <div class="glass-panel h-full rounded-3xl border border-white/5 overflow-hidden flex flex-col reveal active" style="transition-delay: 0.1s;">
+                        <div class="p-10 border-b border-white/5 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <i data-lucide="layers" class="text-white/30 w-6 h-6"></i>
+                                <h2 class="text-xl font-black uppercase tracking-tighter italic">Active Data Streams</h2>
+                            </div>
+                            <button onclick="refreshInterviews()" class="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-all hover-target">
+                                <i data-lucide="refresh-cw" class="w-4 h-4 text-white/40"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="interviews-list" class="flex-1 p-10 overflow-y-auto space-y-4 custom-scrollbar">
+                            <!-- Populated via JS -->
+                            <div class="flex flex-col items-center justify-center py-20 opacity-20">
+                                <i data-lucide="inbox" class="w-12 h-12 mb-4"></i>
+                                <p class="text-xs font-mono uppercase tracking-[0.3em]">No streams detected</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Core Engine -->
+    <script src="dashboard.js"></script>
+</body>
+</html>

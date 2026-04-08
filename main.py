@@ -1,35 +1,14 @@
-import stripe
-import os
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-import json
+from utils import get_env_safe
+from auth import get_current_user, get_user_profile_data
+from payments import PaymentRequest, execute_payment
+from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
 
-# Load env
-load_dotenv()
+# --- 1. System Initialization ---
+app = FastAPI(title="Integra | Core Control Node")
 
-# Secure Key Extraction & Sanitization
-def get_env_safe(key: str):
-    val = os.getenv(key)
-    if not val: return ""
-    return val.strip().replace('"', '').replace("'", "")
-
-# Initialize
-app = FastAPI()
-stripe.api_key = get_env_safe("STRIPE_SECRET_KEY")
-
-# 1. Performance Upgrade: Neural Cache
-# Load Pricing Data once into RAM to reduce disk I/O
-try:
-    with open('pricing.json', 'r') as f:
-        PRICING_DATA = json.load(f)
-        print("=> SYSTEM: Pricing Protocols Loaded into Neural Space.")
-except Exception as e:
-    PRICING_DATA = None
-    print(f"=> ERROR: Critical Cache Failure: {e}")
-
-# CORS Policy => Global Access (Local Dev)
+# Global CORS Protocol
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,71 +16,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import json
+# --- 2. Identity Endpoints (Supabase) ---
+@app.get("/api/user-profile")
+async def get_profile(user: dict = Depends(get_current_user)):
+    """
+    Identity Retrieval Node.
+    Returns the operator profile from the secure Supabase identity buffer.
+    """
+    return get_user_profile_data(user)
 
-class PaymentRequest(BaseModel):
-    payment_method_id: str
-    amount: int
-    plan_id: str
-    billing_cycle: str
+# --- 3. Node & Stream Endpoints ---
+@app.post("/api/nodes")
+async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)):
+    """
+    Secure Node Initialization.
+    Requires an authenticated Command Operator to establish a new data stream.
+    """
+    return create_neural_node(node)
 
-def validate_price(plan_id, cycle):
-    if not PRICING_DATA: return -1
-    try:
-        plans = PRICING_DATA['pricing_data']['plans']
-        plan = next((p for p in plans if p['id'] == plan_id), None)
-        
-        if not plan: return -1
-        if plan[cycle]['price'] == 'Custom': return -1
-        
-        if cycle == 'monthly':
-            return plan['monthly']['price'] * 100
-        else:
-            return plan['yearly']['price'] * 12 * 100 # Total for year
-    except Exception as e:
-        print(f"=> ERROR_NODE: {e}")
-        return -1
+@app.get("/api/nodes")
+async def list_nodes(user: dict = Depends(get_current_user)):
+    """
+    Data Stream Synchronization.
+    Retrieves all active neural streams for the authenticated operator.
+    """
+    return get_active_streams()
 
+@app.get("/api/stats")
+async def sys_stats(user: dict = Depends(get_current_user)):
+    """
+    Telemetry Reporting Node.
+    Returns real-time system performance and node metrics.
+    """
+    return get_node_stats()
+
+# --- 4. Financial Endpoints (Stripe Card) ---
 @app.get("/config")
 async def get_config():
+    """
+    Stripe Config Distributor.
+    Distributes the publishable protocol key to frontend nodes.
+    """
     pk = get_env_safe("STRIPE_PUBLISHABLE_KEY")
     return {"publishableKey": pk}
 
 @app.post("/create-payment-intent")
-async def create_payment(payment_req: PaymentRequest, request: Request):
-    expected_amount = validate_price(payment_req.plan_id, payment_req.billing_cycle)
-    
-    # SECURITY GATE: Integrity Verification
-    if expected_amount == -1:
-        raise HTTPException(status_code=400, detail="Invalid Execution Node: Plan not found.")
-    
-    if payment_req.amount != expected_amount:
-        # LOGGING UPGRADE: Threat Identity Extraction
-        client_ip = request.client.host
-        print(f"!!! SECURITY ALERT / THREAT DETECTED !!!")
-        print(f"-> Origin Node (IP): {client_ip}")
-        print(f"-> Violation: Price tampering detected.")
-        
-        # PERSISTENT STORAGE: Secure Logging Protocol
-        with open('security_threats.log', 'a') as log:
-            log.write(f"PROXIED_THREAT: [Plan:{payment_req.plan_id}] [IP:{client_ip}] [Attempted:{payment_req.amount}] [Required:{expected_amount}]\n")
+async def create_payment_intent(payment_req: PaymentRequest, request: Request):
+    """
+    Stripe Transaction Node.
+    Executes a secure financial handshake through the Payments Module.
+    """
+    return await execute_payment(payment_req, request)
 
-        raise HTTPException(status_code=403, detail="Security Violation: Price tampering detected.")
+# --- 4. System Health Node ---
+@app.get("/")
+async def sys_health():
+    return {
+        "status": "ONLINE",
+        "system": "INTEGRA_CORE_V1",
+        "neural_buffer": "SYNCED"
+    }
 
-    try:
-        intent = stripe.PaymentIntent.create(
-            amount=expected_amount,
-            currency="usd",
-            payment_method=payment_req.payment_method_id,
-            confirm=True,
-            automatic_payment_methods={
-                "enabled": True,
-                "allow_redirects": "never"
-            }
-        )
-        return {"status": "success", "payment_intent_id": intent.id}
-    except stripe.error.StripeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        print(f"=> FATAL PROTOCOL ERROR: {e}")
-        raise HTTPException(status_code=500, detail="Internal Protocol Error")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
