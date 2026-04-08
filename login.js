@@ -34,13 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
-                options: {
-                    redirectTo: window.location.origin + '/dashboard.html',
-                    queryParams: {
-                        prompt: 'select_account',
-                        access_type: 'offline'
+                    options: {
+                        redirectTo: window.location.origin + '/dashboard.html',
+                        queryParams: {
+                            prompt: 'select_account',
+                            access_type: 'offline'
+                        },
+                        flowType: 'pkce'
                     }
-                }
             });
             if (error) throw error;
         } catch (err) {

@@ -11,12 +11,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cursor = document.getElementById('cursor');
 
     // System State
-    let questions = [
-        "Outline your expertise in strategic defense systems.",
-        "Why is your neural node optimal for this protocol?",
-        "Describe a decryption challenge you successfully bypassed."
-    ];
     let createdInterview = null;
+
+    // --- 0. Security Protocol (URL Cleaning) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    if (window.location.hash || urlParams.has('code') || urlParams.has('access_token')) {
+        setTimeout(() => {
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            showToast("Neural link established. Evidence purged.", "system");
+        }, 500);
+    }
+
+    // --- 1.1 Schedule Toggle ---
+    const toggleSchedule = document.getElementById('toggle-schedule');
+    const scheduleContainer = document.getElementById('schedule-container');
+    const scheduledInput = document.getElementById('scheduledAt');
+
+    const candidateEmail = document.getElementById('candidateEmail');
+
+    toggleSchedule.addEventListener('change', () => {
+        if (toggleSchedule.checked) {
+            scheduleContainer.classList.remove('hidden');
+            scheduledInput.required = true;
+            candidateEmail.required = true;
+        } else {
+            scheduleContainer.classList.add('hidden');
+            scheduledInput.required = false;
+            candidateEmail.required = false;
+            scheduledInput.value = '';
+        }
+    });
+
 
     // --- 2. Interactive Cursor ---
     document.addEventListener('mousemove', (e) => {
@@ -43,7 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function fetchNodeStats() {
         try {
             const auth = await getAuthHeader();
-            const res = await fetch('http://localhost:8000/api/stats', {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/stats'), {
                 headers: { 'Authorization': auth }
             });
             return await res.json();
@@ -53,7 +79,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function fetchNodes() {
         try {
             const auth = await getAuthHeader();
-            const res = await fetch('http://localhost:8000/api/nodes', {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes'), {
                 headers: { 'Authorization': auth }
             });
             return await res.json();
@@ -63,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function saveNodeToBackend(nodeData) {
         try {
             const auth = await getAuthHeader();
-            const res = await fetch('http://localhost:8000/api/nodes', {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes'), {
                 method: 'POST',
                 headers: { 
                     'Authorization': auth,
@@ -135,33 +161,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         init3DTilt();
     }
 
-    // --- 5. Protocol Handlers ---
-    window.renderQuestions = () => {
-        const container = document.getElementById('questions-list');
-        container.innerHTML = questions.map((q, i) => `
-            <div class="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl group transition-all hover:border-white/10">
-                <p class="text-[10px] text-white/60 font-medium truncate pr-4">${q}</p>
-                <button type="button" onclick="removeQuestion(${i})" class="text-white/20 hover:text-red-400 transition-colors">
-                    <i data-lucide="x" class="w-3 h-3"></i>
-                </button>
-            </div>
-        `).join('');
-        lucide.createIcons();
-    };
 
-    window.addQuestion = () => {
-        const input = document.getElementById('new-question-input');
-        if (input.value.trim()) {
-            questions.push(input.value.trim());
-            input.value = '';
-            renderQuestions();
-        }
-    };
-
-    window.removeQuestion = (i) => {
-        questions.splice(i, 1);
-        renderQuestions();
-    };
 
     // --- 6. Form Submission Protocol ---
     document.getElementById('createInterviewForm').addEventListener('submit', async (e) => {
@@ -177,8 +177,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             candidate_name: document.getElementById('candidateName').value,
             candidate_email: document.getElementById('candidateEmail').value,
             position: document.getElementById('position').value,
-            questions: questions,
-            scheduled_at: document.getElementById('scheduledAt').value
+            questions: [], // No longer using specific questions
+            scheduled_at: toggleSchedule.checked ? scheduledInput.value : new Date().toISOString()
         };
 
         const result = await saveNodeToBackend(nodeData);
@@ -260,7 +260,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // --- 8. Initial Initialization ---
-    renderQuestions();
     await renderInterviews();
     await updateStats();
 });

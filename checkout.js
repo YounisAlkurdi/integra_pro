@@ -5,10 +5,7 @@ let planId = new URLSearchParams(window.location.search).get('plan') || 'starter
 
 // Dynamic Initialization Node
 async function initializeStripe() {
-    const endpoints = [
-        'http://localhost:8000/config',
-        'http://127.0.0.1:8000/config'
-    ];
+    const endpoints = window.INTEGRA_SETTINGS.API_FALLBACK_URLS.map(url => `${url}/config`);
 
     let publishableKey = null;
 
@@ -162,7 +159,7 @@ async function processPayment(paymentMethodId) {
     }
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/create-payment-intent', {
+        const response = await fetch(window.INTEGRA_SETTINGS.endpoint('/create-payment-intent'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

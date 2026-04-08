@@ -114,32 +114,33 @@
                                 <input type="text" id="candidateName" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="IDENTIFY_SUBJECT" required>
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Subject Email</label>
-                                <input type="email" id="candidateEmail" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="SECURE_ADDRESS@NODE.NET">
-                            </div>
-                            <div class="space-y-2">
                                 <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Assigned Role</label>
                                 <input type="text" id="position" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="LEVEL_4_ENGINEER" required>
                             </div>
                             
-                            <!-- Question Manager -->
+                            <!-- Scheduled Protocol Module -->
                             <div class="space-y-4 pt-4">
-                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Protocol Questions</label>
-                                <div id="questions-list" class="space-y-3 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                    <!-- Populated via JS -->
+                                <div class="flex items-center justify-between">
+                                    <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Temporal Protocol</label>
+                                    <label class="relative inline-flex items-center cursor-pointer hover-target">
+                                        <input type="checkbox" id="toggle-schedule" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/20 after:border-white/10 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-400/20 peer-checked:after:bg-cyan-400"></div>
+                                        <span class="ml-3 text-[9px] font-mono text-white/40 uppercase tracking-widest">Schedule Later</span>
+                                    </label>
                                 </div>
-                                <div class="flex gap-2">
-                                    <input type="text" id="new-question-input" class="flex-1 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 text-xs focus:border-cyan-400 outline-none transition-all" placeholder="ADD_QUERENT">
-                                    <button type="button" onclick="addQuestion()" class="p-3 bg-white/5 rounded-xl hover:bg-cyan-400 hover:text-obsidian transition-all hover-target">
-                                        <i data-lucide="plus" class="w-4 h-4"></i>
-                                    </button>
+                                
+                                <div id="schedule-container" class="space-y-4 pt-4 hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div class="space-y-2">
+                                        <label class="text-[9px] font-mono text-cyan-400/50 uppercase tracking-[0.3em]">Delivery Address (Email)</label>
+                                        <input type="email" id="candidateEmail" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="SECURE_ADDRESS@NODE.NET">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Scheduled Protocol Time</label>
+                                        <input type="datetime-local" id="scheduledAt" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs font-mono text-white/60 focus:border-cyan-400 outline-none transition-all custom-datetime-input">
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="space-y-2 pt-2">
-                                <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Scheduled Protocol Time</label>
-                                <input type="datetime-local" id="scheduledAt" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs font-mono text-white/60 focus:border-cyan-400 outline-none transition-all custom-datetime-input" required>
-                            </div>
 
                             <button type="submit" class="w-full py-5 bg-cyan-400 text-obsidian text-[10px] uppercase tracking-[0.4em] font-black rounded-2xl hover:bg-white hover:shadow-[0_0_40px_rgba(34,211,238,0.2)] transition-all mt-8 hover-target" id="btn-create">
                                 <span id="create-btn-text">Establish Secure Link</span>
@@ -188,6 +189,8 @@
     <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- Core Engine -->
+    <script src="settings.js"></script>
+    <script type="module" src="supabase-client.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
