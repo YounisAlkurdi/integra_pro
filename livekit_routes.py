@@ -2,6 +2,7 @@ import os
 import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from nodes import NODE_STORAGE
 
 # ── LiveKit Token Module ─────────────────────────────────────────────────────
 # ⚠️  SECURITY:
@@ -13,6 +14,7 @@ from pydantic import BaseModel
 #   - Token TTL set to 30 minutes (1800s) — prevents long-lived tokens being abused
 #   - Added DELETE /api/livekit/room/{roomName} endpoint so the dashboard can
 #     forcibly terminate rooms via the LiveKit Server API
+#   - Room Availability: Only grants tokens if the room is active or scheduled time has reached.
 # ────────────────────────────────────────────────────────────────────────────
 
 router = APIRouter(prefix="/api/livekit", tags=["LiveKit"])
@@ -94,6 +96,49 @@ async def get_livekit_token(req: TokenRequest):
             status_code=500,
             detail="LiveKit credentials not configured on the server.",
         )
+
+    # --- Schedule Validation ---
+    from nodes import get_active_streams
+    all_nodes = get_active_streams()
+    node = next((n for n in all_nodes if n['room_id'] == req.roomName), None)
+    
+    if node and node.get('scheduled_at'):
+        try:
+            sched_str = node['scheduled_at'].replace("Z", "+00:00")
+            
+            if len(sched_str) == 16:
+                sched_str += ":00"
+                
+            scheduled_time = datetime.datetime.fromisoformat(sched_str)
+            
+            # Make aware if naive (assume +03:00 for local dev based on metadata)
+            if scheduled_time.tzinfo is None:
+                scheduled_time = scheduled_time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=3)))
+                
+            now = datetime.datetime.now(datetime.timezone.utc)
+            
+            # Allow joining 5 minutes before scheduled time
+            buffer = datetime.timedelta(minutes=5)
+            
+            if scheduled_time > (now + buffer):
+                wait_duration = scheduled_time - now
+                total_seconds = wait_duration.total_seconds()
+                
+                minutes = int(total_seconds // 60)
+                
+                # Bilingual high-tech error message
+                msg_ar = f"الدخول متاح قبل 5 دقائق من الموعد. يرجى الانتظار {minutes} دقيقة."
+                msg_en = f"Access allowed 5m before start. Please wait {minutes} minutes."
+                full_msg = f"{msg_ar} | {msg_en}"
+                
+                raise HTTPException(
+                    status_code=403,
+                    detail=full_msg,
+                )
+        except Exception as e:
+            if isinstance(e, HTTPException): raise e
+            print(f"[LiveKit] Schedule parsing error: {e}")
+            pass
 
     # --- Generate token ---
     try:

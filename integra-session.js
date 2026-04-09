@@ -436,8 +436,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('lk:error', (e) => {
-        addLog(`Error: ${e.detail.message}`, 'error');
-        showToast(e.detail.message, 'error');
+        const msg = e.detail.message;
+        addLog(`Error: ${msg}`, 'error');
+        showToast(msg, 'error');
+
+        // Check if it's a "Not Started" error from our backend
+        if (msg.includes('Access allowed') || msg.includes('الدخول متاح')) {
+            if (joinLobby) {
+                // Split the bilingual message for better display
+                const [msgAr, msgEn] = msg.split(' | ');
+                
+                joinLobby.innerHTML = `
+                    <div class="relative mb-10">
+                        <div class="absolute -inset-10 bg-purple-500/10 rounded-full blur-3xl"></div>
+                        <div class="w-32 h-32 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center animate-[spin_20s_linear_infinite]">
+                            <i data-lucide="clock" class="w-12 h-12 text-white/20 -rotate-12"></i>
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                             <div class="w-2 h-2 bg-purple-500 rounded-full animate-ping"></div>
+                        </div>
+                    </div>
+                    <div class="text-center px-10">
+                        <h3 class="text-xl font-black uppercase tracking-tighter mb-2 text-white/80">${msgAr || msg}</h3>
+                        <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.3em] max-w-sm mx-auto leading-relaxed">
+                            ${msgEn ? msgEn.replace('Access allowed', 'Access restricted until') : 'Access restricted'}
+                        </p>
+                        <div class="mt-8 pt-8 border-t border-white/5">
+                            <button onclick="window.location.reload()" class="px-8 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white text-white hover:text-obsidian transition-all">
+                                تحديث الصفحة
+                            </button>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons({ nodes: [joinLobby] });
+            }
+        }
 
         const joinBtn = $('btn-join');
         if (joinBtn) {
