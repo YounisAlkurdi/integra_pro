@@ -6,6 +6,34 @@ from utils import get_env_safe
 
 # Initialize Stripe Node
 stripe.api_key = get_env_safe("STRIPE_SECRET_KEY")
+WEBHOOK_SECRET = get_env_safe("STRIPE_WEBHOOK_SECRET")
+
+SUPABASE_URL = get_env_safe("SUPABASE_URL")
+SUPABASE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
+
+def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
+    """Internal database update after payment confirmation."""
+    import urllib.request
+    url = f"{SUPABASE_URL}/rest/v1/subscriptions"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+    }
+    body = {
+        "user_id": user_id,
+        "plan_id": plan_id,
+        "billing_cycle": cycle,
+        "stripe_customer_id": customer_id,
+        "status": "active"
+    }
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req) as r: return True
+    except Exception as e:
+        print(f"FAILED TO UPDATE DB: {e}")
+        return False
 
 # Pricing Protocols - Load once into Neural Cache
 try:
@@ -42,7 +70,7 @@ def validate_price(plan_id, cycle):
     except Exception:
         return -1
 
-async def execute_payment(payment_req: PaymentRequest, request: Request):
+async def execute_payment(payment_req: PaymentRequest, request: Request, user_id: str):
     """
     Stripe Transaction Module.
     Executes the secure financial handshake with Stripe's cloud nodes.
@@ -65,6 +93,11 @@ async def execute_payment(payment_req: PaymentRequest, request: Request):
             currency="usd",
             payment_method=payment_req.payment_method_id,
             confirm=True,
+            metadata={
+                "user_id": user_id,
+                "plan_id": payment_req.plan_id,
+                "billing_cycle": payment_req.billing_cycle
+            },
             automatic_payment_methods={
                 "enabled": True,
                 "allow_redirects": "never"
@@ -74,4 +107,33 @@ async def execute_payment(payment_req: PaymentRequest, request: Request):
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print(f"STT Transaction Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Protocol Error")
+
+async def handle_stripe_webhook(request: Request):
+    """
+    Webhook Verification Node.
+    Authenticates notifications from Stripe Cloud and updates subscriptions.
+    """
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, WEBHOOK_SECRET
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook Error: {str(e)}")
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        metadata = intent.get("metadata", {})
+        user_id = metadata.get("user_id")
+        plan_id = metadata.get("plan_id")
+        cycle   = metadata.get("billing_cycle")
+
+        if user_id and plan_id:
+            _update_subscription_in_db(user_id, plan_id, cycle, intent.get("customer"))
+            print(f"STRIPE: Payment confirmed for user {user_id}")
+
+    return {"status": "event_processed"}

@@ -1,9 +1,9 @@
 import uuid
 import json
-import os
-from datetime import datetime
-from pydantic import BaseModel
+import urllib.request
 from typing import List, Optional
+from pydantic import BaseModel
+from utils import get_env_safe
 
 class NodeProtocol(BaseModel):
     candidate_name: str
@@ -14,61 +14,66 @@ class NodeProtocol(BaseModel):
     room_id: Optional[str] = None
     status: str = "PENDING"
 
-# Neural Node Storage (Persistent Buffer)
-BUFFER_FILE = "nodes_buffer.json"
+SUPABASE_URL = get_env_safe("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
 
-def load_buffer():
-    if not os.path.exists(BUFFER_FILE):
+def _supabase_request(method: str, path: str, body=None):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        print("WARNING: Supabase URL or Service Key missing.")
         return []
+
+    url = f"{SUPABASE_URL}/rest/v1/{path}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    data = json.dumps(body).encode() if body else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with open(BUFFER_FILE, "r") as f:
-            return json.load(f)
-    except:
+        with urllib.request.urlopen(req) as resp:
+            content = resp.read()
+            if content:
+                return json.loads(content)
+            return []
+    except Exception as e:
+        print(f"Supabase request failed: {e}")
         return []
 
-def save_buffer(data):
-    with open(BUFFER_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-NODE_STORAGE = load_buffer()
-
-def create_neural_node(node: NodeProtocol):
+def create_neural_node(node: NodeProtocol, user_id: str):
     """
     Initializes a new Secure Control Node.
     Generates a unique Room Signature and timestamps the entry.
     """
-    node.room_id = str(uuid.uuid4())
-    data = node.dict()
-    
-    global NODE_STORAGE
-    NODE_STORAGE.insert(0, data)
-    save_buffer(NODE_STORAGE)
-    
-    return data
+    body = {**node.dict(), "user_id": user_id, "room_id": str(uuid.uuid4())}
+    result = _supabase_request("POST", "nodes", body)
+    return result[0] if result else body
 
-def get_active_streams():
+def get_active_streams(user_id: str = None):
     """
-    Synchronizes the local buffer with active data streams.
+    Synchronizes with the active data streams from Supabase.
     """
-    return load_buffer() # Always reload to get fresh data from disk
+    path = "nodes?select=*&order=created_at.desc"
+    if user_id:
+        path += f"&user_id=eq.{user_id}"
+    return _supabase_request("GET", path)
 
 def delete_node(room_id: str):
     """
-    Purges a node from the neural buffer.
+    Purges a node from the neural buffer (Supabase).
     """
-    global NODE_STORAGE
-    NODE_STORAGE = [n for n in NODE_STORAGE if n['room_id'] != room_id]
-    save_buffer(NODE_STORAGE)
+    _supabase_request("DELETE", f"nodes?room_id=eq.{room_id}")
     return True
 
-def get_node_stats():
+def get_node_stats(user_id: str = None):
     """
     Calculates telemetry across all active nodes.
     """
-    nodes = load_buffer()
+    nodes = get_active_streams(user_id)
     total = len(nodes)
-    active = sum(1 for n in nodes if n['status'] == 'PENDING')
-    completed = sum(1 for n in nodes if n['status'] == 'COMPLETED')
+    active = sum(1 for n in nodes if n.get('status') == 'PENDING')
+    completed = sum(1 for n in nodes if n.get('status') == 'COMPLETED')
     return {
         "total": total,
         "active": active,

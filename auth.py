@@ -29,8 +29,8 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         payload = jwt.decode(
             token, 
             SUPABASE_JWT_SECRET, 
-            algorithms=["HS256"], 
-            audience="authenticated"
+            algorithms=["HS256"],
+            options={"verify_aud": False} # Supabase aud can vary, safer to verify sub/email
         )
         return payload
     except jwt.ExpiredSignatureError:

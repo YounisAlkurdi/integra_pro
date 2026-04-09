@@ -479,10 +479,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Local STT → own feed ─────────────────────────────────────────────────
+    // ── Local STT → own feed & Persist to Server ──────────────────────────────
+    async function saveLogToServer(sender, message) {
+        const roomName = window.LiveKitSession?.getState?.()?.roomName;
+        if (!roomName || !message) return;
+
+        try {
+            const token = localStorage.getItem('supabase_token');
+            await fetch('http://localhost:8000/api/logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    node_id: roomName,
+                    sender: sender,
+                    message: message
+                })
+            });
+        } catch (err) {
+            console.warn('[Log] Failed to save transcript to server:', err);
+        }
+    }
+
     window.addEventListener('stt:final', (e) => {
-        const myRole = window.LiveKitSession?.getState?.()?.localRole || localRole;
+        const state  = window.LiveKitSession?.getState?.();
+        const myRole = state?.localRole || localRole;
+        const myName = e.detail.name || state?.participantName || 'User';
+        
         appendTranscription(myRole, e.detail.text, true);
+        saveLogToServer(myName, e.detail.text);
     });
 
     window.addEventListener('stt:interim', (e) => {
@@ -490,10 +517,14 @@ document.addEventListener('DOMContentLoaded', () => {
         appendTranscription(myRole, e.detail.text, false);
     });
 
-    // ── Remote transcriptions → correct feed ─────────────────────────────────
+    // ── Remote transcriptions → correct feed & Persist to Server ───────────────
     window.addEventListener('lk:transcription', (e) => {
-        const { role, text, isFinal } = e.detail;
+        const { role, text, isFinal, name } = e.detail;
         appendTranscription(role, text, isFinal);
+        
+        if (isFinal) {
+            saveLogToServer(name || role.toUpperCase(), text);
+        }
     });
 
     // ── Control Buttons ───────────────────────────────────────────────────────

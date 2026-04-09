@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from utils import get_env_safe
 from auth import get_current_user, get_user_profile_data
-from payments import PaymentRequest, execute_payment
+from payments import PaymentRequest, execute_payment, handle_stripe_webhook
 from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
+from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
 import livekit_routes
 import os
 from dotenv import load_dotenv
@@ -40,12 +41,12 @@ async def get_profile(user: dict = Depends(get_current_user)):
 @app.post("/api/nodes")
 async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)):
     """Secure Node Initialization."""
-    return create_neural_node(node)
+    return create_neural_node(node, user_id=user["sub"])
 
 @app.get("/api/nodes")
 async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
-    return get_active_streams()
+    return get_active_streams(user_id=user["sub"])
 
 @app.delete("/api/nodes/{room_id}")
 async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
@@ -58,7 +59,18 @@ async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
 @app.get("/api/stats")
 async def sys_stats(user: dict = Depends(get_current_user)):
     """Telemetry Reporting Node."""
-    return get_node_stats()
+    return get_node_stats(user_id=user["sub"])
+
+# --- 4. Chat Logging Endpoints ---
+@app.post("/api/logs")
+async def add_chat_log(log: ChatLogEntry, user: dict = Depends(get_current_user)):
+    """Secure Transcript Recording."""
+    return save_chat_log(log, user_id=user["sub"])
+
+@app.get("/api/logs/{node_id}")
+async def fetch_logs(node_id: str, user: dict = Depends(get_current_user)):
+    """Transcript Retrieval Protocol."""
+    return get_node_chat_logs(node_id, user_id=user["sub"])
 
 # --- 4. LiveKit Endpoints (Token Generator) ---
 # All logic lives in livekit_routes.py — same pattern as payments.py
@@ -71,9 +83,14 @@ async def get_config():
     return {"publishableKey": pk}
 
 @app.post("/create-payment-intent")
-async def create_payment_intent(payment_req: PaymentRequest, request: Request):
+async def create_payment_intent(payment_req: PaymentRequest, request: Request, user: dict = Depends(get_current_user)):
     """Stripe Transaction Node."""
-    return await execute_payment(payment_req, request)
+    return await execute_payment(payment_req, request, user["sub"])
+
+@app.post("/api/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    """Stripe Cloud Event Handshake."""
+    return await handle_stripe_webhook(request)
 
 # --- 6. System Health Node ---
 @app.get("/")
