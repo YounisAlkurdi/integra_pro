@@ -1,6 +1,6 @@
 let stripe, elements, card;
 let currentPlan = null;
-let billingMode = 'monthly'; // default
+let billingMode = new URLSearchParams(window.location.search).get('mode') || 'monthly';
 let planId = new URLSearchParams(window.location.search).get('plan') || 'starter';
 
 // Dynamic Initialization Node
@@ -88,6 +88,9 @@ function selectBilling(mode) {
     document.getElementById('billing-monthly').classList.toggle('active-billing', mode === 'monthly');
     document.getElementById('billing-yearly').classList.toggle('active-billing', mode === 'yearly');
 }
+
+// Initial UI Sync
+selectBilling(billingMode);
 
 initializeStripe();
 

@@ -46,6 +46,17 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
+    window.selectPlan = (planId) => {
+        if (planId === 'enterprise') {
+            window.location.href = 'mailto:sales@integra.com';
+            return;
+        }
+        
+        const mode = isYearly ? 'yearly' : 'monthly';
+        // Redirect to checkout with protocol parameters
+        window.location.href = `checkout.html?plan=${planId}&mode=${mode}`;
+    };
+
     function updateBillingUI(yearly) {
         const knob = document.getElementById('toggle-knob');
         const toggle = document.getElementById('billing-toggle');
