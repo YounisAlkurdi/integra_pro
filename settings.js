@@ -23,3 +23,11 @@ window.INTEGRA_SETTINGS = {
         return `${this.BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     }
 };
+
+// Global Supabase Initialization
+if (typeof supabase !== 'undefined') {
+    window.supabase = supabase.createClient(
+        window.INTEGRA_SETTINGS.SUPABASE_URL,
+        window.INTEGRA_SETTINGS.SUPABASE_ANON_KEY
+    );
+}

@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let screenSharing = false;
     let sttEnabled    = false;
     let sessionSeconds = 0;
+    let maxSeconds     = 600; // Default 10 mins
     let timerInterval  = null;
     let localRole      = 'hr';
     let localName      = '';
@@ -78,14 +79,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Timer ─────────────────────────────────────────────────────────────────
-    function startTimer() {
-        sessionSeconds = 0;
+    function startTimer(limitMins = 10) {
+        maxSeconds = limitMins * 60;
+        sessionSeconds = maxSeconds; // Countdown starting point
+        
+        if (timerInterval) clearInterval(timerInterval);
+        
         timerInterval = setInterval(() => {
-            sessionSeconds++;
+            sessionSeconds--;
+            
+            if (sessionSeconds <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = "00:00";
+                showToast("SESSION EXPIRED. TERMINATING LINK.", "error");
+                setTimeout(() => { window.endSession?.(); }, 3000);
+                return;
+            }
+
             const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
             const s = String(sessionSeconds % 60).padStart(2, '0');
             if (timerEl) timerEl.textContent = `${m}:${s}`;
+
+            // Warn when 2 minutes left
+            if (sessionSeconds === 120) {
+                showToast("WARNING: 120 SECONDS UNTIL LINK TERMINATION", "error");
+                timerEl.classList.add('text-red-500', 'animate-pulse');
+            }
         }, 1000);
+    }
+
+    async function fetchRoomMeta(roomId) {
+        try {
+            // Using public supabase client from global window or config
+            const { data, error } = await window.supabase
+                .from('nodes')
+                .select('max_duration_mins, max_participants')
+                .eq('room_id', roomId)
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (e) {
+            console.warn("[RoomMeta] Falling back to default limits:", e);
+            return { max_duration_mins: 10, max_participants: 2 };
+        }
     }
 
     // ── Feed management ───────────────────────────────────────────────────────
@@ -284,7 +321,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setFeedStatus(role, 'LIVE', true);
 
         addLog(`Connected to room: ${roomName} as ${role.toUpperCase()}`);
-        startTimer();
+        
+        // Fetch limits for this specific room
+        fetchRoomMeta(roomName).then(meta => {
+            startTimer(meta.max_duration_mins);
+            addLog(`Session limits enabled: ${meta.max_duration_mins}m duration`, 'system');
+        });
+
         showToast(`Connected as ${participantName}`, 'success');
 
         // Attach local video
@@ -350,6 +393,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addLog('Session disconnected', 'error');
         showToast('Session ended', 'error');
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 2000);
+    });
+
+    /**
+     * Terminate the session cleanly
+     */
+    window.endSession = function() {
+        showToast("TERMINATING CONNECTION...", "info");
+        window.LiveKitSession?.disconnect();
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1500);
+    };
+
+    // Wire Leave Button
+    $('btn-leave')?.addEventListener('click', () => {
+        window.endSession();
     });
 
     window.addEventListener('lk:participant-joined', (e) => {
@@ -643,6 +705,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     initPreviewCamera();
+
+    // ── Join Session Function ────────────────────────────────────────────────
+    window.joinSession = async function() {
+        const btn = $('btn-join');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'CONNECTING...';
+        }
+
+        const roomName = new URLSearchParams(window.location.search).get('room');
+        const name = new URLSearchParams(window.location.search).get('name') || `User_${Math.floor(Math.random()*1000)}`;
+        const role = new URLSearchParams(window.location.search).get('role') || 'candidate';
+
+        if (!roomName) {
+            showToast("Missing Room ID", "error");
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        try {
+            await window.LiveKitSession.connect({
+                roomName: roomName,
+                participantName: name,
+                role: role
+            });
+        } catch (err) {
+            console.error("[Join] Connection failed:", err);
+            // Error handling is also done via 'lk:error' event
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Reconnect Session';
+            }
+        }
+    };
+
+    $('btn-join')?.addEventListener('click', window.joinSession);
 
     // ── Initial log ──────────────────────────────────────────────────────────
     if (logList) {

@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // System State
     let createdInterview = null;
+    let userSubscription = null;
 
     // --- 0. Security Protocol (URL Cleaning) ---
     const urlParams = new URLSearchParams(window.location.search);
@@ -113,6 +114,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (e) { return []; }
     }
 
+    async function fetchSubscription() {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+            
+            const { data, error } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (error) throw error;
+            userSubscription = data;
+            return data;
+        } catch (e) {
+            console.warn("Neural Link: Subscription data not found. Defaulting to Free.");
+            return { interviews_limit: 5, plan_id: 'free' };
+        }
+    }
+
     async function saveNodeToBackend(nodeData) {
         try {
             const auth = await getAuthHeader();
@@ -131,11 +152,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     // --- 4. UI Rendering Engine ---
     async function updateStats() {
         const stats = await fetchNodeStats();
+        const sub = userSubscription || await fetchSubscription();
+        
         if (stats) {
-            document.getElementById('stat-total').textContent = stats.total;
+            document.getElementById('stat-total').textContent = `${stats.total}/${sub?.interviews_limit || 5}`;
             document.getElementById('stat-active').textContent = stats.active;
             document.getElementById('stat-completed').textContent = stats.completed;
             document.getElementById('stat-flagged').textContent = stats.threats.toString().padStart(2, '0');
+            
+            // Highlight limit if reached
+            if (sub && stats.total >= sub.interviews_limit) {
+                document.getElementById('stat-total').classList.add('text-red-500', 'animate-pulse');
+            }
         }
     }
 
@@ -198,6 +226,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         const btn = document.getElementById('btn-create');
         const text = document.getElementById('create-btn-text');
         
+        // --- Security Check: Quota Verification ---
+        const stats = await fetchNodeStats();
+        const sub = userSubscription || await fetchSubscription();
+        
+        if (sub && stats && stats.total >= sub.interviews_limit) {
+            showToast("NEURAL QUOTA EXHAUSTED. UPGRADE PROTOCOL.", "error");
+            btn.disabled = false;
+            text.textContent = 'UPGRADE REQUIRED';
+            
+            // Redirect to pricing after delay
+            setTimeout(() => { window.location.href = 'pricing.html'; }, 2000);
+            return;
+        }
+
         btn.disabled = true;
         text.textContent = 'ESTABLISHING LINK...';
 
@@ -205,8 +247,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             candidate_name: document.getElementById('candidateName').value,
             candidate_email: document.getElementById('candidateEmail').value,
             position: document.getElementById('position').value,
-            questions: [], // No longer using specific questions
-            scheduled_at: toggleSchedule.checked ? scheduledInput.value : new Date().toISOString()
+            questions: [], 
+            scheduled_at: toggleSchedule.checked ? scheduledInput.value : new Date().toISOString(),
+            // Inject subscription limits into the node record
+            max_duration_mins: sub?.max_duration_mins || 10,
+            max_participants: sub?.max_participants || 2
         };
 
         const result = await saveNodeToBackend(nodeData);

@@ -52,9 +52,13 @@
 
     <!-- LiveKit Client SDK (public CDN — no secrets here) -->
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- App Config (change backend URL here, NEVER put secrets) -->
     <script src="config.js"></script>
+    <script src="settings.js"></script>
 </head>
 <body class="bg-obsidian text-white overflow-hidden h-screen flex flex-col font-sans">
     
@@ -396,8 +400,7 @@
     <!-- Core Logic — ORDER MATTERS -->
     <script src="stt.js"></script>           <!-- 1. STT engine (standalone) -->
     <script src="livekit-session.js"></script> <!-- 2. LiveKit client (uses stt.js + config.js) -->
-    <script src="settings.js"></script>       <!-- 3. Settings -->
-    <script src="integra-session.js"></script> <!-- 4. UI controller -->
+    <script src="integra-session.js"></script> <!-- 3. UI controller -->
 
     <script>
         // ── Read URL params & handle auto-connect or lobby ──

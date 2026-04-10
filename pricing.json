@@ -1,71 +1,42 @@
 {
-  "pricing_data": {
-    "plans": [
-      {
-        "id": "starter",
-        "name": "Starter",
-        "tagline": "For small teams securing initial hires.",
-        "monthly": {
-          "price": 99,
-          "billing_period": "monthly"
-        },
-        "yearly": {
-          "price": 79,
-          "billing_period": "billed annually"
-        },
-        "features": [
-          "Up to 500 scans/mo",
-          "Basic Visual Detection",
-          "Standard Support"
-        ],
-        "button_text": "Select Plan",
-        "highlight": false
-      },
-      {
-        "id": "professional",
-        "name": "Professional",
-        "tagline": "Advanced metrics for growing organizations.",
-        "monthly": {
-          "price": 299,
-          "billing_period": "monthly"
-        },
-        "yearly": {
-          "price": 239,
-          "billing_period": "billed annually"
-        },
-        "features": [
-          "Unlimited scans",
-          "Voice & Behavioral Biometrics",
-          "API Access included",
-          "Priority 24/7 Support"
-        ],
-        "button_text": "Upgrade to Pro",
-        "highlight": true,
-        "badge": "Most Popular"
-      },
-      {
-        "id": "enterprise",
-        "name": "Enterprise",
-        "tagline": "Custom deployments for high-security scaling.",
-        "monthly": {
-          "price": "Custom",
-          "billing_period": "custom"
-        },
-        "yearly": {
-          "price": "Custom",
-          "billing_period": "custom"
-        },
-        "features": [
-          "On-premise deployment",
-          "Custom AI model training",
-          "SLA guarantees",
-          "Dedicated Security Engineer"
-        ],
-        "button_text": "Contact Sales",
-        "highlight": false
-      }
-    ],
-    "currency": "USD",
-    "section_title": "SCALABLE SECURITY"
-  }
+    "pricing_data": {
+        "plans": [
+            {
+                "id": "free",
+                "name": "Neural Bridge",
+                "tagline": "Baseline Identity Verification",
+                "monthly": { "price": 0, "features": ["5 Neural Sessions", "10 Min Sync Limit", "2 Node Capacity"] },
+                "yearly": { "price": 0, "features": ["5 Neural Sessions", "10 Min Sync Limit", "2 Node Capacity"] },
+                "limits": {
+                    "interviews_per_month": 5,
+                    "max_duration_mins": 10,
+                    "max_participants": 2
+                }
+            },
+            {
+                "id": "starter",
+                "name": "System Core",
+                "tagline": "Advanced Evaluation Protocol",
+                "monthly": { "price": 99, "features": ["15 Neural Sessions", "20 Min Sync Limit", "4 Node Capacity", "Analytics Access"] },
+                "yearly": { "price": 89, "features": ["15 Neural Sessions", "20 Min Sync Limit", "4 Node Capacity", "Analytics Access"] },
+                "limits": {
+                    "interviews_per_month": 15,
+                    "max_duration_mins": 20,
+                    "max_participants": 4
+                }
+            },
+            {
+                "id": "professional",
+                "name": "Neural Nexus",
+                "tagline": "Enterprise Intelligence Network",
+                "monthly": { "price": 299, "features": ["40 Neural Sessions", "60 Min Sync Limit", "8 Node Capacity", "Neural Recording", "Priority Support"] },
+                "yearly": { "price": 249, "features": ["40 Neural Sessions", "60 Min Sync Limit", "8 Node Capacity", "Neural Recording", "Priority Support"] },
+                "limits": {
+                    "interviews_per_month": 40,
+                    "max_duration_mins": 60,
+                    "max_participants": 8
+                }
+            }
+        ]
+    }
 }

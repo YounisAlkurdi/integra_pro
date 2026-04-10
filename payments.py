@@ -21,12 +21,28 @@ def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates"
     }
+    # Fetch limits from neural cache
+    limit_data = {
+        "interviews_limit": 5,
+        "max_duration_mins": 10,
+        "max_participants": 2
+    }
+    
+    if PRICING_DATA:
+        plans = PRICING_DATA.get('pricing_data', {}).get('plans', [])
+        plan = next((p for p in plans if p['id'] == plan_id), None)
+        if plan:
+            limit_data = plan.get('limits', limit_data)
+
     body = {
         "user_id": user_id,
         "plan_id": plan_id,
         "billing_cycle": cycle,
         "stripe_customer_id": customer_id,
-        "status": "active"
+        "status": "active",
+        "interviews_limit": limit_data["interviews_per_month"] if "interviews_per_month" in limit_data else limit_data["interviews_limit"],
+        "max_duration_mins": limit_data["max_duration_mins"],
+        "max_participants": limit_data["max_participants"]
     }
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
     try:

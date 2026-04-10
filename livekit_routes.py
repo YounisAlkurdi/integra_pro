@@ -97,48 +97,51 @@ async def get_livekit_token(req: TokenRequest):
             detail="LiveKit credentials not configured on the server.",
         )
 
-    # --- Schedule Validation ---
+    # --- Schedule & Limit Validation ---
     from nodes import get_active_streams
     all_nodes = get_active_streams()
     node = next((n for n in all_nodes if n['room_id'] == req.roomName), None)
     
-    if node and node.get('scheduled_at'):
+    if node:
+        # 1. Check Schedule
+        if node.get('scheduled_at'):
+            try:
+                sched_str = node['scheduled_at'].replace("Z", "+00:00")
+                if len(sched_str) == 16: sched_str += ":00"
+                scheduled_time = datetime.datetime.fromisoformat(sched_str)
+                if scheduled_time.tzinfo is None:
+                    scheduled_time = scheduled_time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=3)))
+                now = datetime.datetime.now(datetime.timezone.utc)
+                buffer = datetime.timedelta(minutes=5)
+                
+                if scheduled_time > (now + buffer):
+                    wait_duration = scheduled_time - now
+                    minutes = int(wait_duration.total_seconds() // 60)
+                    msg_ar = f"الدخول متاح قبل 5 دقائق من الموعد. يرجى الانتظار {minutes} دقيقة."
+                    msg_en = f"Access allowed 5m before start. Please wait {minutes} minutes."
+                    raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
+            except Exception as e:
+                if isinstance(e, HTTPException): raise e
+                print(f"[LiveKit] Schedule parsing error: {e}")
+
+        # 2. Check Participant Limits (Subscription enforcement)
+        max_p = node.get('max_participants', 2)
         try:
-            sched_str = node['scheduled_at'].replace("Z", "+00:00")
-            
-            if len(sched_str) == 16:
-                sched_str += ":00"
+            from livekit.api import LiveKitAPI, ListParticipantsRequest
+            lk_host = livekit_url.replace("wss://", "https://").replace("ws://", "http://")
+            async with LiveKitAPI(lk_host, api_key, api_secret) as lk_api:
+                p_list = await lk_api.room.list_participants(ListParticipantsRequest(room=req.roomName))
+                current_p = len(p_list.participants)
                 
-            scheduled_time = datetime.datetime.fromisoformat(sched_str)
-            
-            # Make aware if naive (assume +03:00 for local dev based on metadata)
-            if scheduled_time.tzinfo is None:
-                scheduled_time = scheduled_time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=3)))
-                
-            now = datetime.datetime.now(datetime.timezone.utc)
-            
-            # Allow joining 5 minutes before scheduled time
-            buffer = datetime.timedelta(minutes=5)
-            
-            if scheduled_time > (now + buffer):
-                wait_duration = scheduled_time - now
-                total_seconds = wait_duration.total_seconds()
-                
-                minutes = int(total_seconds // 60)
-                
-                # Bilingual high-tech error message
-                msg_ar = f"الدخول متاح قبل 5 دقائق من الموعد. يرجى الانتظار {minutes} دقيقة."
-                msg_en = f"Access allowed 5m before start. Please wait {minutes} minutes."
-                full_msg = f"{msg_ar} | {msg_en}"
-                
-                raise HTTPException(
-                    status_code=403,
-                    detail=full_msg,
-                )
+                if current_p >= max_p:
+                    msg_ar = f"الغرفة ممتلئة. الحد الأقصى هو {max_p} مشاركين."
+                    msg_en = f"Room is full. Maximum {max_p} participants allowed."
+                    raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
+        except ImportError:
+            pass # SDK missing, skip technical limit check
         except Exception as e:
             if isinstance(e, HTTPException): raise e
-            print(f"[LiveKit] Schedule parsing error: {e}")
-            pass
+            print(f"[LiveKit] Limit check error: {e}")
 
     # --- Generate token ---
     try:
