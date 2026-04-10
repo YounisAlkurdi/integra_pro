@@ -18,6 +18,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "pricing.json",
+      "use": "@vercel/static"
+    },
+    {
       "src": "{Design,Images,video,frames,Spline_Skill}/**",
       "use": "@vercel/static"
     }
