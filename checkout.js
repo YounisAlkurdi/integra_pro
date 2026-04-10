@@ -32,7 +32,10 @@ async function verifyIdentity() {
 
 // Dynamic Initialization Node
 async function initializeStripe() {
-    const endpoints = window.INTEGRA_SETTINGS.API_FALLBACK_URLS.map(url => `${url}/config`);
+    const endpoints = [
+        window.INTEGRA_SETTINGS.endpoint('/config'),
+        ...window.INTEGRA_SETTINGS.API_FALLBACK_URLS.map(url => `${url}/config`)
+    ];
     let publishableKey = null;
 
     for (let url of endpoints) {
