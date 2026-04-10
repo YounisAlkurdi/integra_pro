@@ -420,6 +420,17 @@
     </div>
 
     <!-- Core Logic — ORDER MATTERS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="settings.js"></script>
+    <script>
+        // Initialize supabase globally for this page
+        if (window.INTEGRA_SETTINGS) {
+            window.supabase = supabase.createClient(
+                window.INTEGRA_SETTINGS.SUPABASE_URL,
+                window.INTEGRA_SETTINGS.SUPABASE_ANON_KEY
+            );
+        }
+    </script>
     <script src="stt.js"></script>           <!-- 1. STT engine (standalone) -->
     <script src="livekit-session.js"></script> <!-- 2. LiveKit client (uses stt.js + config.js) -->
     <script src="integra-session.js"></script> <!-- 3. UI controller -->

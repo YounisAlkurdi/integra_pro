@@ -64,8 +64,11 @@ def get_node_by_room_id(room_id: str):
     return result[0] if result else None
 
 def delete_node(room_id: str):
-    """Marks node as archived. Does NOT remove record."""
-    _supabase_request("PATCH", f"nodes?room_id=eq.{room_id}", {"is_deleted": True})
+    """Marks node as archived and COMPLETED. Does NOT remove record."""
+    _supabase_request("PATCH", f"nodes?room_id=eq.{room_id}", {
+        "is_deleted": True,
+        "status": "COMPLETED"
+    })
     return True
 
 def get_node_stats(user_id: str = None):

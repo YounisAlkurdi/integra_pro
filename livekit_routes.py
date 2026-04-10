@@ -99,9 +99,16 @@ async def get_livekit_token(req: TokenRequest):
             detail="LiveKit credentials not configured on the server.",
         )
 
-    # --- Schedule & Limit Validation ---
     from nodes import get_node_by_room_id
     node = get_node_by_room_id(req.roomName)
+    
+    if not node:
+        raise HTTPException(status_code=404, detail="Room not found.")
+
+    if node.get('is_deleted') or node.get('status') == 'COMPLETED':
+        msg_ar = "عذراً، هذا الرابط انتهت صلاحيته."
+        msg_en = "Sorry, this session link has expired."
+        raise HTTPException(status_code=410, detail=f"{msg_ar} | {msg_en}")
     
     if node:
         # 1. Check Schedule

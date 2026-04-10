@@ -447,17 +447,39 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Terminate the session cleanly
      */
-    window.endSession = function() {
+    window.endSession = async function() {
         showToast("TERMINATING CONNECTION...", "info");
-        window.LiveKitSession?.disconnect();
-        
-        // If I am the HR, I go to dashboard. If I am the candidate, I see the overlay.
+
+        // If I am the HR, I should terminate the room globally for everyone
         if (localRole === 'hr' || localRole === 'admin') {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const authHeader = session ? `Bearer ${session.access_token}` : null;
+                
+                if (authHeader && currentRoomId) {
+                    // 1. Kick everyone out & Close LiveKit Room
+                    await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': authHeader }
+                    });
+
+                    // 2. Mark node as COMPLETED & is_deleted: true
+                    await fetch(`${API_BASE}/api/nodes/${currentRoomId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': authHeader }
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to execute global termination protocol:", e);
+            }
+            
+            // Allow a brief moment for signals to propagate before navigating
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
-            }, 1000);
+            }, 800);
         } else {
-            // Overlay will be triggered by lk:disconnected
+            // Candidates just disconnect locally
+            window.LiveKitSession?.disconnect();
         }
     };
 
@@ -613,6 +635,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="mt-6 text-[9px] font-black uppercase tracking-widest text-white/20">
                             Interviewer: ${new URLSearchParams(window.location.search).get('name') || 'Candidate'}
                         </p>
+                    </div>
+                `;
+                lucide.createIcons({ nodes: [joinLobby] });
+            }
+        }
+
+        // --- BEAUTIFUL "EXPIRED / TERMINATED" UI ---
+        if (msg.includes('expired') || msg.includes('انتهت صلاحيته')) {
+            if (joinLobby) {
+                joinLobby.innerHTML = `
+                    <div class="relative mb-10">
+                        <div class="absolute -inset-16 bg-white/5 rounded-full blur-3xl"></div>
+                        <div class="w-32 h-32 rounded-full border-2 border-white/5 bg-white/5 backdrop-blur-sm flex items-center justify-center">
+                            <i data-lucide="link-2-off" class="w-12 h-12 text-white/20"></i>
+                        </div>
+                    </div>
+                    <div class="text-center px-10">
+                        <h3 class="text-2xl font-black uppercase tracking-tight mb-3 text-white/80">
+                            انتهت صلاحية الرابط
+                        </h3>
+                        <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-loose">
+                            This session has already ended or been terminated by the host.
+                        </p>
+                        <div class="mt-10">
+                            <a href="index.html" class="px-8 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white text-white hover:text-obsidian transition-all">
+                                العودة للرئيسية
+                            </a>
+                        </div>
                     </div>
                 `;
                 lucide.createIcons({ nodes: [joinLobby] });
@@ -865,21 +915,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Poll for status
-                const pollStatus = setInterval(async () => {
+                if (window._pollStatusInterval) clearInterval(window._pollStatusInterval);
+                window._pollStatusInterval = setInterval(async () => {
                     try {
                         const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
+                        if (!checkRaw.ok) return;
                         const check = await checkRaw.json();
                         
                         if (check.status === "APPROVED") {
-                            clearInterval(pollStatus);
+                            clearInterval(window._pollStatusInterval);
+                            window._pollStatusInterval = null;
                             // Join automatically now that we are approved
                             window.joinSession(); 
                         } else if (check.status === "REJECTED") {
-                            clearInterval(pollStatus);
-                            showToast("Entry denied by host", "error");
-                            window.location.reload();
+                            clearInterval(window._pollStatusInterval);
+                            window._pollStatusInterval = null;
+                            showToast("تم رفض طلب الدخول | Entry rejected", "error");
+                            if (joinLobby) {
+                                joinLobby.innerHTML = `<h3 class="text-red-500 font-bold">Entry Rejected</h3>`;
+                            }
                         }
-                    } catch (e) { console.error("Poll fail:", e); }
+                    } catch (e) {
+                        console.error("Polling error:", e);
+                    }
                 }, 3000);
                 return;
             }

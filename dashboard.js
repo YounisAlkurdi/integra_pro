@@ -372,7 +372,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         modal.classList.add('flex');
         lucide.createIcons();
 
-        // Promise-based response logic
         const userChoice = await new Promise((resolve) => {
             const handleConfirm = () => {
                 modal.classList.add('hidden');
@@ -398,29 +397,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!userChoice) return;
 
         try {
-            showToast("INITIATING PURGE...", "system");
+            showToast("EXECUTING PURGE PROTOCOL...", "system");
             const auth = await getAuthHeader();
             
-            // 1. Terminate LiveKit Room
+            // 1. Force-terminate LiveKit Room (Kicks everyone out)
             const lkRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/livekit/room/${rid}`), {
                 method: 'DELETE',
                 headers: { 'Authorization': auth }
             });
+            
+            if (!lkRes.ok) {
+                console.warn("LiveKit Room might already be inactive. Proceeding with DB cleanup.");
+            }
 
-            // 2. Remove from Local Registry
+            // 2. Remove from Local Registry (DB)
             const nodeRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/nodes/${rid}`), {
                 method: 'DELETE',
                 headers: { 'Authorization': auth }
             });
 
-            if (nodeRes.ok) {
-                showToast("System Purge Complete", "success");
+            if (nodeRes.ok || lkRes.ok) {
+                showToast("SESSION TERMINATED & PURGED", "success");
                 await renderInterviews();
                 await updateStats();
             } else {
                 showToast("Purge Signal Interrupted", "error");
             }
         } catch (e) {
+            console.error("Critical Failure in Termination Module:", e);
             showToast("Critical Failure in Termination Module", "error");
         }
     };

@@ -384,8 +384,8 @@ const LiveKitSession = (() => {
             } catch (err) {
                 console.error('[LiveKit] Reconnect failed:', err);
                 
-                // If room was deleted (404) or forbidden (403), do not retry
-                if (err.status === 404 || err.status === 403) {
+                // If room was deleted (404), forbidden (403), or gone (410), do not retry
+                if (err.status === 404 || err.status === 403 || err.status === 410) {
                     console.warn('[LiveKit] Room is gone. Stopping retries.');
                     cleanupAllParticipants();
                     dispatch('lk:disconnected', {});
