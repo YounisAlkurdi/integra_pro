@@ -58,6 +58,11 @@ def get_active_streams(user_id: str = None):
     all_nodes = _supabase_request("GET", f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc") if user_id else []
     return [n for n in all_nodes if not n.get('is_deleted')]
 
+def get_node_by_room_id(room_id: str):
+    """Fetches a specific node by its room_id without user_id filtering."""
+    result = _supabase_request("GET", f"nodes?select=*&room_id=eq.{room_id}")
+    return result[0] if result else None
+
 def delete_node(room_id: str):
     """Marks node as archived. Does NOT remove record."""
     _supabase_request("PATCH", f"nodes?room_id=eq.{room_id}", {"is_deleted": True})

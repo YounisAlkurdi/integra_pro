@@ -79,26 +79,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Timer ─────────────────────────────────────────────────────────────────
-    function startTimer(limitMins = 10) {
-        maxSeconds = limitMins * 60;
-        sessionSeconds = maxSeconds; // Countdown starting point
+    function startTimer(initialSeconds) {
+        sessionSeconds = initialSeconds;
         
         if (timerInterval) clearInterval(timerInterval);
         
+        // Initial draw
+        updateTimerUI();
+
         timerInterval = setInterval(() => {
             sessionSeconds--;
             
             if (sessionSeconds <= 0) {
                 clearInterval(timerInterval);
-                timerEl.textContent = "00:00";
+                if (timerEl) timerEl.textContent = "00:00";
                 showToast("SESSION EXPIRED. TERMINATING LINK.", "error");
                 setTimeout(() => { window.endSession?.(); }, 3000);
                 return;
             }
 
-            const m = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
-            const s = String(sessionSeconds % 60).padStart(2, '0');
-            if (timerEl) timerEl.textContent = `${m}:${s}`;
+            updateTimerUI();
 
             // Warn when 2 minutes left
             if (sessionSeconds === 120) {
@@ -108,12 +108,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
+    function updateTimerUI() {
+        if (!timerEl) return;
+        const m = String(Math.max(0, Math.floor(sessionSeconds / 60))).padStart(2, '0');
+        const s = String(Math.max(0, sessionSeconds % 60)).padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+        
+        // If expired or negative, style as error
+        if (sessionSeconds <= 0) {
+            timerEl.classList.add('text-red-500');
+        } else if (sessionSeconds <= 120) {
+            timerEl.classList.add('text-red-500', 'animate-pulse');
+        } else {
+            timerEl.classList.remove('text-red-500', 'animate-pulse');
+        }
+    }
+
     async function fetchRoomMeta(roomId) {
         try {
-            // Using public supabase client from global window or config
             const { data, error } = await window.supabase
                 .from('nodes')
-                .select('max_duration_mins, max_participants')
+                .select('created_at, duration_seconds')
                 .eq('room_id', roomId)
                 .single();
             
@@ -121,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data;
         } catch (e) {
             console.warn("[RoomMeta] Falling back to default limits:", e);
-            return { max_duration_mins: 10, max_participants: 2 };
+            return { created_at: new Date().toISOString(), duration_seconds: 600 };
         }
     }
 
@@ -322,10 +337,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addLog(`Connected to room: ${roomName} as ${role.toUpperCase()}`);
         
-        // Fetch limits for this specific room
+        // Fetch limits and creation time
         fetchRoomMeta(roomName).then(meta => {
-            startTimer(meta.max_duration_mins);
-            addLog(`Session limits enabled: ${meta.max_duration_mins}m duration`, 'system');
+            const createdAt = new Date(meta.created_at).getTime();
+            const now = Date.now();
+            const totalDuration = meta.duration_seconds || 600; // Default 10 mins
+            const elapsed = Math.floor((now - createdAt) / 1000);
+            const remaining = totalDuration - elapsed;
+
+            if (remaining <= 0) {
+                showToast("SESSION HAS EXPIRED.", "error");
+                timerEl.textContent = "00:00";
+                setTimeout(() => { window.endSession?.(); }, 2000);
+            } else {
+                startTimer(remaining);
+                addLog(`Session active. ${Math.floor(remaining/60)}m ${remaining%60}s remaining.`, 'system');
+            }
         });
 
         showToast(`Connected as ${participantName}`, 'success');
@@ -391,11 +418,24 @@ document.addEventListener('DOMContentLoaded', () => {
         setFeedStatus('hr', 'OFFLINE', false);
         setFeedStatus('candidate', 'OFFLINE', false);
 
-        addLog('Session disconnected', 'error');
-        showToast('Session ended', 'error');
-        setTimeout(() => {
-            window.location.href = 'dashboard.html';
-        }, 2000);
+        addLog('Session terminated by server', 'error');
+        
+        // Show the termination overlay
+        const overlay = $('termination-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            // Ensure icons are created if overlay was hidden
+            if (window.lucide) window.lucide.createIcons({ nodes: [overlay] });
+            
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                overlay.classList.add('opacity-100');
+            }, 50);
+        } else {
+            // Fallback
+            showToast('Session ended', 'error');
+            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+        }
     });
 
     /**
@@ -404,9 +444,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.endSession = function() {
         showToast("TERMINATING CONNECTION...", "info");
         window.LiveKitSession?.disconnect();
-        setTimeout(() => {
-            window.location.href = 'dashboard.html';
-        }, 1500);
+        
+        // If I am the HR, I go to dashboard. If I am the candidate, I see the overlay.
+        if (localRole === 'hr' || localRole === 'admin') {
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        } else {
+            // Overlay will be triggered by lk:disconnected
+        }
     };
 
     // Wire Leave Button
@@ -505,9 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if it's a "Not Started" error from our backend
         if (msg.includes('Access allowed') || msg.includes('الدخول متاح')) {
             if (joinLobby) {
-                // Split the bilingual message for better display
                 const [msgAr, msgEn] = msg.split(' | ');
-                
                 joinLobby.innerHTML = `
                     <div class="relative mb-10">
                         <div class="absolute -inset-10 bg-purple-500/10 rounded-full blur-3xl"></div>
@@ -528,6 +572,41 @@ document.addEventListener('DOMContentLoaded', () => {
                                 تحديث الصفحة
                             </button>
                         </div>
+                    </div>
+                `;
+                lucide.createIcons({ nodes: [joinLobby] });
+            }
+        }
+
+        // --- BEAUTIFUL "ROOM FULL" UI ---
+        if (msg.includes('Room is full') || msg.includes('الغرفة ممتلئة')) {
+            if (joinLobby) {
+                const [msgAr, msgEn] = msg.split(' | ');
+                joinLobby.innerHTML = `
+                    <div class="relative mb-10">
+                        <div class="absolute -inset-16 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div class="w-32 h-32 rounded-full border-2 border-white/10 bg-red-500/5 backdrop-blur-sm flex items-center justify-center">
+                            <i data-lucide="user-minus" class="w-12 h-12 text-red-500 animate-[bounce_2s_infinite]"></i>
+                        </div>
+                        <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center border-4 border-obsidian shadow-2xl">
+                             <i data-lucide="lock" class="w-4 h-4 text-white"></i>
+                        </div>
+                    </div>
+                    <div class="text-center px-10">
+                        <h3 class="text-2xl font-black uppercase tracking-tight mb-3 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                            ${msgAr || 'الغرفة ممتلئة'}
+                        </h3>
+                        <p class="text-[11px] font-mono text-white/50 uppercase tracking-[0.2em] max-w-sm mx-auto leading-loose">
+                            ${msgEn || 'Maximum participants reached for this session.'}
+                        </p>
+                        <div class="mt-10 p-1 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-md">
+                            <button onclick="window.location.reload()" class="w-full px-8 py-4 bg-red-500 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] hover:bg-white text-white hover:text-red-600 transition-all shadow-xl hover:shadow-red-500/20 active:scale-95">
+                                محاولة الدخول مجدداً
+                            </button>
+                        </div>
+                        <p class="mt-6 text-[9px] font-black uppercase tracking-widest text-white/20">
+                            Interviewer: ${new URLSearchParams(window.location.search).get('name') || 'Candidate'}
+                        </p>
                     </div>
                 `;
                 lucide.createIcons({ nodes: [joinLobby] });

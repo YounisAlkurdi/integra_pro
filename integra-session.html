@@ -397,6 +397,28 @@
         </div>
     </div>
 
+    <!-- Session Termination Overlay -->
+    <div id="termination-overlay" class="fixed inset-0 z-[300] bg-obsidian/98 backdrop-blur-3xl flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-1000">
+        <div class="relative mb-10">
+            <div class="absolute -inset-10 bg-red-500/10 rounded-full blur-3xl"></div>
+            <div class="w-32 h-32 rounded-full border border-white/10 flex items-center justify-center overflow-hidden relative">
+                <i data-lucide="shield-alert" class="w-12 h-12 text-white/20"></i>
+                <div class="absolute inset-0 border-t-2 border-red-500/40 rounded-full animate-spin"></div>
+            </div>
+        </div>
+        <div class="text-center px-10">
+            <h2 class="text-3xl font-black uppercase tracking-tighter mb-4 text-white">Interview Terminated</h2>
+            <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.3em] max-w-sm mx-auto leading-relaxed">
+                The secure link has been decommissioned. All session data, logs, and forensics have been archived to the central vault.
+            </p>
+            <div class="mt-12 pt-8 border-t border-white/5">
+                <button onclick="window.location.href='index.html'" class="px-10 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] hover:bg-white text-white hover:text-obsidian transition-all">
+                    Return to Portal
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Logic — ORDER MATTERS -->
     <script src="stt.js"></script>           <!-- 1. STT engine (standalone) -->
     <script src="livekit-session.js"></script> <!-- 2. LiveKit client (uses stt.js + config.js) -->

@@ -77,7 +77,10 @@ const LiveKitSession = (() => {
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-            throw new Error(err.detail || `HTTP ${res.status}`);
+            const msg = err.detail || `HTTP ${res.status}`;
+            const error = new Error(msg);
+            error.status = res.status; // Attach status code
+            throw error;
         }
 
         return await res.json();
@@ -374,6 +377,16 @@ const LiveKitSession = (() => {
                 await room.connect(tokenData.url, tokenData.token);
             } catch (err) {
                 console.error('[LiveKit] Reconnect failed:', err);
+                
+                // If room was deleted (404) or forbidden (403), do not retry
+                if (err.status === 404 || err.status === 403) {
+                    console.warn('[LiveKit] Room is gone. Stopping retries.');
+                    cleanupAllParticipants();
+                    dispatch('lk:disconnected', {});
+                    window.STTEngine?.stop();
+                    return;
+                }
+
                 if (reconnectCount < MAX_RECONNECTS) {
                     scheduleReconnect(roomName, participantName, role);
                 } else {

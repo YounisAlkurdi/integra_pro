@@ -1,6 +1,8 @@
 import jwt
 import requests
 import base64
+import json
+import urllib.request
 from fastapi import HTTPException, Header, Depends
 from typing import Optional
 from utils import get_env_safe
@@ -97,10 +99,36 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         # Final safety valve
         return jwt.decode(token, options={"verify_signature": False})
 
+def get_active_subscription(user_id: str):
+    """
+    Fetches the active subscription for the user from Supabase.
+    """
+    if not SUPABASE_URL or not get_env_safe("SUPABASE_SERVICE_ROLE_KEY"):
+        return None
+
+    url = f"{SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.{user_id}&status=eq.active&select=*"
+    headers = {
+        "apikey": get_env_safe("SUPABASE_SERVICE_ROLE_KEY"),
+        "Authorization": f"Bearer {get_env_safe('SUPABASE_SERVICE_ROLE_KEY')}",
+    }
+    try:
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        with urllib.request.urlopen(req) as resp:
+            content = resp.read()
+            res = json.loads(content) if content else []
+            return res[0] if res else None
+    except Exception as e:
+        print(f"=> Neural Trace Error: Failed to fetch subscription: {e}")
+        return None
+
 def get_user_profile_data(user: dict):
+    user_id = user.get("sub")
+    subscription = get_active_subscription(user_id)
+    
     return {
         "status": "AUTHORIZED",
-        "node_id": user.get("sub"),
+        "node_id": user_id,
         "operator_email": user.get("email"),
-        "access_level": "COMMANDER"
+        "access_level": "COMMANDER",
+        "subscription": subscription
     }

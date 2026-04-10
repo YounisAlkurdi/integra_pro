@@ -40,7 +40,19 @@ async def get_profile(user: dict = Depends(get_current_user)):
 # --- 3. Node & Stream Endpoints ---
 @app.post("/api/nodes")
 async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)):
-    """Secure Node Initialization."""
+    """Secure Node Initialization with Subscription Enforcement."""
+    profile = get_user_profile_data(user)
+    sub = profile.get("subscription")
+    
+    # Enforce limits from the subscription plan
+    if sub:
+        node.max_participants = sub.get("max_participants", 2)
+        node.max_duration_mins = sub.get("max_duration_mins", 10)
+    else:
+        # Strict defaults if no subscription found (Free Tier fallback)
+        node.max_participants = 2
+        node.max_duration_mins = 10
+        
     return create_neural_node(node, user_id=user["sub"])
 
 @app.get("/api/nodes")

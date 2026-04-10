@@ -98,9 +98,8 @@ async def get_livekit_token(req: TokenRequest):
         )
 
     # --- Schedule & Limit Validation ---
-    from nodes import get_active_streams
-    all_nodes = get_active_streams()
-    node = next((n for n in all_nodes if n['room_id'] == req.roomName), None)
+    from nodes import get_node_by_room_id
+    node = get_node_by_room_id(req.roomName)
     
     if node:
         # 1. Check Schedule
