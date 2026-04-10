@@ -137,10 +137,27 @@ async def get_livekit_token(req: TokenRequest):
                     msg_en = f"Room is full. Maximum {max_p} participants allowed."
                     raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
         except ImportError:
-            pass # SDK missing, skip technical limit check
+            pass
         except Exception as e:
             if isinstance(e, HTTPException): raise e
             print(f"[LiveKit] Limit check error: {e}")
+
+        # --- 3. Admission Control (Lobby System) ---
+        if req.role.lower() == "candidate":
+            from nodes import _supabase_request
+            existing_reqs = _supabase_request("GET", f"join_requests?room_id=eq.{req.roomName}&participant_name=eq.{req.participantName}&status=eq.APPROVED")
+            
+            if not existing_reqs:
+                _supabase_request("POST", "join_requests", {
+                    "room_id": req.roomName,
+                    "participant_name": req.participantName,
+                    "status": "PENDING"
+                })
+                return {
+                    "status": "AWAITING_APPROVAL",
+                    "message_ar": "بانتظار موافقة المحاور للدخول...",
+                    "message_en": "Waiting for HR to approve your entry..."
+                }
 
     # --- Generate token ---
     try:
@@ -158,19 +175,47 @@ async def get_livekit_token(req: TokenRequest):
         err_out = traceback.format_exc()
         with open("livekit_error.txt", "w") as f:
             f.write(err_out)
-        raise HTTPException(
-            status_code=500,
-            detail="Token generation failed. See livekit_error.txt",
-        )
+        raise HTTPException(status_code=500, detail="Token generation failed.")
 
     return {
-        "token":           token,              # JWT the frontend uses to connect
-        "url":             livekit_url,        # wss:// address (public, not a secret)
+        "status":          "GRANTED",
+        "token":           token,
+        "url":             livekit_url,
         "roomName":        req.roomName,
         "participantName": req.participantName,
         "role":            normalized_role,
-        "ttl":             TOKEN_TTL_SEC,      # inform frontend of expiry
+        "ttl":             TOKEN_TTL_SEC,
     }
+
+
+@router.get("/pending-requests/{room_id}")
+async def get_pending_requests(room_id: str):
+    from nodes import _supabase_request
+    return _supabase_request("GET", f"join_requests?room_id=eq.{room_id}&status=eq.PENDING")
+
+
+class DecisionRequest(BaseModel):
+    room_id: str
+    participant_name: str
+    decision: str
+
+
+@router.post("/decide-request")
+async def decide_request(req: DecisionRequest):
+    from nodes import _supabase_request
+    _supabase_request("PATCH", f"join_requests?room_id=eq.{req.room_id}&participant_name=eq.{req.participant_name}&status=eq.PENDING", {
+        "status": req.decision.upper()
+    })
+    return {"status": "UPDATED", "decision": req.decision}
+
+
+@router.get("/request-status")
+async def check_request_status(room_id: str, participant_name: str):
+    from nodes import _supabase_request
+    res = _supabase_request("GET", f"join_requests?room_id=eq.{room_id}&participant_name=eq.{participant_name}&order=created_at.desc")
+    if res:
+        return {"status": res[0]['status']}
+    return {"status": "NOT_FOUND"}
 
 
 @router.delete("/room/{room_name}")

@@ -150,8 +150,14 @@ const LiveKitSession = (() => {
         const { Room, RoomEvent, Track, ConnectionState, VideoPresets } = window.LivekitClient;
 
         try {
-            // 1. Fetch token
+            // 1. Fetch token (or request join approval)
             const tokenData = await fetchToken(roomName, participantName, role);
+            
+            // If it's a lobby request, return early so the UI can handle the waiting state
+            if (tokenData.status === "AWAITING_APPROVAL") {
+                return tokenData;
+            }
+
             localIdentity = participantName;
             localName     = participantName;
             localRole     = role;

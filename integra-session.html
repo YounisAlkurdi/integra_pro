@@ -459,40 +459,6 @@
             }
         })();
 
-        async function joinSession() {
-            const room  = document.getElementById('input-room').value.trim();
-            const name  = document.getElementById('input-name').value.trim();
-            const role  = document.getElementById('input-role').value;
-            const errEl = document.getElementById('join-error');
-
-            if (!room || !name) {
-                if(errEl) {
-                    errEl.textContent = 'Room and name params missing.';
-                    errEl.classList.remove('hidden');
-                } else {
-                    showToast('Room and name missing.', 'error');
-                }
-                return;
-            }
-
-            await window.LiveKitSession.connect({ roomName: room, participantName: name, role });
-        }
-
-        function endSession() {
-            window.LiveKitSession.disconnect();
-            window.location.href = 'dashboard.html';
-        }
-
-        function copyInviteLink() {
-            const room   = document.getElementById('input-room').value.trim() || 'integra-room-01';
-            const base   = window.location.origin + window.location.pathname.replace('integra-session.html', '');
-            const link   = `${base}integra-session.html?room=${room}&role=candidate`;
-            navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!', 'success'));
-        }
-
-        function triggerCognitiveTest() {
-            showToast('Cognitive Challenge Protocol Initiated', 'info');
-        }
     </script>
 </body>
 </html>

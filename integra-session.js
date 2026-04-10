@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Init ─────────────────────────────────────────────────────────────────
     if (window.lucide) window.lucide.createIcons();
 
+    const API_BASE = window.APP_CONFIG?.backendUrl || 'http://127.0.0.1:8000';
+
     // ── State ────────────────────────────────────────────────────────────────
     let micEnabled    = true;
     let camEnabled    = true;
@@ -23,8 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let sessionSeconds = 0;
     let maxSeconds     = 600; // Default 10 mins
     let timerInterval  = null;
-    let localRole      = 'hr';
-    let localName      = '';
+    
+    // Auto-detect role from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let localRole = urlParams.get('role') || 'candidate';
+    let localName = urlParams.get('name') || '';
+    let currentRoomId = urlParams.get('room');
 
     // Map of identity → { role, name, feedEl, statusEl }
     const participantFeeds = new Map();
@@ -788,14 +794,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Join Session Function ────────────────────────────────────────────────
     window.joinSession = async function() {
         const btn = $('btn-join');
+        const inputRoom = document.getElementById('input-room');
+        const inputName = document.getElementById('input-name');
+        const inputRole = document.getElementById('input-role');
+
+        const roomName = inputRoom ? inputRoom.value.trim() : new URLSearchParams(window.location.search).get('room');
+        const name     = inputName ? inputName.value.trim() : new URLSearchParams(window.location.search).get('name');
+        const role     = inputRole ? inputRole.value.trim() : (new URLSearchParams(window.location.search).get('role') || 'candidate');
+
         if (btn) {
             btn.disabled = true;
             btn.textContent = 'CONNECTING...';
         }
-
-        const roomName = new URLSearchParams(window.location.search).get('room');
-        const name = new URLSearchParams(window.location.search).get('name') || `User_${Math.floor(Math.random()*1000)}`;
-        const role = new URLSearchParams(window.location.search).get('role') || 'candidate';
 
         if (!roomName) {
             showToast("Missing Room ID", "error");
@@ -804,14 +814,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            await window.LiveKitSession.connect({
+            const result = await window.LiveKitSession.connect({
                 roomName: roomName,
                 participantName: name,
                 role: role
             });
+
+            // --- LOBBY SYSTEM LOGIC ---
+            if (result && result.status === "AWAITING_APPROVAL") {
+                if (joinLobby) {
+                    joinLobby.innerHTML = `
+                        <div class="relative mb-10">
+                            <div class="absolute -inset-10 bg-cyan-500/10 rounded-full blur-3xl"></div>
+                            <div class="w-32 h-32 rounded-full border-2 border-cyan-500/20 flex items-center justify-center">
+                                <div class="w-20 h-20 border-b-2 border-cyan-400 rounded-full animate-spin"></div>
+                                <i data-lucide="shield-check" class="absolute w-8 h-8 text-cyan-400 animate-pulse"></i>
+                            </div>
+                        </div>
+                        <div class="text-center px-10">
+                            <h3 class="text-xl font-black uppercase tracking-widest mb-3 text-white">الطلب قيد الانتظار</h3>
+                            <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
+                                ${result.message_en}
+                            </p>
+                            <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
+                                <span class="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></span>
+                                <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Verifying Identity...</span>
+                            </div>
+                        </div>
+                    `;
+                    lucide.createIcons({ nodes: [joinLobby] });
+                }
+
+                // Poll for status
+                const pollStatus = setInterval(async () => {
+                    try {
+                        const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
+                        const check = await checkRaw.json();
+                        
+                        if (check.status === "APPROVED") {
+                            clearInterval(pollStatus);
+                            // Join automatically now that we are approved
+                            window.joinSession(); 
+                        } else if (check.status === "REJECTED") {
+                            clearInterval(pollStatus);
+                            showToast("Entry denied by host", "error");
+                            window.location.reload();
+                        }
+                    } catch (e) { console.error("Poll fail:", e); }
+                }, 3000);
+                return;
+            }
         } catch (err) {
             console.error("[Join] Connection failed:", err);
-            // Error handling is also done via 'lk:error' event
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Reconnect Session';
@@ -826,5 +880,99 @@ document.addEventListener('DOMContentLoaded', () => {
         logList.innerHTML = '';
         addLog('System initialized. Awaiting session...');
     }
+
+    // --- HR LOBBY MONITOR ---
+    if (localRole === 'hr' || localRole === 'interviewer') {
+        const lobbyContainer = document.createElement('div');
+        lobbyContainer.id = 'hr-lobby-notifs';
+        lobbyContainer.className = 'fixed top-20 right-6 w-80 space-y-4 z-[9999]';
+        document.body.appendChild(lobbyContainer);
+
+        const knownRequests = new Set();
+
+        setInterval(async () => {
+            if (!currentRoomId) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
+                const requests = await res.json();
+
+                requests.forEach(req => {
+                    const reqKey = `${req.participant_name}`;
+                    if (knownRequests.has(reqKey)) return;
+                    knownRequests.add(reqKey);
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+                    card.innerHTML = `
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                                <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                                <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
+                                رفض
+                            </button>
+                            <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
+                                قبول
+                            </button>
+                        </div>
+                    `;
+                    
+                    card.querySelector('.btn-approve').onclick = async () => {
+                        await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
+                        });
+                        card.remove();
+                    };
+
+                    card.querySelector('.btn-deny').onclick = async () => {
+                        await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
+                        });
+                        card.remove();
+                        knownRequests.delete(reqKey);
+                    };
+
+                    lobbyContainer.appendChild(card);
+                    lucide.createIcons({ nodes: [card] });
+                });
+            } catch (e) { console.error("Lobby check failed:", e); }
+        }, 5000);
+    }
+
+    /**
+     * Terminate the session cleanly
+     */
+    window.endSession = function() {
+        window.LiveKitSession.disconnect();
+        window.location.href = 'dashboard.html';
+    };
+
+    /**
+     * Copy invite link for candidate
+     */
+    window.copyInviteLink = function() {
+        const inputRoom = document.getElementById('input-room');
+        const room      = inputRoom ? inputRoom.value.trim() : 'integra-room-01';
+        const base      = window.location.origin + window.location.pathname.replace('integra-session.html', '');
+        const link      = `${base}integra-session.html?room=${room}&role=candidate`;
+        
+        navigator.clipboard.writeText(link).then(() => {
+            if (typeof showToast === 'function') showToast('Invite link copied!', 'success');
+        });
+    };
+
+    window.triggerCognitiveTest = function() {
+        if (typeof showToast === 'function') showToast('Cognitive Challenge Protocol Initiated', 'info');
+    };
 
 });
