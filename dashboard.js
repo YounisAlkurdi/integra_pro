@@ -136,16 +136,25 @@ document.addEventListener("DOMContentLoaded", async () => {
             let sub = data && data[0] ? data[0] : { interviews_limit: 5, plan_id: 'free', max_duration_mins: 10, max_participants: 2 };
             
             // Repair in-memory if needed
-            if (sub.plan_id && (!sub.interviews_limit || !sub.max_duration_mins)) {
+            if (sub.plan_id) {
                 const templates = {
                     'starter': { interviews_limit: 15, max_duration_mins: 20, max_participants: 4 },
                     'professional': { interviews_limit: 40, max_duration_mins: 60, max_participants: 8 },
-                    'nexus': { interviews_limit: 50, max_duration_mins: 60, max_participants: 5 }
+                    'enterprise': { interviews_limit: 9999, max_duration_mins: 1440, max_participants: 100 },
+                    'nexus': { interviews_limit: 50, max_duration_mins: 60, max_participants: 5 },
+                    'free': { interviews_limit: 5, max_duration_mins: 10, max_participants: 2 }
                 };
                 const tpl = templates[sub.plan_id] || templates['free'];
-                sub.interviews_limit = sub.interviews_limit || tpl.interviews_limit;
-                sub.max_duration_mins = sub.max_duration_mins || tpl.max_duration_mins;
-                sub.max_participants = sub.max_participants || tpl.max_participants;
+                
+                if (!sub.interviews_limit || sub.interviews_limit === 5) {
+                    sub.interviews_limit = tpl.interviews_limit;
+                    sub.max_duration_mins = tpl.max_duration_mins;
+                    sub.max_participants = tpl.max_participants;
+                } else {
+                    sub.interviews_limit = sub.interviews_limit || tpl.interviews_limit;
+                    sub.max_duration_mins = sub.max_duration_mins || tpl.max_duration_mins;
+                    sub.max_participants = sub.max_participants || tpl.max_participants;
+                }
             }
 
             userSubscription = sub;

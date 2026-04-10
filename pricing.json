@@ -13,6 +13,7 @@
           "4 Node Capacity",
           "Standard Analytics"
         ],
+        "limits": { "interviews_per_month": 15, "max_duration_mins": 20, "max_participants": 4 },
         "button_text": "Identify Node",
         "highlight": false
       },
@@ -29,6 +30,7 @@
           "Neural Recording Included",
           "Priority Response Handshake"
         ],
+        "limits": { "interviews_per_month": 40, "max_duration_mins": 60, "max_participants": 8 },
         "button_text": "Upgrade to Pro",
         "highlight": true,
         "badge": "High Priority"
@@ -45,6 +47,7 @@
           "SLA guarantees",
           "Dedicated Security Engineer"
         ],
+        "limits": { "interviews_per_month": 9999, "max_duration_mins": 1440, "max_participants": 100 },
         "button_text": "Contact Sales",
         "highlight": false
       }

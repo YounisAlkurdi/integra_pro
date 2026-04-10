@@ -121,21 +121,29 @@ def get_active_subscription(user_id: str):
             sub = res[0] if res else None
             
             # --- NEURAL SYNC: LEGACY RECORD REPAIR ---
-            # If the DB record is missing fields (from older payment flow), repair it in-memory
+            # If the DB record is missing fields or stuck on defaults (from older payment flow), repair it in-memory
             if sub and sub.get('plan_id'):
                 plan_id = sub['plan_id']
-                if not sub.get('max_duration_mins') or not sub.get('interviews_limit'):
+                if not sub.get('max_duration_mins') or not sub.get('interviews_limit') or sub.get('interviews_limit') == 5:
                     # Load template from memory to save I/O
                     templates = {
                         'starter': {"interviews_limit": 15, "max_duration_mins": 20, "max_participants": 4},
                         'professional': {"interviews_limit": 40, "max_duration_mins": 60, "max_participants": 8},
+                        'enterprise': {"interviews_limit": 9999, "max_duration_mins": 1440, "max_participants": 100},
                         'nexus': {"interviews_limit": 50, "max_duration_mins": 60, "max_participants": 5}
                     }
                     if plan_id in templates:
                         tpl = templates[plan_id]
-                        sub['interviews_limit'] = sub.get('interviews_limit') or tpl['interviews_limit']
-                        sub['max_duration_mins'] = sub.get('max_duration_mins') or tpl['max_duration_mins']
-                        sub['max_participants'] = sub.get('max_participants') or tpl['max_participants']
+                        
+                        # Correct bugged defaults (5) by forcing the template limits
+                        if sub.get('interviews_limit') == 5 or not sub.get('interviews_limit'):
+                            sub['interviews_limit'] = tpl['interviews_limit']
+                            sub['max_duration_mins'] = tpl['max_duration_mins']
+                            sub['max_participants'] = tpl['max_participants']
+                        else:
+                            sub['interviews_limit'] = sub.get('interviews_limit') or tpl['interviews_limit']
+                            sub['max_duration_mins'] = sub.get('max_duration_mins') or tpl['max_duration_mins']
+                            sub['max_participants'] = sub.get('max_participants') or tpl['max_participants']
             
             return sub
     except Exception as e:

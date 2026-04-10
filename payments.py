@@ -110,12 +110,12 @@ def validate_price(plan_id, cycle):
         plan = next((p for p in plans if p['id'] == plan_id), None)
         
         if not plan: return -1
-        if plan[cycle]['price'] == 'Custom': return -1
+        if str(plan[cycle]['price']).lower() == 'custom': return -1
         
         if cycle == 'monthly':
-            return plan['monthly']['price'] * 100
+            return int(plan['monthly']['price']) * 100
         else:
-            return plan['yearly']['price'] * 12 * 100 # Total for year
+            return int(plan['yearly']['price']) * 12 * 100 # Total for year
     except Exception:
         return -1
 
