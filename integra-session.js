@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const { data, error } = await window.supabase
                 .from('nodes')
-                .select('created_at, max_duration_mins')
+                .select('created_at, max_duration_mins, scheduled_at')
                 .eq('room_id', roomId)
                 .single();
             
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data;
         } catch (e) {
             console.warn("[RoomMeta] Falling back to default limits:", e);
-            return { created_at: new Date().toISOString(), max_duration_mins: 10 };
+            return { created_at: new Date().toISOString(), max_duration_mins: 10, scheduled_at: null };
         }
     }
 
@@ -802,15 +802,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const name     = inputName ? inputName.value.trim() : new URLSearchParams(window.location.search).get('name');
         const role     = inputRole ? inputRole.value.trim() : (new URLSearchParams(window.location.search).get('role') || 'candidate');
 
+        if (!roomName) {
+            showToast("Missing Room ID", "error");
+            return;
+        }
+
+        // --- PRE-CONNECT SCHEDULE CHECK ---
+        const meta = await fetchRoomMeta(roomName);
+        if (meta && meta.scheduled_at) {
+            const scheduledAt = new Date(meta.scheduled_at);
+            const now = new Date();
+            const buffer = 5 * 60 * 1000; // 5 mins
+            
+            if (scheduledAt > (now.getTime() + buffer)) {
+                const diff = scheduledAt - now;
+                const minutes = Math.floor(diff / 60000);
+                showToast(`الموعد لم يحن بعد. يمكنك الدخول قبل 5 دقائق (مبقي ${minutes} دقيقة)`, "info");
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = `متبقي ${minutes} دقيقة`;
+                    setTimeout(() => { btn.disabled = false; window.joinSession(); }, Math.min(diff - buffer, 30000));
+                }
+                return;
+            }
+        }
+
         if (btn) {
             btn.disabled = true;
             btn.textContent = 'CONNECTING...';
-        }
-
-        if (!roomName) {
-            showToast("Missing Room ID", "error");
-            if (btn) btn.disabled = false;
-            return;
         }
 
         try {
@@ -866,7 +885,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- START TIMER LOGIC ---
-            const meta = await fetchRoomMeta(roomName);
             if (meta) {
                 const startTime = new Date(meta.created_at).getTime();
                 const now = new Date().getTime();
@@ -904,63 +922,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const knownRequests = new Set();
 
-        setInterval(async () => {
-            if (!currentRoomId) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
-                const requests = await res.json();
+        async function startSmartMonitoring() {
+            const meta = await fetchRoomMeta(currentRoomId);
+            const scheduledAt = meta?.scheduled_at ? new Date(meta.scheduled_at) : null;
 
-                requests.forEach(req => {
-                    const reqKey = `${req.participant_name}`;
-                    if (knownRequests.has(reqKey)) return;
-                    knownRequests.add(reqKey);
+            const checkLogic = async () => {
+                if (!currentRoomId) return;
+                const now = new Date();
+                
+                if (scheduledAt) {
+                    const diff = scheduledAt - now;
+                    const fiveMins = 5 * 60 * 1000;
+                    if (diff > fiveMins) {
+                        console.log(`[HR Monitor] Too early. Check-back in 1 min. Remaining: ${Math.round(diff/60000)}m`);
+                        setTimeout(startSmartMonitoring, 60000); 
+                        return;
+                    }
+                }
 
-                    const card = document.createElement('div');
-                    card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
-                    card.innerHTML = `
-                        <div class="flex items-start gap-4 mb-4">
-                            <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                                <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                try {
+                    const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
+                    const requests = await res.json();
+
+                    requests.forEach(req => {
+                        const reqKey = `${req.participant_name}`;
+                        if (knownRequests.has(reqKey)) return;
+                        knownRequests.add(reqKey);
+
+                        const card = document.createElement('div');
+                        card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+                        card.innerHTML = `
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                                    <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                                    <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
-                                <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
+                                    رفض
+                                </button>
+                                <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
+                                    قبول
+                                </button>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
-                                رفض
-                            </button>
-                            <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
-                                قبول
-                            </button>
-                        </div>
-                    `;
-                    
-                    card.querySelector('.btn-approve').onclick = async () => {
-                        await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
-                        });
-                        card.remove();
-                    };
+                        `;
+                        
+                        card.querySelector('.btn-approve').onclick = async () => {
+                            await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
+                            });
+                            card.remove();
+                        };
 
-                    card.querySelector('.btn-deny').onclick = async () => {
-                        await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
-                        });
-                        card.remove();
-                        knownRequests.delete(reqKey);
-                    };
+                        card.querySelector('.btn-deny').onclick = async () => {
+                            await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
+                            });
+                            card.remove();
+                            knownRequests.delete(reqKey);
+                        };
 
-                    lobbyContainer.appendChild(card);
-                    lucide.createIcons({ nodes: [card] });
-                });
-            } catch (e) { console.error("Lobby check failed:", e); }
-        }, 5000);
+                        lobbyContainer.appendChild(card);
+                        lucide.createIcons({ nodes: [card] });
+                    });
+                } catch (e) { console.error("Lobby check failed:", e); }
+                
+                setTimeout(checkLogic, 5000);
+            };
+
+            checkLogic();
+        }
+
+        startSmartMonitoring();
     }
 
     /**
