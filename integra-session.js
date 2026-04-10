@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const { data, error } = await window.supabase
                 .from('nodes')
-                .select('created_at, duration_seconds')
+                .select('created_at, max_duration_mins')
                 .eq('room_id', roomId)
                 .single();
             
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data;
         } catch (e) {
             console.warn("[RoomMeta] Falling back to default limits:", e);
-            return { created_at: new Date().toISOString(), duration_seconds: 600 };
+            return { created_at: new Date().toISOString(), max_duration_mins: 10 };
         }
     }
 
@@ -864,6 +864,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 3000);
                 return;
             }
+
+            // --- START TIMER LOGIC ---
+            const meta = await fetchRoomMeta(roomName);
+            if (meta) {
+                const startTime = new Date(meta.created_at).getTime();
+                const now = new Date().getTime();
+                const elapsedSeconds = Math.floor((now - startTime) / 1000);
+                const totalAllowedSeconds = (meta.max_duration_mins || 10) * 60;
+                const remainingSeconds = totalAllowedSeconds - elapsedSeconds;
+                
+                console.log(`[Timer] Total: ${totalAllowedSeconds}s, Elapsed: ${elapsedSeconds}s, Remaining: ${remainingSeconds}s`);
+                startTimer(remainingSeconds);
+            }
+
         } catch (err) {
             console.error("[Join] Connection failed:", err);
             if (btn) {

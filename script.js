@@ -3,6 +3,16 @@
  * Handles custom cursors, animations, pricing toggles, and modal logic.
  */
 
+// Global Logout Utility
+window.logoutHR = async () => {
+    if (window.supabase) {
+        await window.supabase.auth.signOut();
+        window.location.href = 'index.html';
+    } else {
+        window.location.href = 'index.html';
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Initialize Icons
     lucide.createIcons();

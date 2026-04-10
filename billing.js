@@ -42,6 +42,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderInvoices(invoices);
     renderStats(invoices);
+
+    // Update 'Active Protocol' text if subscription found
+    const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('plan_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+    
+    if (subData && subData.length > 0) {
+        const protocolEl = document.querySelector('p.text-lg.font-black.tracking-tighter.text-white.uppercase.italic');
+        if (protocolEl) {
+            protocolEl.textContent = getFriendlyPlanName(subData[0].plan_id);
+        }
+    }
 });
 
 function showSuccessProtocol() {
@@ -97,7 +112,7 @@ function renderInvoices(invoices) {
                     <i data-lucide="receipt" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h3 class="text-sm font-bold uppercase tracking-tight italic mb-1">${inv.plan_id.toUpperCase()} PROTOCOL</h3>
+                    <h3 class="text-sm font-bold uppercase tracking-tight italic mb-1">${getFriendlyPlanName(inv.plan_id)}</h3>
                     <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest">${new Date(inv.created_at).toLocaleDateString()} • REF: ${inv.id.split('-')[0]}</p>
                 </div>
             </div>
@@ -129,5 +144,14 @@ function renderError() {
             <p class="text-xs font-mono uppercase tracking-widest">Ledger Sync Error</p>
         </div>
     `;
-    lucide.createIcons();
+}
+
+function getFriendlyPlanName(plan_id) {
+    const names = {
+        'free': 'Neural Bridge Protocol',
+        'starter': 'System Core Protocol',
+        'professional': 'Neural Nexus Protocol',
+        'nexus': 'Nexus Core Protocol'
+    };
+    return names[plan_id] || `${plan_id.toUpperCase()} PROTOCOL`;
 }

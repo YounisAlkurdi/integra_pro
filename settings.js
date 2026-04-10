@@ -26,7 +26,7 @@ window.INTEGRA_SETTINGS = {
 
 // Global Supabase Initialization
 if (typeof supabase !== 'undefined') {
-    window.supabase = supabase.createClient(
+    window.supabaseClient = supabase.createClient(
         window.INTEGRA_SETTINGS.SUPABASE_URL,
         window.INTEGRA_SETTINGS.SUPABASE_ANON_KEY
     );

@@ -11,12 +11,13 @@ async function verifyIdentity() {
     const supabaseUrl = window.INTEGRA_SETTINGS.SUPABASE_URL;
     const supabaseKey = window.INTEGRA_SETTINGS.SUPABASE_ANON_KEY;
     
-    if (typeof supabase === 'undefined') {
-        console.error("Supabase engine not loaded.");
-        return;
+    // Use global client from settings.js if available, otherwise create it
+    if (window.supabaseClient) {
+        supabaseClient = window.supabaseClient;
+    } else {
+        supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     }
-
-    supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    
     const { data } = await supabaseClient.auth.getSession();
     session = data.session;
     
@@ -68,7 +69,14 @@ async function initializeStripe() {
         }
     });
 
+    const mountContainer = document.getElementById('card-element');
     card.mount('#card-element');
+    
+    card.on('ready', () => {
+        const placeholder = document.getElementById('card-element-placeholder');
+        if (placeholder) placeholder.remove();
+        mountContainer.classList.add('border-cyan-400/30');
+    });
     loadPlanData();
 }
 

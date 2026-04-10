@@ -14,41 +14,51 @@ SUPABASE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
 def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
     """Internal database update after payment confirmation."""
     import urllib.request
-    url = f"{SUPABASE_URL}/rest/v1/subscriptions"
+    import os
+    
+    # Reload pricing data dynamically to ensure latest limits
+    try:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(base_path, 'pricing.json'), 'r') as f:
+            neural_pricing = json.load(f)
+    except:
+        neural_pricing = PRICING_DATA
+
+    # Use on_conflict=user_id for UPSERT logic (requires unique constraint on user_id)
+    url = f"{SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id"
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates"
     }
-    # Fetch limits from neural cache
-    limit_data = {
-        "interviews_limit": 5,
-        "max_duration_mins": 10,
-        "max_participants": 2
-    }
     
-    if PRICING_DATA:
-        plans = PRICING_DATA.get('pricing_data', {}).get('plans', [])
+    # Default Limits
+    limit_data = {"interviews_per_month": 5, "max_duration_mins": 10, "max_participants": 2}
+    
+    if neural_pricing:
+        plans = neural_pricing.get('pricing_data', {}).get('plans', [])
         plan = next((p for p in plans if p['id'] == plan_id), None)
         if plan:
             limit_data = plan.get('limits', limit_data)
 
+    print(f"=> NEURAL_SYNC: Updating Subscription for {user_id} -> Plan: {plan_id} (Duration: {limit_data.get('max_duration_mins')}m)")
+
     body = {
         "user_id": user_id,
         "plan_id": plan_id,
-        "billing_cycle": cycle,
+        "billing_cycle": cycle or "monthly",
         "stripe_customer_id": customer_id,
-        "status": "active",
-        "interviews_limit": limit_data["interviews_per_month"] if "interviews_per_month" in limit_data else limit_data["interviews_limit"],
-        "max_duration_mins": limit_data["max_duration_mins"],
-        "max_participants": limit_data["max_participants"]
+        "status": "ACTIVE",
+        "interviews_limit": limit_data.get("interviews_per_month", 5),
+        "max_duration_mins": limit_data.get("max_duration_mins", 10),
+        "max_participants": limit_data.get("max_participants", 2)
     }
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req) as r: return True
     except Exception as e:
-        print(f"FAILED TO UPDATE SUBSCRIPTION: {e}")
+        print(f"FAILED TO UPSERT SUBSCRIPTION: {e}")
         return False
 
 def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):

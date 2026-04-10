@@ -2,6 +2,10 @@ import os
 import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+try:
+    from livekit.api import AccessToken, VideoGrants, LiveKitAPI, ListParticipantsRequest, DeleteRoomRequest
+except ImportError:
+    AccessToken = VideoGrants = LiveKitAPI = ListParticipantsRequest = DeleteRoomRequest = None
 # nodes storage is handled via Supabase — see get_active_streams() below
 
 # ── LiveKit Token Module ─────────────────────────────────────────────────────
@@ -36,12 +40,10 @@ def _build_token(api_key: str, api_secret: str, req: "TokenRequest") -> str:
     Token expires in TOKEN_TTL_SEC seconds and carries the participant's role
     as metadata.
     """
-    try:
-        from livekit.api import AccessToken, VideoGrants
-    except ImportError as e:
+    if AccessToken is None:
         raise HTTPException(
             status_code=500,
-            detail=f"LiveKit SDK Error: {str(e)}. Run: pip install livekit-api",
+            detail="LiveKit SDK not installed. Run: pip install livekit-api",
         )
 
     token = (
@@ -125,22 +127,25 @@ async def get_livekit_token(req: TokenRequest):
 
         # 2. Check Participant Limits (Subscription enforcement)
         max_p = node.get('max_participants', 2)
-        try:
-            from livekit.api import LiveKitAPI, ListParticipantsRequest
-            lk_host = livekit_url.replace("wss://", "https://").replace("ws://", "http://")
-            async with LiveKitAPI(lk_host, api_key, api_secret) as lk_api:
-                p_list = await lk_api.room.list_participants(ListParticipantsRequest(room=req.roomName))
-                current_p = len(p_list.participants)
-                
-                if current_p >= max_p:
-                    msg_ar = f"الغرفة ممتلئة. الحد الأقصى هو {max_p} مشاركين."
-                    msg_en = f"Room is full. Maximum {max_p} participants allowed."
-                    raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
-        except ImportError:
-            pass
-        except Exception as e:
-            if isinstance(e, HTTPException): raise e
-            print(f"[LiveKit] Limit check error: {e}")
+        if LiveKitAPI:
+            try:
+                lk_host = livekit_url.replace("wss://", "https://").replace("ws://", "http://")
+                async with LiveKitAPI(lk_host, api_key, api_secret) as lk_api:
+                    p_list = await lk_api.room.list_participants(ListParticipantsRequest(room=req.roomName))
+                    current_p = len(p_list.participants)
+                    
+                    if current_p >= max_p:
+                        msg_ar = f"الغرفة ممتلئة. الحد الأقصى هو {max_p} مشاركين."
+                        msg_en = f"Room is full. Maximum {max_p} participants allowed."
+                        raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
+            except Exception as e:
+                if isinstance(e, HTTPException): raise e
+                # If room doesn't exist yet (404), list_participants might fail. 
+                # This is OK for token generation.
+                if "not_found" in str(e).lower() or "404" in str(e):
+                    pass 
+                else:
+                    print(f"[LiveKit] Limit check error: {e}")
 
         # --- 3. Admission Control (Lobby System) ---
         if req.role.lower() == "candidate":
@@ -162,12 +167,36 @@ async def get_livekit_token(req: TokenRequest):
     # --- Generate token ---
     try:
         normalized_role = req.role.lower()
+        
+        # Calculate Dynamic TTL based on node limit (mins to secs) + 10m buffer for safety
+        max_mins = node.get('max_duration_mins', 10) if node else 10
+        dynamic_ttl = (max_mins * 60) + 600 # Add 10 mins buffer
+        
         token_req = TokenRequest(
             roomName=req.roomName,
             participantName=req.participantName,
             role=normalized_role,
         )
-        token = _build_token(api_key, api_secret, token_req)
+        
+        # Build token with dynamic TTL
+        token = (
+            AccessToken(api_key, api_secret)
+            .with_identity(req.participantName)
+            .with_name(req.participantName)
+            .with_ttl(datetime.timedelta(seconds=dynamic_ttl))
+            .with_metadata(f'{{"role":"{normalized_role}"}}')
+            .with_grants(
+                VideoGrants(
+                    room_join=True,
+                    room=req.roomName,
+                    can_publish=True,
+                    can_subscribe=True,
+                    can_publish_data=True,
+                )
+            )
+            .to_jwt()
+        )
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -184,7 +213,7 @@ async def get_livekit_token(req: TokenRequest):
         "roomName":        req.roomName,
         "participantName": req.participantName,
         "role":            normalized_role,
-        "ttl":             TOKEN_TTL_SEC,
+        "ttl":             dynamic_ttl,
     }
 
 
@@ -235,8 +264,13 @@ async def end_room(room_name: str):
             detail="LiveKit credentials not configured on the server.",
         )
 
+    if not DeleteRoomRequest:
+        raise HTTPException(
+            status_code=500,
+            detail="LiveKit API SDK not installed.",
+        )
+
     try:
-        from livekit.api import LiveKitAPI, DeleteRoomRequest
         async with LiveKitAPI(livekit_url, api_key, api_secret) as lk_api:
             await lk_api.room.delete_room(DeleteRoomRequest(room=room_name))
         return {"deleted": True, "room": room_name}

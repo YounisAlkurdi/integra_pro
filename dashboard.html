@@ -78,7 +78,7 @@
             <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform hover-target overflow-hidden" id="user-avatar">
                 <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">YA</div>
             </div>
-            <a href="index.html" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Disconnect">
+            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="تسجيل الخروج">
                 <i data-lucide="power" class="w-5 h-5"></i>
             </a>
         </div>
@@ -129,11 +129,11 @@
                         <div class="text-white/20 mb-1"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
                     </div>
                 </div>
-                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-red-400/30 transition-all duration-500 reveal active" style="transition-delay: 0.3s;">
-                    <p class="text-[9px] font-mono text-red-400/50 uppercase tracking-[0.3em] mb-4">Threat Vectors</p>
+                <div class="glass-panel p-8 rounded-2xl border border-white/5 group hover:border-purple-400/30 transition-all duration-500 reveal active" style="transition-delay: 0.3s;">
+                    <p class="text-[9px] font-mono text-purple-400/50 uppercase tracking-[0.3em] mb-4">Node Capacity</p>
                     <div class="flex items-end justify-between">
-                        <span class="text-4xl font-black tracking-tighter text-red-500" id="stat-flagged">03</span>
-                        <div class="text-red-500 mb-1 animate-pulse"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+                        <span class="text-3xl font-black tracking-tighter" id="stat-capacity">10m / 2P</span>
+                        <div class="text-purple-500 mb-1"><i data-lucide="upbolt" class="w-5 h-5"></i></div>
                     </div>
                 </div>
             </div>

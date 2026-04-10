@@ -106,7 +106,9 @@ def get_active_subscription(user_id: str):
     if not SUPABASE_URL or not get_env_safe("SUPABASE_SERVICE_ROLE_KEY"):
         return None
 
-    url = f"{SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.{user_id}&status=eq.active&select=*"
+    # Pick the latest active subscription using ordering
+    # Use ilike for case-insensitive status check to match 'ACTIVE' or 'active'
+    url = f"{SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.{user_id}&status=ilike.active&order=created_at.desc"
     headers = {
         "apikey": get_env_safe("SUPABASE_SERVICE_ROLE_KEY"),
         "Authorization": f"Bearer {get_env_safe('SUPABASE_SERVICE_ROLE_KEY')}",
@@ -116,7 +118,26 @@ def get_active_subscription(user_id: str):
         with urllib.request.urlopen(req) as resp:
             content = resp.read()
             res = json.loads(content) if content else []
-            return res[0] if res else None
+            sub = res[0] if res else None
+            
+            # --- NEURAL SYNC: LEGACY RECORD REPAIR ---
+            # If the DB record is missing fields (from older payment flow), repair it in-memory
+            if sub and sub.get('plan_id'):
+                plan_id = sub['plan_id']
+                if not sub.get('max_duration_mins') or not sub.get('interviews_limit'):
+                    # Load template from memory to save I/O
+                    templates = {
+                        'starter': {"interviews_limit": 15, "max_duration_mins": 20, "max_participants": 4},
+                        'professional': {"interviews_limit": 40, "max_duration_mins": 60, "max_participants": 8},
+                        'nexus': {"interviews_limit": 50, "max_duration_mins": 60, "max_participants": 5}
+                    }
+                    if plan_id in templates:
+                        tpl = templates[plan_id]
+                        sub['interviews_limit'] = sub.get('interviews_limit') or tpl['interviews_limit']
+                        sub['max_duration_mins'] = sub.get('max_duration_mins') or tpl['max_duration_mins']
+                        sub['max_participants'] = sub.get('max_participants') or tpl['max_participants']
+            
+            return sub
     except Exception as e:
         print(f"=> Neural Trace Error: Failed to fetch subscription: {e}")
         return None

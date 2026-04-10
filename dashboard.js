@@ -116,21 +116,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function fetchSubscription() {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return null;
+            const auth = await getAuthHeader();
+            const response = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user-profile'), {
+                headers: { 'Authorization': auth }
+            });
             
-            const { data, error } = await supabase
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
+            if (!response.ok) throw new Error("Sync Interrupted");
+            const data = await response.json();
             
-            if (error) throw error;
-            userSubscription = data;
-            return data;
+            // The backend now provides the latest active subscription with all limits enforced
+            userSubscription = data.subscription || { interviews_limit: 5, plan_id: 'free', max_duration_mins: 10, max_participants: 2 };
+            return userSubscription;
         } catch (e) {
-            console.warn("Neural Link: Subscription data not found. Defaulting to Free.");
-            return { interviews_limit: 5, plan_id: 'free' };
+            console.warn("Neural Link: Backend sync failed. Retrying in bypass mode.");
+            // Manual check as last resort
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data } = await supabase.from('subscriptions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1);
+            
+            let sub = data && data[0] ? data[0] : { interviews_limit: 5, plan_id: 'free', max_duration_mins: 10, max_participants: 2 };
+            
+            // Repair in-memory if needed
+            if (sub.plan_id && (!sub.interviews_limit || !sub.max_duration_mins)) {
+                const templates = {
+                    'starter': { interviews_limit: 15, max_duration_mins: 20, max_participants: 4 },
+                    'professional': { interviews_limit: 40, max_duration_mins: 60, max_participants: 8 },
+                    'nexus': { interviews_limit: 50, max_duration_mins: 60, max_participants: 5 }
+                };
+                const tpl = templates[sub.plan_id] || templates['free'];
+                sub.interviews_limit = sub.interviews_limit || tpl.interviews_limit;
+                sub.max_duration_mins = sub.max_duration_mins || tpl.max_duration_mins;
+                sub.max_participants = sub.max_participants || tpl.max_participants;
+            }
+
+            userSubscription = sub;
+            return userSubscription;
         }
     }
 
@@ -158,7 +177,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById('stat-total').textContent = `${stats.total}/${sub?.interviews_limit || 5}`;
             document.getElementById('stat-active').textContent = stats.active;
             document.getElementById('stat-completed').textContent = stats.completed;
-            document.getElementById('stat-flagged').textContent = stats.threats.toString().padStart(2, '0');
+            
+            // Update Node Capacity display
+            const capacityEl = document.getElementById('stat-capacity');
+            if (capacityEl) {
+                const mins = sub?.max_duration_mins || 10;
+                const parts = sub?.max_participants || 2;
+                capacityEl.textContent = `${mins}m / ${parts}P`;
+            }
+
+            // Legacy support for flagged element
+            const flaggedEl = document.getElementById('stat-flagged');
+            if (flaggedEl) flaggedEl.textContent = stats.threats.toString().padStart(2, '0');
             
             // Highlight limit if reached
             if (sub && stats.total >= sub.interviews_limit) {

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from utils import get_env_safe
-from auth import get_current_user, get_user_profile_data
+from auth import get_current_user, get_user_profile_data, get_active_subscription
 from payments import PaymentRequest, execute_payment, handle_stripe_webhook
 from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
 from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
@@ -23,8 +23,8 @@ app.add_middleware(
         "http://localhost:5501", "http://127.0.0.1:5501",
         "http://localhost:8080", "http://127.0.0.1:8080",
         "http://localhost:3000", "http://127.0.0.1:3000",
-        # NOTE: "null" (file:// origin) removed — use a local dev server instead.
-        # Run: python -m http.server 8080  or use Live Server extension.
+        "http://localhost:8000", "http://127.0.0.1:8000",
+        "null" # Support local file:// development
     ],
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -42,16 +42,17 @@ async def get_profile(user: dict = Depends(get_current_user)):
 async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)):
     """Secure Node Initialization with Subscription Enforcement."""
     profile = get_user_profile_data(user)
-    sub = profile.get("subscription")
+    sub = profile.get("subscription") or {}
+    limit = sub.get('interviews_limit', 5)
     
-    # Enforce limits from the subscription plan
-    if sub:
-        node.max_participants = sub.get("max_participants", 2)
-        node.max_duration_mins = sub.get("max_duration_mins", 10)
-    else:
-        # Strict defaults if no subscription found (Free Tier fallback)
-        node.max_participants = 2
-        node.max_duration_mins = 10
+    # 1. Enforce limits from the subscription plan on the record
+    node.max_participants = sub.get("max_participants", 2)
+    node.max_duration_mins = sub.get("max_duration_mins", 10)
+    
+    # 2. Check Usage Limit
+    stats = get_node_stats(user_id=user["sub"])
+    if stats['total'] >= limit:
+        raise HTTPException(status_code=402, detail="Neural Link Saturated: Limit Reached")
         
     return create_neural_node(node, user_id=user["sub"])
 
@@ -115,4 +116,4 @@ async def sys_health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
