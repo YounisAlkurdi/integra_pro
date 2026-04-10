@@ -3,20 +3,43 @@ let currentPlan = null;
 let billingMode = new URLSearchParams(window.location.search).get('mode') || 'monthly';
 let planId = new URLSearchParams(window.location.search).get('plan') || 'starter';
 
+// Global Identity verification
+let session = null;
+let supabaseClient = null;
+
+async function verifyIdentity() {
+    const supabaseUrl = window.INTEGRA_SETTINGS.SUPABASE_URL;
+    const supabaseKey = window.INTEGRA_SETTINGS.SUPABASE_ANON_KEY;
+    
+    if (typeof supabase === 'undefined') {
+        console.error("Supabase engine not loaded.");
+        return;
+    }
+
+    supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    const { data } = await supabaseClient.auth.getSession();
+    session = data.session;
+    
+    if (!session) {
+        window.location.href = 'index.html?error=auth_required';
+        return;
+    }
+
+    // Initialize Stripe once identity is verified
+    initializeStripe();
+}
+
 // Dynamic Initialization Node
 async function initializeStripe() {
     const endpoints = window.INTEGRA_SETTINGS.API_FALLBACK_URLS.map(url => `${url}/config`);
-
     let publishableKey = null;
 
     for (let url of endpoints) {
         try {
-            console.log(`=> Neural Link: Attempting connection via ${url}`);
             const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 publishableKey = data.publishableKey;
-                console.log(`=> Neural Link: Success via ${url}`);
                 break;
             }
         } catch (e) {
@@ -46,8 +69,6 @@ async function initializeStripe() {
     });
 
     card.mount('#card-element');
-    
-    // Load Plan Details
     loadPlanData();
 }
 
@@ -56,10 +77,7 @@ async function loadPlanData() {
         const response = await fetch('pricing.json');
         const data = await response.json();
         currentPlan = data.pricing_data.plans.find(p => p.id === planId);
-
-        if (currentPlan) {
-            updatePriceDisplays();
-        }
+        if (currentPlan) updatePriceDisplays();
     } catch (e) {
         console.error("=> Identity Breach: Failed to load pricing protocols.", e);
     }
@@ -67,7 +85,6 @@ async function loadPlanData() {
 
 function updatePriceDisplays() {
     if (!currentPlan) return;
-
     const monthlyDisplay = document.getElementById('monthly-price-display');
     const yearlyDisplay = document.getElementById('yearly-price-display');
 
@@ -83,65 +100,67 @@ function updatePriceDisplays() {
 
 function selectBilling(mode) {
     billingMode = mode;
-    
-    // UI Update
-    document.getElementById('billing-monthly').classList.toggle('active-billing', mode === 'monthly');
-    document.getElementById('billing-yearly').classList.toggle('active-billing', mode === 'yearly');
+    document.getElementById('billing-monthly')?.classList.toggle('active-billing', mode === 'monthly');
+    document.getElementById('billing-yearly')?.classList.toggle('active-billing', mode === 'yearly');
 }
 
 // Initial UI Sync
 selectBilling(billingMode);
 
-initializeStripe();
-
 // 3D Experience (Physics Engine)
 const cardInner = document.getElementById('card-inner');
 const cardContainer = document.querySelector('.card-container');
 
-cardContainer.addEventListener('mousemove', (e) => {
-    const rect = cardContainer.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    cardInner.style.transition = 'transform 0.1s linear';
-    cardInner.style.transform = `rotateX(${-y * 25}deg) rotateY(${x * 25}deg)`;
-});
+if (cardContainer && cardInner) {
+    cardContainer.addEventListener('mousemove', (e) => {
+        const rect = cardContainer.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        cardInner.style.transition = 'transform 0.1s linear';
+        cardInner.style.transform = `rotateX(${-y * 25}deg) rotateY(${x * 25}deg)`;
+    });
 
-cardContainer.addEventListener('mouseleave', () => {
-    cardInner.style.transition = 'transform 0.6s ease';
-    cardInner.style.transform = 'rotateY(0deg) rotateX(0deg)';
-});
+    cardContainer.addEventListener('mouseleave', () => {
+        cardInner.style.transition = 'transform 0.6s ease';
+        cardInner.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    });
+}
 
 // Identity Sync
 const holderInput = document.getElementById('card-holder-name');
 const holderDisplay = document.getElementById('card-holder-display');
 
-holderInput.addEventListener('input', (e) => {
-    holderDisplay.textContent = e.target.value.toUpperCase() || 'JANE DOE';
-});
+if (holderInput && holderDisplay) {
+    holderInput.addEventListener('input', (e) => {
+        holderDisplay.textContent = e.target.value.toUpperCase() || 'JANE DOE';
+    });
+}
 
 // Force Handle
 const form = document.getElementById('payment-form');
 const button = document.getElementById('submit-button');
 
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    button.disabled = true;
-    button.textContent = 'AUTHENTICATING...';
+if (form) {
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        button.textContent = 'AUTHENTICATING...';
 
-    const { paymentMethod, error } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: card,
-        billing_details: { name: holderInput.value }
+        const { paymentMethod, error } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: card,
+            billing_details: { name: holderInput.value }
+        });
+
+        if (error) {
+            document.getElementById('card-errors').textContent = error.message;
+            button.disabled = false;
+            button.textContent = 'Confirm Secure Transaction';
+        } else {
+            await processPayment(paymentMethod.id);
+        }
     });
-
-    if (error) {
-        document.getElementById('card-errors').textContent = error.message;
-        button.disabled = false;
-        button.textContent = 'Confirm Secure Transaction';
-    } else {
-        await processPayment(paymentMethod.id);
-    }
-});
+}
 
 async function processPayment(paymentMethodId) {
     if (!currentPlan) return;
@@ -154,7 +173,6 @@ async function processPayment(paymentMethodId) {
         return;
     }
 
-    // Stripe amount is in cents
     if (billingMode === 'monthly') {
         amount = currentPlan.monthly.price * 100;
     } else {
@@ -164,7 +182,10 @@ async function processPayment(paymentMethodId) {
     try {
         const response = await fetch(window.INTEGRA_SETTINGS.endpoint('/create-payment-intent'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`
+            },
             body: JSON.stringify({ 
                 payment_method_id: paymentMethodId, 
                 amount: amount,
@@ -172,15 +193,24 @@ async function processPayment(paymentMethodId) {
                 billing_cycle: billingMode
             })
         });
+
         const result = await response.json();
-        if (result.status === 'success') {
-            window.location.href = 'index.html?status=success&plan=' + planId;
+        
+        if (response.ok && result.status === 'success') {
+            window.location.href = 'billing.html?status=success&plan=' + planId;
         } else {
-            alert('Security Link Severed: ' + result.message);
+            const errorMsg = result.detail || result.message || 'Unknown Protocol Error';
+            alert('Security Link Severed: ' + errorMsg);
+            button.disabled = false;
+            button.textContent = 'Retry Handshake';
         }
     } catch (err) {
         console.error("=> System Critical Error: ", err);
+        alert('Security Link Severed: Network timeout or connection lost.');
         button.disabled = false;
         button.textContent = 'Retry Handshake';
     }
 }
+
+// Start Verification
+verifyIdentity();

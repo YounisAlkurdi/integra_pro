@@ -32,7 +32,30 @@ def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
     try:
         with urllib.request.urlopen(req) as r: return True
     except Exception as e:
-        print(f"FAILED TO UPDATE DB: {e}")
+        print(f"FAILED TO UPDATE SUBSCRIPTION: {e}")
+        return False
+
+def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):
+    """Creates an invoice record in the ledger."""
+    import urllib.request
+    url = f"{SUPABASE_URL}/rest/v1/invoices"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+    body = {
+        "user_id": user_id,
+        "plan_id": plan_id,
+        "amount": amount,
+        "payment_intent_id": payment_intent_id,
+        "status": "PAID"
+    }
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req) as r: return True
+    except Exception as e:
+        print(f"FAILED TO CREATE INVOICE: {e}")
         return False
 
 # Pricing Protocols - Load once into Neural Cache
@@ -103,6 +126,12 @@ async def execute_payment(payment_req: PaymentRequest, request: Request, user_id
                 "allow_redirects": "never"
             }
         )
+        
+        # PROACTIVE RECORDING: Link invoice immediately for synchronized feedback
+        customer_id = getattr(intent, 'customer', None)
+        _update_subscription_in_db(user_id, payment_req.plan_id, payment_req.billing_cycle, customer_id)
+        _create_invoice_in_db(user_id, payment_req.plan_id, expected_amount, intent.id)
+        
         return {"status": "success", "payment_intent_id": intent.id}
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -133,7 +162,10 @@ async def handle_stripe_webhook(request: Request):
         cycle   = metadata.get("billing_cycle")
 
         if user_id and plan_id:
+            # 1. Update Subscription Status
             _update_subscription_in_db(user_id, plan_id, cycle, intent.get("customer"))
-            print(f"STRIPE: Payment confirmed for user {user_id}")
+            # 2. Record Invoice in Ledger
+            _create_invoice_in_db(user_id, plan_id, intent.get("amount"), intent.id)
+            print(f"STRIPE: Payment and Invoice confirmed for user {user_id}")
 
     return {"status": "event_processed"}

@@ -5,3 +5,5 @@ python-dotenv
 stripe
 pydantic
 livekit-api
+requests
+cryptography

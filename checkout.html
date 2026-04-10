@@ -25,6 +25,9 @@
     <div class="scanlines"></div>
     <div class="grid-lines fixed inset-0 opacity-20"></div>
 
+    <!-- Interactive Cursor -->
+    <div class="custom-cursor hidden md:block" id="cursor"></div>
+
     <a href="index.html" class="absolute top-10 left-10 text-[10px] uppercase font-mono tracking-[0.4em] text-white/40 hover:text-cyan-400 transition-all z-50 flex items-center gap-2">
         <i data-lucide="arrow-left" class="w-4 h-4 text-cyan-400"></i> ABORT / RETURN
     </a>
@@ -126,8 +129,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="settings.js"></script>
     <script src="checkout.js"></script>
-    <script>lucide.createIcons();</script>
+    <script src="script.js"></script>
 </body>
 </html>

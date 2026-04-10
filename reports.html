@@ -16,6 +16,9 @@
     <div class="bg-noise"></div>
     <div class="grid-lines fixed inset-0 opacity-10"></div>
 
+    <!-- Interactive Cursor -->
+    <div class="custom-cursor hidden md:block" id="cursor"></div>
+
     <!-- Vertical Sidebar -->
     <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
         <!-- Logo Node -->
@@ -35,6 +38,9 @@
             </a>
             <a href="appointments.html" class="sidebar-link hover-target" title="Appointments">
                 <i data-lucide="calendar" class="w-5 h-5"></i>
+            </a>
+            <a href="billing.html" class="sidebar-link hover-target" title="Billing">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
             </a>
             <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
@@ -194,7 +200,11 @@
     </div>
 
     <script src="settings.js"></script>
-    <script src="supabase-client.js" type="module"></script>
-    <script src="reports.js" type="module"></script>
+    <!-- Core Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="settings.js"></script>
+    <script type="module" src="supabase-client.js"></script>
+    <script type="module" src="reports.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

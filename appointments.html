@@ -57,6 +57,9 @@
             <a href="appointments.html" class="sidebar-link active hover-target" title="Appointments">
                 <i data-lucide="calendar" class="w-5 h-5"></i>
             </a>
+            <a href="billing.html" class="sidebar-link hover-target" title="Billing">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </a>
             <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
@@ -199,16 +202,10 @@
     <div id="toast-container" class="fixed bottom-10 right-10 flex flex-col gap-3 z-[100]"></div>
 
     <!-- Core Engine -->
-    <script src="settings.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="settings.js"></script>
     <script type="module" src="supabase-client.js"></script>
-    <script type="module">
-        import { supabase } from './supabase-client.js';
-        
-        document.addEventListener('DOMContentLoaded', () => {
-             if (window.lucide) lucide.createIcons();
-        });
-    </script>
     <script type="module" src="appointments.js?v=6"></script>
+    <script src="script.js"></script>
 </body>
 </html>
