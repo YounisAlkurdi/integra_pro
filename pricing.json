@@ -1,42 +1,53 @@
 {
-    "pricing_data": {
-        "plans": [
-            {
-                "id": "free",
-                "name": "Neural Bridge",
-                "tagline": "Baseline Identity Verification",
-                "monthly": { "price": 0, "features": ["5 Neural Sessions", "10 Min Sync Limit", "2 Node Capacity"] },
-                "yearly": { "price": 0, "features": ["5 Neural Sessions", "10 Min Sync Limit", "2 Node Capacity"] },
-                "limits": {
-                    "interviews_per_month": 5,
-                    "max_duration_mins": 10,
-                    "max_participants": 2
-                }
-            },
-            {
-                "id": "starter",
-                "name": "System Core",
-                "tagline": "Advanced Evaluation Protocol",
-                "monthly": { "price": 99, "features": ["15 Neural Sessions", "20 Min Sync Limit", "4 Node Capacity", "Analytics Access"] },
-                "yearly": { "price": 89, "features": ["15 Neural Sessions", "20 Min Sync Limit", "4 Node Capacity", "Analytics Access"] },
-                "limits": {
-                    "interviews_per_month": 15,
-                    "max_duration_mins": 20,
-                    "max_participants": 4
-                }
-            },
-            {
-                "id": "professional",
-                "name": "Neural Nexus",
-                "tagline": "Enterprise Intelligence Network",
-                "monthly": { "price": 299, "features": ["40 Neural Sessions", "60 Min Sync Limit", "8 Node Capacity", "Neural Recording", "Priority Support"] },
-                "yearly": { "price": 249, "features": ["40 Neural Sessions", "60 Min Sync Limit", "8 Node Capacity", "Neural Recording", "Priority Support"] },
-                "limits": {
-                    "interviews_per_month": 40,
-                    "max_duration_mins": 60,
-                    "max_participants": 8
-                }
-            }
-        ]
-    }
+  "pricing_data": {
+    "plans": [
+      {
+        "id": "starter",
+        "name": "System Core",
+        "tagline": "Advanced evaluation for specialized nodes.",
+        "monthly": { "price": "99" },
+        "yearly": { "price": "89" },
+        "features": [
+          "15 Neural Sessions / mo",
+          "20 Min Sync Limit",
+          "4 Node Capacity",
+          "Standard Analytics"
+        ],
+        "button_text": "Identify Node",
+        "highlight": false
+      },
+      {
+        "id": "professional",
+        "name": "Neural Nexus",
+        "tagline": "Advanced metrics for intelligence centers.",
+        "monthly": { "price": "299" },
+        "yearly": { "price": "259" },
+        "features": [
+          "40 Neural Sessions / mo",
+          "60 Min Sync Limit",
+          "8 Node Capacity",
+          "Neural Recording Included",
+          "Priority Response Handshake"
+        ],
+        "button_text": "Upgrade to Pro",
+        "highlight": true,
+        "badge": "High Priority"
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "tagline": "Custom deployments for high-security scaling.",
+        "monthly": { "price": "Custom" },
+        "yearly": { "price": "Custom" },
+        "features": [
+          "On-premise deployment",
+          "Custom AI model training",
+          "SLA guarantees",
+          "Dedicated Security Engineer"
+        ],
+        "button_text": "Contact Sales",
+        "highlight": false
+      }
+    ]
+  }
 }
