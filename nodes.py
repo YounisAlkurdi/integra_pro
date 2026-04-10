@@ -1,6 +1,7 @@
 import uuid
 import json
 import urllib.request
+import urllib.parse
 from typing import List, Optional
 from pydantic import BaseModel
 from utils import get_env_safe
@@ -13,14 +14,20 @@ class NodeProtocol(BaseModel):
     scheduled_at: str
     room_id: Optional[str] = None
     status: str = "PENDING"
+    max_duration_mins: Optional[int] = 10
+    max_participants: Optional[int] = 2
 
 SUPABASE_URL = get_env_safe("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
 
 def _supabase_request(method: str, path: str, body=None):
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        print("WARNING: Supabase URL or Service Key missing.")
         return []
+
+    if '?' in path:
+        base, query = path.split('?', 1)
+        encoded_query = urllib.parse.quote(query, safe='=&(),.!')
+        path = f"{base}?{encoded_query}"
 
     url = f"{SUPABASE_URL}/rest/v1/{path}"
     headers = {
@@ -34,49 +41,48 @@ def _supabase_request(method: str, path: str, body=None):
     try:
         with urllib.request.urlopen(req) as resp:
             content = resp.read()
-            if content:
-                return json.loads(content)
-            return []
+            return json.loads(content) if content else []
     except Exception as e:
-        print(f"Supabase request failed: {e}")
+        print(f"Neural Buffer Error: {e}")
         return []
 
 def create_neural_node(node: NodeProtocol, user_id: str):
-    """
-    Initializes a new Secure Control Node.
-    Generates a unique Room Signature and timestamps the entry.
-    """
+    """Initializes a permanent control node."""
     body = {**node.dict(), "user_id": user_id, "room_id": str(uuid.uuid4())}
     result = _supabase_request("POST", "nodes", body)
     return result[0] if result else body
 
 def get_active_streams(user_id: str = None):
-    """
-    Synchronizes with the active data streams from Supabase.
-    """
-    path = "nodes?select=*&order=created_at.desc"
-    if user_id:
-        path += f"&user_id=eq.{user_id}"
-    return _supabase_request("GET", path)
+    """Returns only nodes that are NOT marked as deleted."""
+    # Get everything for user and filter in memory for 100% reliability
+    all_nodes = _supabase_request("GET", f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc") if user_id else []
+    return [n for n in all_nodes if not n.get('is_deleted')]
 
 def delete_node(room_id: str):
-    """
-    Purges a node from the neural buffer (Supabase).
-    """
-    _supabase_request("DELETE", f"nodes?room_id=eq.{room_id}")
+    """Marks node as archived. Does NOT remove record."""
+    _supabase_request("PATCH", f"nodes?room_id=eq.{room_id}", {"is_deleted": True})
     return True
 
 def get_node_stats(user_id: str = None):
     """
-    Calculates telemetry across all active nodes.
+    Calculates lifetime usage and current active telemetry.
+    This 'Total' count NEVER decreases because it counts all history.
     """
-    nodes = get_active_streams(user_id)
-    total = len(nodes)
-    active = sum(1 for n in nodes if n.get('status') == 'PENDING')
-    completed = sum(1 for n in nodes if n.get('status') == 'COMPLETED')
+    if not user_id: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+    
+    # FETCH ALL (History + Active)
+    all_history = _supabase_request("GET", f"nodes?select=status,is_deleted&user_id=eq.{user_id}")
+    
+    total_consumed = len(all_history)
+    active_now = [n for n in all_history if not n.get('is_deleted')]
+    
+    pending = sum(1 for n in active_now if n.get('status') == 'PENDING')
+    completed = sum(1 for n in active_now if n.get('status') == 'COMPLETED')
+    
     return {
-        "total": total,
-        "active": active,
+        "total": total_consumed, # HISTORICAL COUNT - NEVER DECREASES
+        "active_view": len(active_now),
+        "active": pending,
         "completed": completed,
         "threats": 0 
     }
