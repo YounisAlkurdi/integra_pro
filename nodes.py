@@ -73,22 +73,34 @@ def delete_node(room_id: str):
 
 def get_node_stats(user_id: str = None):
     """
-    Calculates lifetime usage and current active telemetry.
-    This 'Total' count NEVER decreases because it counts all history.
+    Calculates usage telemetry. 
+    Neural Logic: Only counts nodes created AFTER the latest successful payment cycle.
+    This ensures previous sub rooms or free rooms don't saturate new quotas.
     """
     if not user_id: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
     
-    # FETCH ALL (History + Active)
-    all_history = _supabase_request("GET", f"nodes?select=status,is_deleted&user_id=eq.{user_id}")
+    # 1. Fetch Latest Payment Date
+    last_payment_date = None
+    invoices = _supabase_request("GET", f"invoices?user_id=eq.{user_id}&status=eq.PAID&order=created_at.desc&limit=1")
+    if invoices:
+        last_payment_date = invoices[0].get('created_at')
+
+    # 2. Fetch Nodes with Date Filter if payment exists
+    node_query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}"
+    if last_payment_date:
+        # filter nodes >= last_payment_date
+        node_query += f"&created_at=gte.{last_payment_date}"
     
-    total_consumed = len(all_history)
-    active_now = [n for n in all_history if not n.get('is_deleted')]
+    all_relevant_nodes = _supabase_request("GET", node_query)
+    
+    total_consumed = len(all_relevant_nodes)
+    active_now = [n for n in all_relevant_nodes if not n.get('is_deleted')]
     
     pending = sum(1 for n in active_now if n.get('status') == 'PENDING')
     completed = sum(1 for n in active_now if n.get('status') == 'COMPLETED')
     
     return {
-        "total": total_consumed, # HISTORICAL COUNT - NEVER DECREASES
+        "total": total_consumed, 
         "active_view": len(active_now),
         "active": pending,
         "completed": completed,
