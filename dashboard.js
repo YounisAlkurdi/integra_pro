@@ -177,6 +177,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (e) { return null; }
     }
 
+    async function sendEmailInvitation(nodeData, room_id) {
+        try {
+            const auth = await getAuthHeader();
+            const roomLink = `${window.location.origin}/integra-session.html?room=${room_id}&role=candidate`;
+            
+            await fetch(window.INTEGRA_SETTINGS.endpoint('/api/send-invitation'), {
+                method: 'POST',
+                headers: { 
+                    'Authorization': auth,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    candidate_name: nodeData.candidate_name,
+                    candidate_email: nodeData.candidate_email,
+                    scheduled_at: nodeData.scheduled_at,
+                    room_link: roomLink
+                })
+            });
+            showToast("Invitation Transmitted Successfully", "success");
+        } catch (e) {
+            console.error("Transmission Error:", e);
+            showToast("Network Error: Invitation Failed", "error");
+        }
+    }
+
     // --- 4. UI Rendering Engine ---
     async function updateStats() {
         const stats = await fetchNodeStats();
@@ -311,6 +336,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 text.textContent = 'LINK ESTABLISHED';
 
                 showToast("Secure Node Initialized", "success");
+                
+                // --- Automatic Invitation Dispatch ---
+                if (nodeData.candidate_email) {
+                    await sendEmailInvitation(nodeData, result.room_id);
+                }
+
                 renderInterviews();
                 updateStats();
             }

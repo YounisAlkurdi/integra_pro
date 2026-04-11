@@ -6,6 +6,7 @@ from auth import get_current_user, get_user_profile_data, get_active_subscriptio
 from payments import PaymentRequest, execute_payment, handle_stripe_webhook
 from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
 from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
+from mailer import send_interview_invitation
 import livekit_routes
 import os
 from dotenv import load_dotenv
@@ -14,6 +15,12 @@ load_dotenv()
 
 # --- 1. System Initialization ---
 app = FastAPI(title="Integra | Core Control Node")
+
+class EmailRequest(BaseModel):
+    candidate_name: str
+    candidate_email: str
+    scheduled_at: str
+    room_link: str
 
 # Global CORS Protocol
 app.add_middleware(
@@ -106,6 +113,20 @@ async def stripe_webhook(request: Request):
     return await handle_stripe_webhook(request)
 
 # --- 6. System Health Node ---
+@app.post("/api/send-invitation")
+async def send_invitation(data: EmailRequest, user: dict = Depends(get_current_user)):
+    """Automated Email Invitation via Gmail SMTP (Delegated to mailer.py)."""
+    try:
+        email = send_interview_invitation(
+            candidate_name=data.candidate_name,
+            candidate_email=data.candidate_email,
+            scheduled_at=data.scheduled_at,
+            room_link=data.room_link
+        )
+        return {"status": "EMAIL_SENT", "id": email["id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def sys_health():
     return {
