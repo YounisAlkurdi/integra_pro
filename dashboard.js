@@ -39,16 +39,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const avatar = document.getElementById('user-avatar');
+            const userNameEl = document.getElementById('user-name-display');
+            const userIdEl = document.getElementById('user-id-display');
+
+            // 1. Show Name
+            if (userNameEl) {
+                userNameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+            }
+
+            // 2. Show ID (Optional - for debugging or profile)
+            if (userIdEl) {
+                userIdEl.textContent = `ID: ${user.id.substring(0, 8)}...`;
+            }
+
+            // 3. Set Profile Picture
             if (avatar) {
                 const initials = user.user_metadata?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || user.email[0].toUpperCase();
-                avatar.innerHTML = `<div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">${initials}</div>`;
+                avatar.innerHTML = `<div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold border border-white/5">${initials}</div>`;
+                
                 if (user.user_metadata?.avatar_url) {
-                    avatar.innerHTML = `<img src="${user.user_metadata.avatar_url}" class="w-full h-full object-cover">`;
+                    avatar.innerHTML = `<img src="${user.user_metadata.avatar_url}" class="w-full h-full rounded-full object-cover">`;
                 }
             }
         }
     } catch (e) {
-        console.error("Failed to load user intelligence for sidebar.");
+        console.error("Failed to load user information.");
     }
 
     // --- 1.1 Schedule Toggle ---
