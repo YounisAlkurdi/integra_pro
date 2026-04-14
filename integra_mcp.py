@@ -209,5 +209,8 @@ def check_system_health() -> str:
         
     return json.dumps(health, indent=2)
 
+# Expose mcp instance for integration in main.py
+# (No standalone app definition here anymore)
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

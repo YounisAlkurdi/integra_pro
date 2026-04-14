@@ -112,7 +112,12 @@ async def stripe_webhook(request: Request):
     """Stripe Cloud Event Handshake."""
     return await handle_stripe_webhook(request)
 
-# --- 6. System Health Node ---
+# --- 6. Integra MCP Integration ---
+# This mounts the MCP server under the /mcp path
+from integra_mcp import mcp
+app.mount("/mcp", mcp.streamable_http_app())
+
+# --- 7. System Health Node ---
 @app.post("/api/send-invitation")
 async def send_invitation(data: EmailRequest, user: dict = Depends(get_current_user)):
     """Automated Email Invitation via Gmail SMTP (Delegated to mailer.py)."""
