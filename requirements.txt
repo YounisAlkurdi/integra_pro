@@ -1,12 +1,29 @@
-fastapi
-uvicorn
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
 PyJWT
-python-dotenv
+python-dotenv>=1.0.0
 stripe
 pydantic
+pydantic-settings>=2.2.0
 livekit-api
 requests
 cryptography
 fastmcp
 mcp[cli]
 supabase
+python-multipart>=0.0.9
+websockets>=12.0
+
+# LangChain — مأخوذة من D:\Voiser\tts\backend\requirements.txt
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-openai>=0.1.0
+langchain-anthropic>=0.1.0
+langchain-groq>=0.1.0
+langchain-google-genai>=1.0.0
+langchain-ollama>=0.1.0
+
+# HuggingFace (اختياري - للنماذج المفتوحة)
+transformers>=4.41.0
+accelerate>=0.30.0

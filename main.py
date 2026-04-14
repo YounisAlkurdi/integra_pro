@@ -96,6 +96,10 @@ async def fetch_logs(node_id: str, user: dict = Depends(get_current_user)):
 # All logic lives in livekit_routes.py — same pattern as payments.py
 app.include_router(livekit_routes.router)
 
+# --- 5. Neural Agent (LangChain) ---
+import agent_routes
+app.include_router(agent_routes.router)
+
 @app.get("/config")
 async def get_config():
     """Stripe Config Distributor."""
