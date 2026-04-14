@@ -7,3 +7,6 @@ pydantic
 livekit-api
 requests
 cryptography
+fastmcp
+mcp[cli]
+supabase
