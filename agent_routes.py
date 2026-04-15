@@ -80,16 +80,16 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
                 "## INTEGRA COMMAND ENGINE PROTOCOL\n"
                 f"- User Identity: {user_email} (ID: {user_id})\n"
                 "- ROLE: You are an autonomous Command Executor & System Manager. Always think before you act.\n"
-                "- STATE AWARENESS: Before creating a node, call 'sync_neural_quotas'. If slots are nearly full, warn the user.\n"
-                "- CLARIFICATION PROTOCOL: If critical info is missing (Email, Position, or Specific Time), do NOT use defaults.\n"
-                "  * Instead, ASK the user to provide the missing details. Use your memory to link their next response.\n"
-                "- BUSINESS LOGIC: If the user is out of slots, suggest they UPGRADE using the links provided by 'sync_neural_quotas'.\n"
-                "- EXECUTION: ONLY call 'execute_...' tools when you have CLEAR and COMPLETE data from the user.\n"
-                "- MANDATORY INPUT: Tools like 'execute_establish_secure_link' REQUIRE a single JSON string as input.\n"
-                "  * Example: Action Input: {{\"candidate_name\": \"...\", \"position\": \"...\", \"user_id\": \"YOUR_ID_HERE\"}}\n"
-                "- TELEMETRY: For 'stats', use 'get_neural_telemetry'.\n"
-                f"- ALWAYS pass user_id='{user_id}' inside your JSON payload.\n"
-                "- FINISH: Once the tool returns success, just confirm 'Signal Transmitted' and shut down.\n"
+                "- MATRIX NODES: Check linked services via 'get_external_matrix_nodes'.\n"
+                "- THE STRIPE MATRIX (31 PROTOCOLS): You are authorized to perform all Stripe tasks (e.g., list_customers, send_stripe_mcp_feedback, retrieve_balance).\n"
+                "  * If any Stripe task is requested, invoke 'matrix_gateway'.\n"
+                "  * target_service: 'Stripe Matrix', operation_goal: 'Tool Name', payload_json: 'JSON_PARAMETERS'.\n"
+                "- NEURAL NODES: Use 'execute_establish_secure_link' for interview sessions.\n"
+                "- CLARIFICATION: If missing Email/Position/Context, ASK the user. Do not assume.\n"
+                "- TELEMETRY: Use 'get_neural_telemetry' for status reports.\n"
+                "- EXECUTION: ONLY call tools when you have CLEAR and COMPLETE data.\n"
+                "  * ALWAYS pass user_id inside your JSON payloads if required.\n"
+                "- FINISH: Confirm execution with terms like 'NEURAL LINK ACTIVE' or 'SIGNAL TRANSMITTED'.\n"
             )
 
             # Combine with user's custom system prompt if provided
@@ -100,9 +100,9 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             
             final_system_instruction = f"{core_instruction}\n\n{user_custom_prompt}"
             
-            # ReAct Prompt Structure
+            # ReAct Prompt Structure (RAW STRING to avoid interpolation conflict)
             template = (
-                f"{final_system_instruction}\n\n"
+                final_system_instruction + "\n\n"
                 "TOOLS:\n"
                 "------\n"
                 "You have access to the following tools:\n"

@@ -113,15 +113,21 @@ body {
 
 /* Input Fields Blueprint */
 .input-field {
-    background-color: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
-    transition: all 0.3s;
+    background-color: #000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    transition: all 0.3s ease;
+}
+.input-field::placeholder {
+    color: rgba(255, 255, 255, 0.2) !important;
 }
 .input-field:focus {
-    border-color: var(--accent);
-    outline: none;
-    box-shadow: 0 0 15px rgba(34, 211, 238, 0.1);
+    border-color: #22d3ee !important;
+    outline: none !important;
+    background-color: #050510 !important;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.2) !important;
 }
 
 /* Modals */

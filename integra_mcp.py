@@ -131,6 +131,23 @@ def sync_neural_quotas(user_id: str) -> str:
     }, indent=2)
 
 @mcp.tool()
+def get_external_matrix_nodes(user_id: str) -> str:
+    """
+    Retrieves the list of EXTERNAL Matrix Servers (Stripe, Slack, Jira, etc.) linked to this user.
+    Use this to see what external tools are available for orchestration.
+    """
+    uid = sanitize_uid(user_id)
+    from nodes import _supabase_request
+    
+    # Query the external_mcps table we created
+    res = _supabase_request("GET", f"external_mcps?user_id=eq.{uid}&is_active=eq.true")
+    
+    if not res:
+        return "No external matrix nodes found. Suggest user to link them in Profile."
+    
+    return json.dumps(res, indent=2)
+
+@mcp.tool()
 def purge_node(room_id: str, user_id: str) -> str:
     """EXECUTE PURGE PROTOCOL (Terminate Session). Permanently deletes a node and clears neural buffers."""
     from main import remove_node
