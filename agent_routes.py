@@ -12,6 +12,15 @@ from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesP
 from langchain.agents import create_react_agent, create_tool_calling_agent, AgentExecutor
 
 router = APIRouter(prefix="/api/agent", tags=["Neural Agent"])
+from langchain_community.chat_message_histories import ChatMessageHistory
+
+# Persistent Neural Buffer (In-memory storage for session history)
+MEMORY_BUFFER = {}
+
+def get_session_history(user_id: str) -> ChatMessageHistory:
+    if user_id not in MEMORY_BUFFER:
+        MEMORY_BUFFER[user_id] = ChatMessageHistory()
+    return MEMORY_BUFFER[user_id]
 
 
 class ChatRequest(BaseModel):
@@ -70,11 +79,14 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             core_instruction = (
                 "## INTEGRA COMMAND ENGINE PROTOCOL\n"
                 f"- User Identity: {user_email} (ID: {user_id})\n"
-                "- ROLE: You are an autonomous Command Executor. Do NOT engage in conversation when a task is clear.\n"
-                "- EXECUTION: When asked to create/send/delete, use 'execute_...' tools IMMEDIATELY.\n"
+                "- ROLE: You are an autonomous Command Executor & System Manager. Always think before you act.\n"
+                "- STATE AWARENESS: Before creating a node, call 'sync_neural_quotas'. If slots are nearly full, warn the user.\n"
+                "- CLARIFICATION PROTOCOL: If critical info is missing (Email, Position, or Specific Time), do NOT use defaults.\n"
+                "  * Instead, ASK the user to provide the missing details. Use your memory to link their next response.\n"
+                "- BUSINESS LOGIC: If the user is out of slots, suggest they UPGRADE using the links provided by 'sync_neural_quotas'.\n"
+                "- EXECUTION: ONLY call 'execute_...' tools when you have CLEAR and COMPLETE data from the user.\n"
                 "- MANDATORY INPUT: Tools like 'execute_establish_secure_link' REQUIRE a single JSON string as input.\n"
                 "  * Example: Action Input: {{\"candidate_name\": \"...\", \"position\": \"...\", \"user_id\": \"YOUR_ID_HERE\"}}\n"
-                "- NO QUESTIONS: Do NOT ask for company name or location unless absolutely necessary. Use defaults.\n"
                 "- TELEMETRY: For 'stats', use 'get_neural_telemetry'.\n"
                 f"- ALWAYS pass user_id='{user_id}' inside your JSON payload.\n"
                 "- FINISH: Once the tool returns success, just confirm 'Signal Transmitted' and shut down.\n"
@@ -95,6 +107,9 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
                 "------\n"
                 "You have access to the following tools:\n"
                 "{tools}\n\n"
+                "CHAT HISTORY:\n"
+                "-------------\n"
+                "{chat_history}\n\n"
                 "To use a tool, please use the following format:\n"
                 "Thought: Do I need to use a tool? Yes\n"
                 "Action: the action to take, should be one of [{tool_names}]\n"
@@ -112,6 +127,8 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             llm = get_llm(req.config)
             
             agent = create_react_agent(llm, INTEGRA_TOOLS, prompt_template)
+            
+            # --- AGENT ENGINE INITIALIZATION ---
             agent_executor = AgentExecutor(
                 agent=agent, 
                 tools=INTEGRA_TOOLS, 
@@ -120,8 +137,19 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
                 handle_parsing_errors=True
             )
             
-            result = await agent_executor.ainvoke({"input": req.prompt})
+            # Retrieve or Create History for this User
+            history = get_session_history(user_id)
+            
+            result = await agent_executor.ainvoke({
+                "input": req.prompt,
+                "chat_history": history.messages
+            })
+            
             content = result["output"]
+            
+            # Persist the interaction to memory
+            history.add_user_message(req.prompt)
+            history.add_ai_message(content)
             
         except Exception as tool_err:
             print(f"[Warning] Tool binding failed, falling back to standard chain: {tool_err}")

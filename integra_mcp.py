@@ -44,12 +44,15 @@ def list_active_streams(user_id: str) -> str:
 def establish_secure_link(candidate_name: str, position: str, user_id: str, candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
     """
     INITIALIZE NODE (Establish Secure Link). 
-    Matches the dashboard.html form fields:
-    - candidate_name: IDENTIFY_SUBJECT (Candidate Name)
-    - position: ASSIGNED_ROLE (Level_4_Engineer, etc.)
-    - candidate_email: DELIVERY_ADDRESS (Secure Email)
-    - scheduled_at: SCHEDULED_PROTOCOL_TIME (ISO Date). If empty, initializes an INSTANT node (Now).
-    - questions: Neural questions for the candidate to answer.
+    NOTE: Before calling this, it is HIGHLY RECOMMENDED to call 'sync_neural_quotas' 
+    to verify if the user has enough interview slots remaining.
+    
+    Arguments:
+    - candidate_name: The name of the subject (Candidate).
+    - position: The role being interviewed for.
+    - user_id: The unique identifier for the user (UUID format).
+    - candidate_email: Target delivery address.
+    - scheduled_at: ISO timestamp. Empty for instant SESSION.
     """
     uid = sanitize_uid(user_id)
     
@@ -87,12 +90,45 @@ def get_neural_link_status(user_id: str) -> str:
 
 @mcp.tool()
 def sync_neural_quotas(user_id: str) -> str:
-    """Retrieves Subscription Plan (Quotas, Limits, and Enforcements)."""
+    """
+    Retrieves the ACTUAL Subscription Plan (Quotas, Limits, and Enforcements) from the LIVE billing system. 
+    Use this to determine if the user needs to UPGRADE their plan.
+    """
     uid = sanitize_uid(user_id)
-    from nodes import _supabase_request
-    res = _supabase_request("GET", f"user_settings?user_id=eq.{uid}")
-    if not res: return json.dumps({"status": "FREE_TIER", "interviews_limit": 5, "usage": 0})
-    return json.dumps(res[0], indent=2)
+    
+    # 1. Fetch Real Subscription from Auth Engine
+    sub = get_active_subscription(uid)
+    
+    # 2. Pricing links for the Agent to suggest upgrades
+    upgrade_info = {
+        "upgrade_links": {
+            "professional": "/upgrade?plan=professional",
+            "nexus": "/upgrade?plan=nexus"
+        },
+        "instructions": "If the user is out of slots, suggest they visit the upgrade links above."
+    }
+    
+    if not sub: 
+        # Fallback to defaults if no record exists
+        return json.dumps({
+            "status": "FREE_TIER", 
+            "interviews_limit": 5, 
+            "usage_count": get_node_stats(uid).get('total', 0), 
+            **upgrade_info
+        })
+    
+    # 3. Calculate Real Usage based on Subscription Reset Date
+    since = sub.get('created_at')
+    stats = get_node_stats(uid, since_date=since)
+    
+    return json.dumps({
+        "plan_id": sub.get('plan_id'),
+        "status": sub.get('status'),
+        "interviews_limit": sub.get('interviews_limit'),
+        "usage_count": stats.get('total', 0),
+        "period_start": since,
+        **upgrade_info
+    }, indent=2)
 
 @mcp.tool()
 def purge_node(room_id: str, user_id: str) -> str:
