@@ -35,7 +35,9 @@ def sanitize_uid(uid: str) -> str:
 def list_active_streams(user_id: str) -> str:
     """Scan Active Data Streams (Search by SUBJECT_IDENTIFICATION). Returns all live nodes for a user."""
     uid = sanitize_uid(user_id)
-    interviews = get_active_streams(user_id=uid)
+    sub = get_active_subscription(uid)
+    since = sub.get('created_at') if sub else None
+    interviews = get_active_streams(user_id=uid, since_date=since)
     return json.dumps(interviews, indent=2)
 
 @mcp.tool()
@@ -78,7 +80,9 @@ def transmit_invitation_protocol(candidate_name: str, candidate_email: str, sche
 def get_neural_link_status(user_id: str) -> str:
     """Telemetry Node: Total Nodes, Live Sessions, and Memory Capacity."""
     uid = sanitize_uid(user_id)
-    stats = get_node_stats(user_id=uid)
+    sub = get_active_subscription(uid)
+    since = sub.get('created_at') if sub else None
+    stats = get_node_stats(user_id=uid, since_date=since)
     return json.dumps(stats, indent=2)
 
 @mcp.tool()

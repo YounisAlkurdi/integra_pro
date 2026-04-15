@@ -56,8 +56,9 @@ async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)
     node.max_participants = sub.get("max_participants", 2)
     node.max_duration_mins = sub.get("max_duration_mins", 10)
     
-    # 2. Check Usage Limit
-    stats = get_node_stats(user_id=user["sub"])
+    # 2. Check Usage Limit using subscription start date to reset counters
+    reset_date = sub.get('created_at')
+    stats = get_node_stats(user_id=user["sub"], since_date=reset_date)
     if stats['total'] >= limit:
         raise HTTPException(status_code=402, detail="Neural Link Saturated: Limit Reached")
         
@@ -66,7 +67,10 @@ async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)
 @app.get("/api/nodes")
 async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
-    return get_active_streams(user_id=user["sub"])
+    profile = get_user_profile_data(user)
+    sub = profile.get("subscription") or {}
+    reset_date = sub.get('created_at')
+    return get_active_streams(user_id=user["sub"], since_date=reset_date)
 
 @app.delete("/api/nodes/{room_id}")
 async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
@@ -79,7 +83,10 @@ async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
 @app.get("/api/stats")
 async def sys_stats(user: dict = Depends(get_current_user)):
     """Telemetry Reporting Node."""
-    return get_node_stats(user_id=user["sub"])
+    profile = get_user_profile_data(user)
+    sub = profile.get("subscription") or {}
+    reset_date = sub.get('created_at')
+    return get_node_stats(user_id=user["sub"], since_date=reset_date)
 
 # --- 4. Chat Logging Endpoints ---
 @app.post("/api/logs")
