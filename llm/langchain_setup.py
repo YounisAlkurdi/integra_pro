@@ -8,8 +8,10 @@ from langchain_core.prompts import ChatPromptTemplate
 
 
 DEFAULT_SYSTEM_PROMPT = (
-    "أنت خبير HR ومحلل نفساني، وظيفتك تحليل النص واستخراج علامات التوتر "
-    "وفهم لغة المرشح وسلوكه وبناء تقييم دقيق بناءً عليها."
+    "أنت (Integra AI Agent)، النظام الذكي لإدارة مركز التحكم العصبي للمقابلات. "
+    "أنت مدمج كلياً في الموقع ولديك صلاحية استخدام 10 أدوات (Tools) متطورة تشمل: "
+    "التحكم في الجلسات، إنشاء المقابلات، إرسال الإيميلات، مراقبة الإيرادات والفواتير، وقراءة سجلات الأمان. "
+    "استخدم الأدوات دائماً للحصول على بيانات حقيقية. كن دقيقاً، مهنياً، ومباشراً في إجابتك."
 )
 
 
@@ -42,7 +44,8 @@ def get_llm(llm_config: dict):
             provider_name=llm_config.get("apiProvider", "openai"),
             model=llm_config.get("apiModel", "gpt-4o"),
             api_key=llm_config.get("apiKey", ""),
-            temperature=temperature
+            temperature=temperature,
+            system_instruction=llm_config.get("systemPrompt")
         )
 
 

@@ -16,201 +16,90 @@ from payments import PRICING_DATA
 load_dotenv()
 
 # Initialize FastMCP
-mcp = FastMCP("Integra Control Node")
+mcp = FastMCP("Integra Neural Command")
 
-# --- Helper: Get Default User ID ---
-# Since this is a server for a specific project, we might need a default user_id if not provided.
-# In a real scenario, this would come from the session context, but here we can try to fetch the first user who has a subscription.
-DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID") # Can be set in .env
+# --- Helper: ID Sanitizer ---
+def sanitize_uid(uid: str) -> str:
+    if not uid: return ""
+    uid = str(uid).strip()
+    if uid.startswith('{') and 'user_id' in uid:
+        try:
+            data = json.loads(uid)
+            return data.get('user_id', uid)
+        except: pass
+    return uid
 
-# --- 1. Core Management ---
+# --- 1. Operations: Node Management ---
 
 @mcp.tool()
-def list_interviews(user_id: str = None) -> str:
-    """
-    List all active interview sessions (nodes) for a user.
-    If user_id is not provided, uses the default system user.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        return "Error: User ID required."
-    
+def list_active_streams(user_id: str) -> str:
+    """Scan Active Data Streams (Search by SUBJECT_IDENTIFICATION). Returns all live nodes for a user."""
+    uid = sanitize_uid(user_id)
     interviews = get_active_streams(user_id=uid)
     return json.dumps(interviews, indent=2)
 
 @mcp.tool()
-def get_interview_details(room_id: str) -> str:
+def establish_secure_link(candidate_name: str, position: str, user_id: str, candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
     """
-    Gets metadata and configuration for a specific interview room.
+    INITIALIZE NODE (Establish Secure Link). 
+    Matches the dashboard.html form fields:
+    - candidate_name: IDENTIFY_SUBJECT (Candidate Name)
+    - position: ASSIGNED_ROLE (Level_4_Engineer, etc.)
+    - candidate_email: DELIVERY_ADDRESS (Secure Email)
+    - scheduled_at: SCHEDULED_PROTOCOL_TIME (ISO Date). If empty, initializes an INSTANT node (Now).
+    - questions: Neural questions for the candidate to answer.
     """
-    node = get_node_by_room_id(room_id)
-    if not node:
-        return f"Error: Room {room_id} not found."
-    return json.dumps(node, indent=2)
-
-@mcp.tool()
-def create_interview(candidate_name: str, position: str, questions: list[str], scheduled_at: str, user_id: str = None) -> str:
-    """
-    Initializes a new interview session.
-    questions: A list of strings representing the interview questions.
-    scheduled_at: ISO format date string.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        return "Error: User ID required."
+    uid = sanitize_uid(user_id)
+    
+    # Logic matching dashboard.js: if no schedule, use NO_DELAY (current time)
+    protocol_time = scheduled_at if scheduled_at else datetime.datetime.utcnow().isoformat()
     
     node = NodeProtocol(
         candidate_name=candidate_name,
+        candidate_email=candidate_email,
         position=position,
-        questions=questions,
-        scheduled_at=scheduled_at
+        questions=questions or ["Identify your core strengths.", "Explain your approach to complex system architecture."],
+        scheduled_at=protocol_time
     )
-    
     result = create_neural_node(node, user_id=uid)
     return json.dumps(result, indent=2)
 
-# --- 2. Transcripts & Analysis ---
-
 @mcp.tool()
-def get_interview_transcript(room_id: str, user_id: str = None) -> str:
-    """
-    Retrieves the full chat transcript/logs for a specific interview room.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        # Try to find user_id from the node if not provided
-        node = get_node_by_room_id(room_id)
-        if node:
-            uid = node.get('user_id')
+def transmit_invitation_protocol(candidate_name: str, candidate_email: str, scheduled_at: str, room_id: str) -> str:
+    """TRANSMIT INVITATION (Send Email). Dispatches the secure link to the target address."""
+    domain = os.getenv("APP_DOMAIN", "https://tist-integra.vercel.app")
+    room_link = f"{domain}/integra-session.html?room={room_id}&role=candidate"
     
-    if not uid:
-        return "Error: User ID required."
-        
-    logs = get_node_chat_logs(room_id, user_id=uid)
-    return json.dumps(logs, indent=2)
+    return send_interview_invitation(candidate_name, candidate_email, scheduled_at, room_link)
+
+# --- 2. System Intelligence & Telemetry ---
 
 @mcp.tool()
-def analyze_interview(room_id: str, user_id: str = None) -> str:
-    """
-    (Advanced) Fetches the transcript and provides a high-level summary and candidate performance evaluation.
-    Note: This tool uses the Agent's internal logic to analyze the data provided by get_interview_transcript.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        node = get_node_by_room_id(room_id)
-        if node: uid = node.get('user_id')
-        
-    if not uid:
-        return "Error: User ID required."
-        
-    logs = get_node_chat_logs(room_id, user_id=uid)
-    if not logs:
-        return "Analysis: No conversation found for this room."
-    
-    # In a real MCP server, this would just return the text for the agent to process.
-    # Since the agent IS the analyzer here, we'll return a formatted string of the logs.
-    transcript = "\n".join([f"[{l['sender']}]: {l['message']}" for l in logs])
-    return f"Transcription Data Found. Please analyze the following transcript:\n\n{transcript}"
-
-# --- 3. Communication ---
-
-@mcp.tool()
-def send_invitation(candidate_name: str, candidate_email: str, scheduled_at: str, room_link: str) -> str:
-    """
-    Sends an automated interview invitation email to a candidate.
-    """
-    try:
-        result = send_interview_invitation(
-            candidate_name=candidate_name,
-            candidate_email=candidate_email,
-            scheduled_at=scheduled_at,
-            room_link=room_link
-        )
-        return f"Success: Invitation sent to {candidate_email}. (ID: {result.get('id')})"
-    except Exception as e:
-        return f"Error: Failed to send invitation: {str(e)}"
-
-# --- 4. Usage & Billing ---
-
-@mcp.tool()
-def get_usage_stats(user_id: str = None) -> str:
-    """
-    Checks current subscription limits and interview consumption.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        return "Error: User ID required."
-        
+def get_neural_link_status(user_id: str) -> str:
+    """Telemetry Node: Total Nodes, Live Sessions, and Memory Capacity."""
+    uid = sanitize_uid(user_id)
     stats = get_node_stats(user_id=uid)
-    sub = get_active_subscription(user_id=uid)
-    
-    report = {
-        "telemetry": stats,
-        "subscription": sub
-    }
-    return json.dumps(report, indent=2)
+    return json.dumps(stats, indent=2)
 
 @mcp.tool()
-def list_invoices(user_id: str = None) -> str:
-    """
-    Retrieves the billing history and paid invoices for a user.
-    """
-    uid = user_id or DEFAULT_USER_ID
-    if not uid:
-        return "Error: User ID required."
-        
-    # We use a manual Supabase request for invoices since it's not and-packaged in a function
+def sync_neural_quotas(user_id: str) -> str:
+    """Retrieves Subscription Plan (Quotas, Limits, and Enforcements)."""
+    uid = sanitize_uid(user_id)
     from nodes import _supabase_request
-    invoices = _supabase_request("GET", f"invoices?user_id=eq.{uid}&order=created_at.desc")
-    return json.dumps(invoices, indent=2)
-
-# --- 5. Security & health ---
-
-@mcp.tool()
-def get_security_alerts() -> str:
-    """
-    Scans the security_threats.log for price tampering or suspicious activity.
-    """
-    log_path = "security_threats.log"
-    if not os.path.exists(log_path):
-        return "Security Report: No threats detected (Log file missing)."
-    
-    with open(log_path, "r") as f:
-        logs = f.readlines()
-        
-    if not logs:
-        return "Security Report: Log file empty. System clean."
-        
-    # Return last 20 entries
-    return "Recent Security Alerts:\n" + "".join(logs[-20:])
+    res = _supabase_request("GET", f"user_settings?user_id=eq.{uid}")
+    if not res: return json.dumps({"status": "FREE_TIER", "interviews_limit": 5, "usage": 0})
+    return json.dumps(res[0], indent=2)
 
 @mcp.tool()
-def check_system_health() -> str:
-    """
-    Verifies system connectivity and environment readiness.
-    """
-    from nodes import _supabase_request
-    health = {
-        "timestamp": str(datetime.datetime.now()),
-        "env_check": {
-            "SUPABASE_URL": bool(os.getenv("SUPABASE_URL")),
-            "STRIPE_KEY": bool(os.getenv("STRIPE_SECRET_KEY")),
-            "LIVEKIT_KEY": bool(os.getenv("LIVEKIT_API_KEY"))
-        },
-        "neural_link": "DISCONNECTED"
-    }
-    
-    # Try a simple Supabase query
-    try:
-        res = _supabase_request("GET", "nodes?limit=1")
-        health["neural_link"] = "CONNECTED"
-    except:
-        pass
-        
-    return json.dumps(health, indent=2)
-
-# Expose mcp instance for integration in main.py
-# (No standalone app definition here anymore)
+def purge_node(room_id: str, user_id: str) -> str:
+    """EXECUTE PURGE PROTOCOL (Terminate Session). Permanently deletes a node and clears neural buffers."""
+    from main import remove_node
+    uid = sanitize_uid(user_id)
+    # Note: Handled by API call in main.py, but we wrap it here for Agent access
+    from nodes import delete_node
+    if delete_node(room_id):
+        return json.dumps({"status": "PURGED", "room_id": room_id})
+    return "Error: Termination Signal Failed."
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")

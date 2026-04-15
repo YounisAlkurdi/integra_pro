@@ -1,25 +1,28 @@
 /**
  * LLM Config JS — Integra
  * يدير صفحة إعدادات العقل التحليلي
- * يستخدم models.config.js (مأخوذ من D:\Voiser\tts\frontend\js\models.config.js)
+ * نسخة مستقرة 100% بدون تعقيدات الموديولات
  */
 
 const STORAGE_KEY = 'INTEGRA_LLM_CONFIG';
 
 // ─── Load saved config on init ────────────────────────────────────────
-(function init() {
+window.addEventListener('DOMContentLoaded', () => {
     const saved = getSavedConfig();
 
     // System Prompt
     if (saved.systemPrompt) {
-        document.getElementById('system-prompt').value = saved.systemPrompt;
+        const el = document.getElementById('system-prompt');
+        if (el) el.value = saved.systemPrompt;
     }
 
     // Temperature
     const temp = saved.temperature ?? 0.1;
     const slider = document.getElementById('llm-temp');
-    slider.value = temp;
-    updateTempDisplay(temp);
+    if (slider) {
+        slider.value = temp;
+        updateTempDisplay(temp);
+    }
 
     // Source
     const source = saved.source || 'api';
@@ -31,18 +34,23 @@ const STORAGE_KEY = 'INTEGRA_LLM_CONFIG';
     const provider = saved.apiProvider || 'openai';
     const providerRadio = document.querySelector(`input[name="provider"][value="${provider}"]`);
     if (providerRadio) providerRadio.checked = true;
+    
+    // تأكيد تعبئة القائمة
     populateModels(provider);
 
-    // API Model
+    // API Model (Select the saved model after populating)
     if (saved.apiModel) {
         setTimeout(() => {
             const sel = document.getElementById('api-model');
-            sel.value = saved.apiModel;
-        }, 50);
+            if (sel) sel.value = saved.apiModel;
+        }, 100);
     }
 
     // API Key
-    if (saved.apiKey) document.getElementById('api-key').value = saved.apiKey;
+    if (saved.apiKey) {
+        const keyInp = document.getElementById('api-key');
+        if (keyInp) keyInp.value = saved.apiKey;
+    }
 
     // Local
     if (saved.localUrl) document.getElementById('local-url').value = saved.localUrl;
@@ -51,14 +59,18 @@ const STORAGE_KEY = 'INTEGRA_LLM_CONFIG';
     // HF
     populateHFModels();
     if (saved.hfModel) {
-        setTimeout(() => { document.getElementById('hf-model').value = saved.hfModel; }, 50);
+        setTimeout(() => { 
+            const hfSel = document.getElementById('hf-model');
+            if (hfSel) hfSel.value = saved.hfModel; 
+        }, 100);
     }
     if (saved.hfToken) document.getElementById('hf-token').value = saved.hfToken;
-})();
+});
 
-// ─── Populate HF models from models.config.js ─────────────────────────
+// ─── Populate HF models ───────────────────────────────────────────────
 function populateHFModels() {
     const sel = document.getElementById('hf-model');
+    if (!sel) return;
     sel.innerHTML = '';
     (window.HF_MODELS || []).forEach(m => {
         const opt = document.createElement('option');
@@ -70,8 +82,17 @@ function populateHFModels() {
 // ─── Populate API models based on provider ────────────────────────────
 function populateModels(provider) {
     const sel = document.getElementById('api-model');
+    if (!sel) return;
     sel.innerHTML = '';
-    const models = (window.PROVIDER_MODELS || {})[provider] || [];
+    
+    // التأكد من وجود البيانات في window
+    const allModels = window.PROVIDER_MODELS || {};
+    const models = allModels[provider] || [];
+    
+    if (models.length === 0) {
+        console.warn("No models found for provider:", provider);
+    }
+
     models.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m; opt.textContent = m;
@@ -81,20 +102,26 @@ function populateModels(provider) {
 
 // ─── Source switch logic ───────────────────────────────────────────────
 function switchSource(source) {
-    document.getElementById('api-section').classList.toggle('hidden', source !== 'api');
-    document.getElementById('local-section').classList.toggle('hidden', source !== 'local');
-    document.getElementById('hf-section').classList.toggle('hidden', source !== 'hf');
+    const apiS = document.getElementById('api-section');
+    const locS = document.getElementById('local-section');
+    const hfS = document.getElementById('hf-section');
+    if (apiS) apiS.classList.toggle('hidden', source !== 'api');
+    if (locS) locS.classList.toggle('hidden', source !== 'local');
+    if (hfS) hfS.classList.toggle('hidden', source !== 'hf');
 }
 
 // ─── Temperature display ───────────────────────────────────────────────
 function updateTempDisplay(val) {
-    document.getElementById('temp-display').textContent = parseFloat(val).toFixed(2);
+    const disp = document.getElementById('temp-display');
+    if (disp) disp.textContent = parseFloat(val).toFixed(2);
 }
 
 // ─── Eye toggle for API key ────────────────────────────────────────────
 function toggleApiKey() {
     const inp = document.getElementById('api-key');
     const icon = document.getElementById('eye-icon');
+    if (!inp || !icon) return;
+    
     if (inp.type === 'password') {
         inp.type = 'text';
         icon.setAttribute('data-lucide', 'eye-off');
@@ -102,11 +129,11 @@ function toggleApiKey() {
         inp.type = 'password';
         icon.setAttribute('data-lucide', 'eye');
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
 // ─── Save config ───────────────────────────────────────────────────────
-function saveConfig() {
+async function saveConfig() {
     const source = document.querySelector('input[name="source"]:checked')?.value || 'api';
     const provider = document.querySelector('input[name="provider"]:checked')?.value || 'openai';
 
@@ -114,20 +141,43 @@ function saveConfig() {
         systemPrompt: document.getElementById('system-prompt').value.trim(),
         temperature: parseFloat(document.getElementById('llm-temp').value),
         source,
-        // API
         apiProvider: provider,
         apiModel: document.getElementById('api-model').value,
         apiKey: document.getElementById('api-key').value.trim(),
-        // Local
         localUrl: document.getElementById('local-url').value.trim(),
         localModel: document.getElementById('local-model').value.trim(),
-        // HF
         hfModel: document.getElementById('hf-model').value,
         hfToken: document.getElementById('hf-token').value.trim(),
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    
+    // Sync to Supabase if available globally
+    if (window.supabase) {
+        await syncToCloud(config);
+    }
+    
     showToast();
+}
+
+async function syncToCloud(config) {
+    try {
+        const { data: { session } } = await window.supabase.auth.getSession();
+        if (!session) return;
+        
+        await window.supabase
+            .from('user_settings')
+            .upsert({
+                user_id: session.user.id,
+                llm_api_key: config.apiKey,
+                llm_provider: config.apiProvider,
+                llm_model: config.apiModel,
+                system_prompt_override: config.systemPrompt,
+                updated_at: new Date().toISOString()
+            });
+    } catch (e) {
+        console.error("[Cloud Sync] Error:", e);
+    }
 }
 
 function getSavedConfig() {
@@ -135,9 +185,9 @@ function getSavedConfig() {
     catch { return {}; }
 }
 
-// ─── Toast notification ────────────────────────────────────────────────
 function showToast() {
     const t = document.getElementById('toast');
+    if (!t) return;
     t.classList.remove('translate-y-20', 'opacity-0');
     t.classList.add('translate-y-0', 'opacity-100');
     setTimeout(() => {
@@ -147,15 +197,21 @@ function showToast() {
 }
 
 // ─── Event listeners ──────────────────────────────────────────────────
-document.getElementById('llm-temp').addEventListener('input', e => updateTempDisplay(e.target.value));
+document.addEventListener('DOMContentLoaded', () => {
+    const tempInp = document.getElementById('llm-temp');
+    if (tempInp) tempInp.addEventListener('input', e => updateTempDisplay(e.target.value));
 
-document.querySelectorAll('input[name="source"]').forEach(radio => {
-    radio.addEventListener('change', e => switchSource(e.target.value));
+    document.querySelectorAll('input[name="source"]').forEach(radio => {
+        radio.addEventListener('change', e => switchSource(e.target.value));
+    });
+
+    document.querySelectorAll('input[name="provider"]').forEach(radio => {
+        radio.addEventListener('change', e => populateModels(e.target.value));
+    });
 });
 
-document.querySelectorAll('input[name="provider"]').forEach(radio => {
-    radio.addEventListener('change', e => populateModels(e.target.value));
-});
-
-// ─── Export config for other pages ────────────────────────────────────
+// Expose functions
+window.saveConfig = saveConfig;
+window.toggleApiKey = toggleApiKey;
+window.populateModels = populateModels;
 window.getLLMConfig = getSavedConfig;

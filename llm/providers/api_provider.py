@@ -4,7 +4,7 @@ API Provider — Integra LLM Engine
 معدّلة: حذف import من backend.config واستبداله بمعاملات مباشرة فقط
 """
 
-def get_api_llm(provider_name: str, model: str, api_key: str, temperature: float = 0.1):
+def get_api_llm(provider_name: str, model: str, api_key: str, temperature: float = 0.1, **kwargs):
     """
     يُرجع LLM مناسب بناءً على اسم الـ provider.
     مدعوم: openai, anthropic, groq, google/gemini
@@ -25,10 +25,12 @@ def get_api_llm(provider_name: str, model: str, api_key: str, temperature: float
 
     elif provider_name in ("google", "gemini"):
         from langchain_google_genai import ChatGoogleGenerativeAI
-        # Gemini 2.5+ يعمل بشكل أفضل عند 1.0 حسب التوثيق الرسمي
-        if temperature == 0.1:
-            temperature = 1.0
-        return ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=temperature)
+        # Stable config for older langchain-google-genai versions
+        return ChatGoogleGenerativeAI(
+            model=model, 
+            google_api_key=api_key, 
+            temperature=0.0
+        )
 
     else:
         raise ValueError(f"Unsupported API provider: {provider_name}")

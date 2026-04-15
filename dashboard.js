@@ -88,10 +88,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
     // --- 2. Interactive Cursor ---
-    document.addEventListener('mousemove', (e) => {
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-    });
+    if (cursor) {
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+    }
 
     document.body.addEventListener('mouseover', (e) => {
         if (['BUTTON', 'A', 'INPUT', 'SELECT'].includes(e.target.tagName) || e.target.closest('.hover-target')) {
@@ -288,7 +290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </div>
                     </div>
                 </div>
-                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:via-transparent transition-all duration-700"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:via-transparent transition-all duration-700 pointer-events-none"></div>
             </div>
         `).join('');
         
@@ -423,20 +425,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         const btnCancel = document.getElementById('confirm-cancel');
 
         // Show Modal
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.add('pointer-events-auto', 'opacity-100');
+        const modalContent = document.getElementById('confirm-modal-content');
+        if (modalContent) modalContent.style.transform = 'scale(1)';
         lucide.createIcons();
 
         const userChoice = await new Promise((resolve) => {
             const handleConfirm = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                modal.classList.add('pointer-events-none', 'opacity-0');
+                modal.classList.remove('pointer-events-auto', 'opacity-100');
+                if (modalContent) modalContent.style.transform = 'scale(0.9)';
                 cleanup();
                 resolve(true);
             };
             const handleCancel = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                modal.classList.add('pointer-events-none', 'opacity-0');
+                modal.classList.remove('pointer-events-auto', 'opacity-100');
+                if (modalContent) modalContent.style.transform = 'scale(0.9)';
                 cleanup();
                 resolve(false);
             };
@@ -536,7 +542,7 @@ function showToast(msg, type = "success") {
 function createToastContainer() { 
     const div = document.createElement('div'); 
     div.id = 'toast-container'; 
-    div.className = 'fixed bottom-10 right-10 z-[100] flex flex-col gap-3'; 
+    div.className = 'fixed top-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none'; 
     document.body.appendChild(div); 
     return div; 
 }

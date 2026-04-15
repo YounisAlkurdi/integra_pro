@@ -26,10 +26,14 @@ def _supabase_request(method: str, path: str, body=None):
 
     if '?' in path:
         base, query = path.split('?', 1)
-        encoded_query = urllib.parse.quote(query, safe='=&(),.!')
+        # Add * + : and other symbols for PostgREST compatibility
+        encoded_query = urllib.parse.quote(query, safe='=&(),.!+:*')
         path = f"{base}?{encoded_query}"
 
     url = f"{SUPABASE_URL}/rest/v1/{path}"
+    # Log the debug URL to catch the exact cause if it fails
+    # print(f"[DEBUG] Supabase URL: {url}")
+    
     headers = {
         "apikey": SUPABASE_SERVICE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
@@ -42,6 +46,10 @@ def _supabase_request(method: str, path: str, body=None):
         with urllib.request.urlopen(req) as resp:
             content = resp.read()
             return json.loads(content) if content else []
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"Neural Buffer Error (HTTP {e.code}): {error_body}")
+        return []
     except Exception as e:
         print(f"Neural Buffer Error: {e}")
         return []
@@ -74,26 +82,19 @@ def delete_node(room_id: str):
 def get_node_stats(user_id: str = None):
     """
     Calculates usage telemetry. 
-    Neural Logic: Only counts nodes created AFTER the latest successful payment cycle.
-    This ensures previous sub rooms or free rooms don't saturate new quotas.
+    Refined Logic: Counts all active and pending nodes.
     """
     if not user_id: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
     
-    # 1. Fetch Latest Payment Date
-    last_payment_date = None
-    invoices = _supabase_request("GET", f"invoices?user_id=eq.{user_id}&status=eq.PAID&order=created_at.desc&limit=1")
-    if invoices:
-        last_payment_date = invoices[0].get('created_at')
-
-    # 2. Fetch Nodes with Date Filter if payment exists
+    # Fetch all relevant nodes for the user to ensure 100% visibility
     node_query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}"
-    if last_payment_date:
-        # filter nodes >= last_payment_date
-        node_query += f"&created_at=gte.{last_payment_date}"
-    
     all_relevant_nodes = _supabase_request("GET", node_query)
     
+    if not all_relevant_nodes:
+        return {"total": 0, "active_view": 0, "active": 0, "completed": 0, "threats": 0}
+
     total_consumed = len(all_relevant_nodes)
+    # Only filter out officially deleted nodes
     active_now = [n for n in all_relevant_nodes if not n.get('is_deleted')]
     
     pending = sum(1 for n in active_now if n.get('status') == 'PENDING')

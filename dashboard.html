@@ -35,12 +35,12 @@
 </head>
 <body class="bg-obsidian text-white relative min-h-screen">
     
-    <div class="bg-noise"></div>
-    <div class="scanlines"></div>
-    <div class="grid-lines fixed inset-0 opacity-10"></div>
+    <div class="bg-noise pointer-events-none"></div>
+    <div class="scanlines pointer-events-none"></div>
+    <div class="grid-lines fixed inset-0 opacity-10 pointer-events-none"></div>
 
     <!-- Interactive Cursor -->
-    <div class="custom-cursor hidden md:block" id="cursor"></div>
+    <div class="custom-cursor hidden md:block pointer-events-none" id="cursor"></div>
 
     <!-- Vertical Sidebar -->
     <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
@@ -103,7 +103,7 @@
         </div>
     </header>
 
-    <main class="ml-20 pt-32 pb-20 relative z-10 px-6 w-[calc(100%-5rem)]">
+    <main class="ml-20 pt-32 pb-20 relative z-10 pl-6 pr-24 w-[calc(100%-5rem)]">
         <div class="max-w-7xl mx-auto">
             
             <!-- Dashboard Stats -->
@@ -225,36 +225,65 @@
     </main>
 
     <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-10 right-10 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- Professional Confirmation Modal -->
-    <div id="confirm-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-obsidian/90 backdrop-blur-2xl"></div>
-        <div class="relative w-full max-w-md glass-panel border border-white/5 rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-            <div class="h-1 w-full bg-gradient-to-r from-red-500/0 via-red-500 to-red-500/0"></div>
-            
-            <div class="p-10 text-center">
-                <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-8 mx-auto border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                    <i data-lucide="alert-triangle" class="w-8 h-8"></i>
-                </div>
-                
-                <h3 class="text-xl font-black uppercase tracking-tighter italic mb-4">Terminate Secure Node?</h3>
-                <p class="text-[11px] text-white/40 leading-relaxed mb-10 font-mono uppercase tracking-widest">
-                    This action will disconnect <span class="text-white">all participants</span> and sever the neural link. The session data will be archived and the room purged from servers.
-                </p>
-                
-                <div class="flex flex-col gap-3">
-                    <button id="confirm-proceed" class="w-full py-4 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-600 shadow-[0_0_40px_rgba(239,68,68,0.2)] transition-all hover-target">Confirm Purge</button>
-                    <button id="confirm-cancel" class="w-full py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all hover-target">Abort Protocol</button>
-                </div>
+    <div id="confirm-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-300 backdrop-blur-sm bg-obsidian/40">
+        <div class="glass-panel p-8 rounded-3xl border border-white/10 max-w-sm w-full text-center scale-90 transition-transform duration-300" id="confirm-modal-content">
+            <div class="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                <i data-lucide="alert-triangle" class="text-red-500 w-8 h-8"></i>
             </div>
-            
-            <div class="bg-white/[0.02] px-10 py-4 border-t border-white/5 flex items-center justify-between opacity-40">
-                <span class="text-[7px] font-mono uppercase tracking-[0.3em]">Signature: Purge_Auth_v1.2</span>
-                <span class="text-[7px] font-mono uppercase tracking-[0.3em]">Status: Waiting Approval</span>
+            <h3 class="text-xl font-black uppercase tracking-tighter italic mb-2">Purge Protocol</h3>
+            <p class="text-[10px] font-mono text-white/40 uppercase tracking-widest leading-relaxed mb-8">This action will permanently terminate the neural link. Proceed with caution.</p>
+            <div class="flex gap-4">
+                <button id="confirm-cancel" class="flex-1 py-4 bg-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all hover-target">Abort</button>
+                <button id="confirm-proceed" class="flex-1 py-4 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] hover-target">Confirm Purge</button>
             </div>
         </div>
     </div>
+
+    <!-- AI Agent Chat Widget -->
+    <!-- Chat Button -->
+    <button id="ai-chat-btn" class="fixed bottom-10 right-10 z-[80] w-14 h-14 bg-cyan-400 rounded-full shadow-[0_0_40px_rgba(34,211,238,0.4)] hover:shadow-[0_0_60px_rgba(34,211,238,0.6)] flex items-center justify-center transition-all hover:scale-110 hover-target animate-bounce" title="المساعد الذكي">
+        <i data-lucide="bot" class="text-obsidian w-6 h-6"></i>
+    </button>
+
+    <!-- Chat Window -->
+    <div id="ai-chat-window" class="fixed bottom-28 right-10 w-96 max-w-[calc(100vw-5rem)] h-[500px] max-h-[70vh] glass-panel border border-white/10 rounded-3xl shadow-2xl z-[80] flex flex-col hidden opacity-0 translate-y-10 transition-all duration-300" dir="rtl">
+        <!-- Chat Header -->
+        <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-cyan-400/20 border border-cyan-400/50 flex flex-col items-center justify-center">
+                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black italic tracking-tighter text-white">Integra System Agent</h3>
+                    <p class="text-[8px] font-mono uppercase tracking-[0.2em] text-cyan-400">MCP/LangChain Linked</p>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="text-white/40 hover:text-white transition-colors hover-target">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="ai-chat-messages" class="flex-1 p-5 overflow-y-auto space-y-4 custom-scrollbar flex flex-col">
+            <div class="p-4 rounded-2xl bg-white/[0.05] border border-white/10 text-white/70 text-[11px] font-mono leading-relaxed self-start max-w-[85%] rounded-tl-none">
+                أهلاً بك. أنا المساعد الذكي لنظام Integra. أستطيع قراءة لوحة التحكم، وإجراء التحليلات باستخدام أدوات MCP المتاحة. كيف يمكنني مساعدتك؟
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-4 border-t border-white/10 bg-black/40 rounded-b-3xl">
+            <div class="relative flex items-center">
+                <input autocomplete="off" type="text" id="ai-chat-input" placeholder="اطلب تقريراً أو اسأل عن إعدادات النظام..." class="w-full bg-transparent border-none text-white text-[11px] font-mono placeholder:text-white/20 outline-none pr-3 pl-12 h-10">
+                <button id="ai-chat-send" class="absolute left-2 w-8 h-8 rounded-full bg-cyan-400 flex flex-col items-center justify-center text-obsidian hover:bg-white transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] hover-target">
+                    <i data-lucide="send" class="w-4 h-4 -ml-0.5 mt-0.5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Core Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -276,5 +305,6 @@
     </script>
     <script src="settings.js"></script>
     <script src="dashboard.js"></script>
+    <script type="module" src="chat-widget.js"></script>
 </body>
 </html>
