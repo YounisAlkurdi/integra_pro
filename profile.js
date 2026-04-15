@@ -114,6 +114,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const configLabel = document.getElementById('config-label');
         const configArea = document.getElementById('mcp-config');
         const nameContainer = document.getElementById('field-name-container');
+        const restUrlContainer = document.getElementById('field-rest-url-container');
+        const mcpUrlContainer = document.getElementById('field-url-container');
         
         // Reset Card UI
         document.querySelectorAll('.provider-card').forEach(card => {
@@ -123,8 +125,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Highlight Selected Card
         const btn = document.getElementById(`btn-${type}`);
-        btn.classList.add('border-purple-400/50', 'bg-purple-500/10');
-        btn.querySelectorAll('i, span').forEach(el => el.classList.replace('text-white/30', 'text-purple-400'));
+        if(btn) {
+            btn.classList.add('border-purple-400/50', 'bg-purple-500/10');
+            btn.querySelectorAll('i, span').forEach(el => el.classList.replace('text-white/30', 'text-purple-400'));
+        }
+
+        // Hide all extra URL containers by default
+        if(restUrlContainer) restUrlContainer.style.display = 'none';
+        if(mcpUrlContainer) mcpUrlContainer.style.display = 'none';
 
         // Adapt UI based on Provider
         if (type === 'stripe') {
@@ -139,6 +147,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             configArea.value = "";
             configArea.style.height = "60px";
             nameContainer.style.display = "none";
+        } else if (type === 'rest_api') {
+            if(restUrlContainer) restUrlContainer.style.display = 'block';
+            configLabel.textContent = "Auth Headers (JSON) — optional";
+            configArea.placeholder = '{ "X-Api-Key": "your-key-here" }';
+            configArea.style.height = "80px";
+            nameContainer.style.display = "block";
+        } else if (type === 'remote_mcp') {
+            if(mcpUrlContainer) mcpUrlContainer.style.display = 'block';
+            configLabel.textContent = "Additional Config (JSON) — optional";
+            configArea.placeholder = '{ "apiKey": "optional" }';
+            configArea.style.height = "80px";
+            nameContainer.style.display = "block";
         } else {
             configLabel.textContent = "JSON Credentials Matrix";
             configArea.placeholder = '{ "key": "value" }';
@@ -164,13 +184,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (currentProvider === 'stripe') {
                 name = 'Stripe Matrix';
                 configObj = { "stripe_secret_key": configRaw };
-                finalType = 'Finance';
+                finalType = 'stripe';
             } else if (currentProvider === 'slack') {
                 name = 'Slack Transmitter';
                 configObj = { "slack_bot_token": configRaw };
-                finalType = 'Communication';
+                finalType = 'slack';
+            } else if (currentProvider === 'rest_api') {
+                const url = document.getElementById('rest-base-url')?.value?.trim();
+                if (!url) { showToast("Base URL is required", "error"); return; }
+                configObj = configRaw ? JSON.parse(configRaw) : {};
+                configObj.base_url = url;
+                finalType = 'rest_api';
+            } else if (currentProvider === 'remote_mcp') {
+                const url = document.getElementById('mcp-url')?.value?.trim();
+                if (!url) { showToast("MCP URL is required", "error"); return; }
+                configObj = configRaw ? JSON.parse(configRaw) : {};
+                configObj.mcp_url = url;
+                finalType = 'remote_mcp';
             } else {
                 configObj = JSON.parse(configRaw);
+                finalType = 'custom';
                 if (!name) name = "Custom Link";
             }
 
@@ -190,6 +223,62 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         } catch (e) {
             showToast("Matrix Configuration Error: Invalid Data", "error");
+        }
+    };
+
+    window.testMCPConnection = async () => {
+        const configRaw = document.getElementById('mcp-config').value;
+        const restUrl = document.getElementById('rest-base-url')?.value?.trim();
+        const mcpUrl = document.getElementById('mcp-url')?.value?.trim();
+        const btnTest = document.getElementById('btn-test');
+        
+        let configObj = {};
+        try {
+            if (currentProvider === 'stripe') {
+                configObj = { stripe_secret_key: configRaw };
+            } else if (currentProvider === 'slack') {
+                configObj = { slack_bot_token: configRaw };
+            } else if (currentProvider === 'rest_api') {
+                if (!restUrl) { showToast("Base URL is required", "error"); return; }
+                configObj = configRaw ? JSON.parse(configRaw) : {};
+                configObj.base_url = restUrl;
+            } else if (currentProvider === 'remote_mcp') {
+                if (!mcpUrl) { showToast("MCP URL is required", "error"); return; }
+                configObj = configRaw ? JSON.parse(configRaw) : {};
+                configObj.mcp_url = mcpUrl;
+            } else {
+                configObj = JSON.parse(configRaw);
+            }
+        } catch (e) {
+            showToast("Configuration must be valid format (JSON if not token)", "error");
+            return;
+        }
+
+        if (btnTest) { btnTest.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> TESTING...'; btnTest.disabled = true; if (window.lucide) lucide.createIcons(); }
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if(!session) { showToast("Not authenticated", "error"); return; }
+
+            const res = await fetch('/api/external-mcps/test', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: currentProvider,
+                    mcp_config: configObj
+                })
+            });
+            
+            const result = await res.json();
+            if (result.success) {
+                showToast(result.message, "success");
+            } else {
+                showToast(result.message, "error");
+            }
+        } catch (err) {
+            showToast(`Network error: ${err.message}`, "error");
+        } finally {
+            if (btnTest) { btnTest.innerHTML = '<i data-lucide="zap" class="w-3 h-3"></i> Test Connection'; btnTest.disabled = false; if (window.lucide) lucide.createIcons(); }
         }
     };
 

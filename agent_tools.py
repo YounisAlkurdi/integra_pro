@@ -73,6 +73,7 @@ def get_external_matrix_nodes(user_id: str) -> str:
     return integra_mcp.get_external_matrix_nodes(str(user_id))
 
 # --- UNIVERSAL NEURAL GATEWAY ---
+import api_bridge
 
 @tool
 def matrix_gateway(target_service: str, operation_goal: str, payload_json: str = "{}"):
@@ -80,12 +81,9 @@ def matrix_gateway(target_service: str, operation_goal: str, payload_json: str =
     UNIVERSAL GATEWAY: Executes an authenticated API operation for ANY linked matrix service.
     
     Args:
-        target_service: The name of the service (e.g., 'Stripe Matrix', 'Slack').
-        operation_goal: What you want to do (e.g., 'Get balance', 'Create customer', 'Send feedback').
+        target_service: The name of the service (e.g., 'Stripe Matrix', 'Slack', or custom REST API).
+        operation_goal: What you want to do (e.g., 'GET /balance' or 'POST /users').
         payload_json: A JSON string of parameters needed for the API call.
-        
-    Reality Check: This tool dynamically uses the stored credentials to bridge to the target API 
-    via standard HTTP protocols. No specific library installations are required.
     """
     try:
         # 1. Fetch the node to get credentials
@@ -96,20 +94,36 @@ def matrix_gateway(target_service: str, operation_goal: str, payload_json: str =
             return f"PROTOCOL ERROR: Service '{target_service}' is not linked to this neural matrix."
 
         config = node['mcp_config']
+        mcp_type = node.get('mcp_type', 'custom')
         
-        # 2. Logic for Universal Bridge (Example for Stripe, but extendable)
-        # Note: In a production environment, we'd use 'httpx' or 'requests' here.
-        # For simplicity and 'Realism', we return a simulated success if we have the key.
+        # Determine provider explicitly
+        provider = 'custom'
+        if 'base_url' in config:
+            provider = 'rest_api'
+        elif 'mcp_url' in config:
+            provider = 'remote_mcp'
+        elif mcp_type.lower() == 'stripe' or 'stripe' in target_service.lower():
+            provider = 'stripe'
+        elif mcp_type.lower() == 'slack' or 'slack' in target_service.lower():
+            provider = 'slack'
+        elif mcp_type.lower() == 'rest_api':
+            provider = 'rest_api'
+        elif mcp_type.lower() == 'remote_mcp':
+            provider = 'remote_mcp'
         
-        if "stripe" in target_service.lower():
-            if not config.get('stripe_secret_key'):
-                return "AUTH ERROR: Stripe Secret Key missing in matrix node."
-            
-            # Simulated Action based on the 31 tools listed by the user
-            # In a real script, this would be: requests.post('https://api.stripe.com/v1/...')
-            return f"NEURAL OPERATION SUCCESS: '{operation_goal}' executed for {target_service} using secure portal. [Result: Action Staged/Sent]"
-            
-        return f"NEURAL LINK ACTIVE: Successfully bridged to {target_service}. Action '{operation_goal}' simulated via gateway."
+        # Parse payload
+        payload = {}
+        try:
+            payload = json.loads(payload_json) if payload_json else {}
+        except:
+            pass
+
+        result = api_bridge.dispatch_sync(provider, config, operation_goal, payload)
+        
+        if "error" in result:
+             return f"GATEWAY ERROR: {result['error']}"
+             
+        return f"NEURAL LINK SUCCESS: {json.dumps(result)}"
         
     except Exception as e:
         return f"MATRIX CRITICAL ERROR: {str(e)}"

@@ -123,10 +123,26 @@ async def stripe_webhook(request: Request):
     """Stripe Cloud Event Handshake."""
     return await handle_stripe_webhook(request)
 
-# --- 6. Integra MCP Integration ---
-# This mounts the MCP server under the /mcp path
+# --- 6. Integra MCP & External Integrations ---
 from integra_mcp import mcp
 app.mount("/mcp", mcp.streamable_http_app())
+
+import api_bridge
+from pydantic import BaseModel
+from typing import Dict, Any
+
+class ExternalMCPTestRequest(BaseModel):
+    provider: str
+    mcp_config: Dict[str, Any]
+
+@app.post("/api/external-mcps/test")
+async def test_external_mcp(config: ExternalMCPTestRequest, user: dict = Depends(get_current_user)):
+    """Test remote APIs or MCP servers before saving."""
+    try:
+        result = await api_bridge.test_connection(config.provider, config.mcp_config)
+        return result
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 # --- 7. System Health Node ---
 @app.post("/api/send-invitation")
