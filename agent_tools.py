@@ -128,6 +128,103 @@ def matrix_gateway(target_service: str, operation_goal: str, payload_json: str =
     except Exception as e:
         return f"MATRIX CRITICAL ERROR: {str(e)}"
 
+@tool
+def analyze_web_link(url: str) -> str:
+    """
+    THE WEB SENSOR: Fetches a URL and returns a summary. Use for dealing with links output.
+    """
+    try:
+        import httpx
+        res = httpx.get(url, timeout=10.0, follow_redirects=True)
+        html = res.text
+        
+        # Try bs4 if available, otherwise fallback
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, 'html.parser')
+            title = soup.title.string.strip() if soup.title else "Unknown Title"
+            paragraphs = [p.get_text().strip() for p in soup.find_all('p') if len(p.get_text().strip()) > 50]
+            summary = " ".join(paragraphs[:2]) if paragraphs else "No content summary found."
+        except ImportError:
+            import re
+            m = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+            title = m.group(1) if m else "Unknown Title"
+            summary = html[:300].strip() + "..."
+            
+        summary = summary[:300] + "..." if len(summary) > 300 else summary
+        
+        payload = {"type": "link", "url": url, "title": title, "summary": summary}
+        return f"[INTEGRA_UI_CARD: {json.dumps(payload)}]"
+    except Exception as e:
+        return f"Web Sensor Failure: {str(e)}"
+
+@tool
+def analyze_image(image_path_or_url: str) -> str:
+    """
+    THE VISION SENSOR: Downloads an image, extracts tech data, and returns path for display.
+    """
+    try:
+        import os
+        import httpx
+        file_path = image_path_or_url
+        if image_path_or_url.startswith("http"):
+            temp_dir = os.path.join(os.getcwd(), 'static', 'temp_images')
+            os.makedirs(temp_dir, exist_ok=True)
+            filename = image_path_or_url.split("/")[-1] or "downloaded_img.jpg"
+            if "?" in filename: filename = filename.split("?")[0]
+            file_path = os.path.join(temp_dir, filename)
+            
+            res = httpx.get(image_path_or_url, follow_redirects=True)
+            with open(file_path, 'wb') as f:
+                f.write(res.content)
+            serve_path = f"/static/temp_images/{filename}"
+        else:
+            serve_path = image_path_or_url
+            
+        # Try EXIF or fallback
+        try:
+            from PIL import Image
+            img = Image.open(file_path)
+            tech_data = {"format": img.format, "size": f"{img.size[0]}x{img.size[1]}", "mode": img.mode}
+        except Exception:
+            tech_data = {"status": "Metadata unavailable or PIL missing"}
+
+        payload = {"type": "image", "path": serve_path, "tech_data": tech_data}
+        return f"[INTEGRA_UI_CARD: {json.dumps(payload)}]"
+    except Exception as e:
+        return f"Vision Sensor Failure: {str(e)}"
+
+@tool
+def analyze_local_file(filepath: str) -> str:
+    """
+    THE DOCUMENT SENSOR: Reads a local file up to 500KB. Fails securely if reading sensitive env files.
+    """
+    import os
+    try:
+        # Secure block
+        name = filepath.lower()
+        if ".env" in name or "secret" in name or ".pem" in name:
+            return "SECURITY ERROR: Prevented neural read on highly sensitive file."
+            
+        if not os.path.exists(filepath):
+            return f"Document Sensor Error: {filepath} not found."
+            
+        sz = os.path.getsize(filepath)
+        if sz > 500 * 1024:
+            return "Document Sensor Error: File exceeds 500KB strict limit."
+            
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            
+        payload = {
+            "type": "file",
+            "filepath": filepath,
+            "content": content
+        }
+        return f"[INTEGRA_UI_CARD: {json.dumps(payload)}]"
+    except Exception as e:
+        return f"Document Sensor Failure: {str(e)}"
+
 # Export all tools for the AI Agent
 INTEGRA_TOOLS = [
     execute_establish_secure_link,
@@ -136,5 +233,8 @@ INTEGRA_TOOLS = [
     sync_neural_quotas,
     execute_purge_protocol,
     get_external_matrix_nodes,
-    matrix_gateway
+    matrix_gateway,
+    analyze_web_link,
+    analyze_image,
+    analyze_local_file
 ]
