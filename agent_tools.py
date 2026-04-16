@@ -3,44 +3,36 @@ import json
 import integra_mcp
 
 # --- UNIVERSAL PROTOCOL TOOL ---
-# We use a single string input to ensure ReAct agents don't fail during validation.
-# The Agent will pass a JSON string, and we will parse it.
 
 @tool
-def execute_establish_secure_link(json_input: str) -> str:
+def execute_establish_secure_link(candidate_name: str, position: str, user_id: str, candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
     """
-    EXECUTE_LINK_PROTOCOL: Use this to INITIALIZE A NODE.
-    Input MUST be a JSON string with these keys: 
-    {"candidate_name": "...", "position": "...", "user_id": "...", "candidate_email": "...", "scheduled_at": "..."}
-    If 'scheduled_at' is missing, it creates an INSTANT session.
+    Initialize a secure interview node session.
+    Use this when requested to set up an interview.
     """
     try:
-        data = json.loads(json_input)
         return integra_mcp.establish_secure_link(
-            candidate_name=data.get("candidate_name"),
-            position=data.get("position"),
-            user_id=str(data.get("user_id")),
-            candidate_email=data.get("candidate_email"),
-            scheduled_at=data.get("scheduled_at"),
-            questions=data.get("questions")
+            candidate_name=candidate_name,
+            position=position,
+            user_id=str(user_id),
+            candidate_email=candidate_email,
+            scheduled_at=scheduled_at,
+            questions=questions
         )
     except Exception as e:
-        return f"CRITICAL_FAILURE: Protocol corruption. Ensure valid JSON input. Error: {str(e)}"
+        return f"CRITICAL_FAILURE: Protocol corruption. Error: {str(e)}"
 
 @tool
-def execute_transmit_invitation(json_input: str) -> str:
+def execute_transmit_invitation(candidate_name: str, candidate_email: str, scheduled_at: str, room_id: str) -> str:
     """
-    EXECUTE_TRANSMIT_PROTOCOL: Use this to DISPATCH THE INVITATION.
-    Input MUST be a JSON string with these keys:
-    {"candidate_name": "...", "candidate_email": "...", "scheduled_at": "...", "room_id": "..."}
+    Dispatch an interview invitation email to the candidate.
     """
     try:
-        data = json.loads(json_input)
         return integra_mcp.transmit_invitation_protocol(
-            candidate_name=data.get("candidate_name"),
-            candidate_email=data.get("candidate_email"),
-            scheduled_at=data.get("scheduled_at"),
-            room_id=data.get("room_id")
+            candidate_name=candidate_name,
+            candidate_email=candidate_email,
+            scheduled_at=scheduled_at,
+            room_id=room_id
         )
     except Exception as e:
         return f"CRITICAL_FAILURE: Transmission failed. Error: {str(e)}"
@@ -56,11 +48,10 @@ def sync_neural_quotas(user_id: str) -> str:
     return integra_mcp.sync_neural_quotas(str(user_id))
 
 @tool
-def execute_purge_protocol(json_input: str) -> str:
-    """PURGE_PROTOCOL: Terminate a node. Input: {"room_id": "...", "user_id": "..."}"""
+def execute_purge_protocol(room_id: str, user_id: str) -> str:
+    """Terminate and purge an active interview node session."""
     try:
-        data = json.loads(json_input)
-        return integra_mcp.purge_node(data.get("room_id"), str(data.get("user_id")))
+        return integra_mcp.purge_node(room_id, str(user_id))
     except Exception as e:
         return f"CRITICAL_FAILURE: Purge aborted. Error: {str(e)}"
 
@@ -78,11 +69,11 @@ import api_bridge
 @tool
 def matrix_gateway(target_service: str, operation_goal: str, payload_json: str = "{}"):
     """
-    UNIVERSAL GATEWAY: Executes an authenticated API operation for ANY linked matrix service.
+    Execute an API operation for any linked matrix service.
     
     Args:
-        target_service: The name of the service (e.g., 'Stripe Matrix', 'Slack', or custom REST API).
-        operation_goal: What you want to do (e.g., 'GET /balance' or 'POST /users').
+        target_service: The name of the service (e.g., 'Stripe Matrix', 'Slack').
+        operation_goal: What you want to do (e.g., 'GET /balance' or action intent).
         payload_json: A JSON string of parameters needed for the API call.
     """
     try:

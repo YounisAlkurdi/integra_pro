@@ -99,33 +99,41 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             
             final_system_instruction = f"{core_instruction}\n\n{user_custom_prompt}"
             
-            # ReAct Prompt Structure (RAW STRING to avoid interpolation conflict)
-            template = (
-                final_system_instruction + "\n\n"
-                "TOOLS:\n"
-                "------\n"
-                "You have access to the following tools:\n"
-                "{tools}\n\n"
-                "CHAT HISTORY:\n"
-                "-------------\n"
-                "{chat_history}\n\n"
-                "To use a tool, please use the following format:\n"
-                "Thought: Do I need to use a tool? Yes\n"
-                "Action: the action to take, should be one of [{tool_names}]\n"
-                "Action Input: the input to the action\n"
-                "Observation: the result of the action\n"
-                "... (this Thought/Action/Action Input/Observation can repeat N times)\n"
-                "Thought: I now know the final answer\n"
-                "Final Answer: the final answer to the original input question\n\n"
-                "Begin!\n\n"
-                "Question: {input}\n"
-                "Thought: {agent_scratchpad}"
-            )
-            
-            prompt_template = PromptTemplate.from_template(template)
             llm = get_llm(req.config)
+            provider = req.config.get("apiProvider", "openai").lower()
             
-            agent = create_react_agent(llm, INTEGRA_TOOLS, prompt_template)
+            if provider == "google":
+                template = (
+                    final_system_instruction + "\n\n"
+                    "TOOLS:\n"
+                    "------\n"
+                    "You have access to the following tools:\n"
+                    "{tools}\n\n"
+                    "CHAT HISTORY:\n"
+                    "-------------\n"
+                    "{chat_history}\n\n"
+                    "To use a tool, please use the following format:\n"
+                    "Thought: Do I need to use a tool? Yes\n"
+                    "Action: the action to take, should be one of [{tool_names}]\n"
+                    "Action Input: the input to the action (must be JSON)\n"
+                    "Observation: the result of the action\n"
+                    "... (this Thought/Action/Action Input/Observation can repeat N times)\n"
+                    "Thought: I now know the final answer\n"
+                    "Final Answer: the final answer to the original input question\n\n"
+                    "Begin!\n\n"
+                    "Question: {input}\n"
+                    "Thought: {agent_scratchpad}"
+                )
+                prompt_template = PromptTemplate.from_template(template)
+                agent = create_react_agent(llm, INTEGRA_TOOLS, prompt_template)
+            else:
+                prompt_template = ChatPromptTemplate.from_messages([
+                    ("system", final_system_instruction),
+                    MessagesPlaceholder("chat_history", optional=True),
+                    ("human", "{input}"),
+                    MessagesPlaceholder("agent_scratchpad"),
+                ])
+                agent = create_tool_calling_agent(llm, INTEGRA_TOOLS, prompt_template)
             
             # --- AGENT ENGINE INITIALIZATION ---
             agent_executor = AgentExecutor(

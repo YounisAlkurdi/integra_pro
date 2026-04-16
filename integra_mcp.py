@@ -130,22 +130,39 @@ def sync_neural_quotas(user_id: str) -> str:
         **upgrade_info
     }, indent=2)
 
+# Simple manual TTL Cache for matrix nodes
+_MATRIX_NODES_CACHE = {}
+_MATRIX_NODES_TTL = 300  # 5 minutes
+
 @mcp.tool()
 def get_external_matrix_nodes(user_id: str) -> str:
     """
     Retrieves the list of EXTERNAL Matrix Servers (Stripe, Slack, Jira, etc.) linked to this user.
     Use this to see what external tools are available for orchestration.
     """
+    import time
     uid = sanitize_uid(user_id)
+    
+    # Check cache
+    now = time.time()
+    if uid in _MATRIX_NODES_CACHE:
+        cached_data, timestamp = _MATRIX_NODES_CACHE[uid]
+        if now - timestamp < _MATRIX_NODES_TTL:
+            return cached_data
+            
     from nodes import _supabase_request
     
     # Query the external_mcps table we created
     res = _supabase_request("GET", f"external_mcps?user_id=eq.{uid}&is_active=eq.true")
     
     if not res:
-        return "No external matrix nodes found. Suggest user to link them in Profile."
-    
-    return json.dumps(res, indent=2)
+        result_str = "No external matrix nodes found. Suggest user to link them in Profile."
+    else:
+        result_str = json.dumps(res, indent=2)
+        
+    # Save to cache
+    _MATRIX_NODES_CACHE[uid] = (result_str, now)
+    return result_str
 
 @mcp.tool()
 def purge_node(room_id: str, user_id: str) -> str:
