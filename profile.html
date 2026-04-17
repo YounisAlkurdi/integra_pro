@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +9,68 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;800&display=swap');
+        
+        :root {
+            --obsidian: #020617;
+            --matrix-green: #00ff41;
+            --neural-cyan: #22d3ee;
+            --protocol-purple: #8b5cf6;
+        }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'Space Mono', monospace; }
+
         .profile-card {
             background: rgba(15, 15, 20, 0.4);
-            backdrop-filter: blur(20px);
-            border: 1px border border-white/5;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.5);
         }
-        .glow-identity {
-            box-shadow: 0 0 50px rgba(34, 211, 238, 0.1);
+
+        .matrix-terminal {
+            background: rgba(2, 6, 23, 0.95);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .matrix-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .glow-cyan { box-shadow: 0 0 30px rgba(34, 211, 238, 0.15); }
+        .glow-purple { box-shadow: 0 0 30px rgba(139, 92, 246, 0.15); }
+
+        .scanline-effect {
+            position: relative;
+        }
+        .scanline-effect::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(to bottom, transparent 50%, rgba(34, 211, 238, 0.05) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        .sidebar-link.active {
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+            border-left: 2px solid #22d3ee;
+        }
+
+        .provider-card.selected {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
         }
     </style>
 </head>
@@ -24,57 +78,236 @@
     <div class="bg-noise"></div>
     <div class="scanlines"></div>
 
-    <main class="relative z-10 flex items-center justify-center min-h-screen p-6">
-        <div class="max-w-xl w-full profile-card rounded-[2.5rem] p-12 text-center reveal active glow-identity border border-white/5">
-            
-            <div class="relative inline-block mb-10">
-                <div class="w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 p-1">
-                    <div id="p-avatar" class="w-full h-full rounded-full bg-obsidian flex items-center justify-center overflow-hidden">
-                        <i data-lucide="user" class="w-12 h-12 text-white/10"></i>
-                    </div>
-                </div>
-                <div class="absolute -bottom-2 -right-2 bg-cyan-400 text-obsidian px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">
-                    Verified
-                </div>
-            </div>
-
-            <h1 id="p-name" class="text-3xl font-black uppercase tracking-tighter italic mb-2">Synchronizing...</h1>
-            <p id="p-email" class="text-[10px] font-mono text-white/30 uppercase tracking-[0.3em] mb-12">Checking Neural Link...</p>
-
-            <div class="grid grid-cols-1 gap-4 text-left">
-                <div class="bg-white/5 border border-white/5 p-6 rounded-2xl">
-                    <label class="text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.3em] block mb-2">Primary Identifier (User ID)</label>
-                    <div class="flex items-center justify-between">
-                        <code id="p-id" class="text-xs font-mono text-white/60">ID-UNDEFINED</code>
-                        <button onclick="copyID()" class="text-white/20 hover:text-cyan-400 transition-colors"><i data-lucide="copy" class="w-3 h-3"></i></button>
-                    </div>
-                </div>
-
-                <div class="bg-white/5 border border-white/5 p-6 rounded-2xl">
-                    <label class="text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.3em] block mb-2">Auth Provider</label>
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="shield-check" class="w-3 h-3 text-cyan-400"></i>
-                        <span id="p-provider" class="text-[10px] font-mono text-white/80 uppercase tracking-widest">Google Auth</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-12 flex gap-4">
-                <a href="dashboard.html" class="flex-1 py-4 bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl border border-white/5 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="arrow-left" class="w-3 h-3"></i> Return to Console
-                </a>
-                <button onclick="logoutHR()" class="px-8 py-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl border border-red-500/20 transition-all">
-                    Sign Out
-                </button>
+    <!-- Right Sidebar (RTL Optimized) -->
+    <aside class="fixed right-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-l border-white/5 backdrop-blur-2xl bg-obsidian/40">
+        <div class="mb-12">
+            <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                <span class="text-obsidian font-black text-xl">I</span>
             </div>
         </div>
+
+        <nav class="flex-1 flex flex-col gap-8">
+            <a href="dashboard.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Console">
+                <i data-lucide="terminal" class="w-5 h-5"></i>
+            </a>
+            <a href="reports.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Archives">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </a>
+            <a href="appointments.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Appointments">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+            </a>
+            <a href="billing.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Billing">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </a>
+            <a href="pricing.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Security labs">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </a>
+            <a href="llm-config.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Neural Engine">
+                <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+            </a>
+        </nav>
+
+        <div class="flex flex-col gap-6 items-center">
+            <a href="profile.html" class="sidebar-link active p-3 rounded-xl transition-all ring-2 ring-cyan-400/30" id="user-avatar-sidebar" title="Identity">
+                <div class="w-6 h-6 rounded-full bg-cyan-400/20 flex items-center justify-center text-[8px] font-bold text-cyan-400">YA</div>
+            </a>
+            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Terminate">
+                <i data-lucide="power" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </aside>
+
+    <main class="mr-20 pt-10 px-8 w-[calc(100%-5rem)] relative z-10">
+        <!-- Dashboard Header -->
+        <div class="max-w-6xl mx-auto mb-10 flex items-end justify-between">
+            <div>
+                <h1 class="text-4xl font-black uppercase tracking-tighter italic mb-2 bg-gradient-to-r from-white via-white to-white/20 bg-clip-text text-transparent">Neural Matrix Profile</h1>
+                <p class="text-[10px] font-mono text-cyan-400/60 uppercase tracking-[0.4em]">Integrated Control Interface / User: <span id="p-header-email">SYNCING...</span></p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="text-[8px] font-mono text-white/20 uppercase tracking-widest">Protocol Version</p>
+                    <p class="text-[10px] font-black text-cyan-400 tracking-widest">V2.4.0-NEURAL</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <i data-lucide="fingerprint" class="w-6 h-6 text-cyan-400/50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Identity & Hub -->
+            <div class="lg:col-span-4 space-y-8">
+                <!-- Identity Module -->
+                <div class="profile-card rounded-[2rem] p-8 border border-white/5 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-400/5 blur-[60px] rounded-full"></div>
+                    
+                    <div class="flex flex-col items-center mb-8">
+                        <div class="relative mb-6">
+                            <div class="w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-400/20 to-transparent p-1">
+                                <div id="p-avatar" class="w-full h-full rounded-full bg-obsidian flex items-center justify-center overflow-hidden border border-white/10 scanline-effect">
+                                    <i data-lucide="user" class="w-12 h-12 text-white/5"></i>
+                                </div>
+                            </div>
+                            <div class="absolute -bottom-2 -right-2 bg-cyan-400 text-obsidian px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border border-cyan-300">Active</div>
+                        </div>
+                        <h2 id="p-name" class="text-2xl font-black uppercase tracking-tight text-white mb-1">Synchronizing...</h2>
+                        <p id="p-email" class="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">IDENT_LINK_PENDING</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-black/20 p-4 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all cursor-pointer" onclick="copyID()">
+                            <label class="text-[7px] font-black text-cyan-400/40 uppercase tracking-[0.3em] block mb-2">Subject UUID</label>
+                            <div class="flex items-center justify-between">
+                                <code id="p-id" class="text-[9px] font-mono text-white/40 truncate mr-2">LOADING...</code>
+                                <i data-lucide="copy" class="w-3 h-3 text-white/20"></i>
+                            </div>
+                        </div>
+                        <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                            <label class="text-[7px] font-black text-cyan-400/40 uppercase tracking-[0.3em] block mb-2">Security Protocol</label>
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="shield" class="w-3 h-3 text-cyan-400"></i>
+                                <span id="p-provider" class="text-[9px] font-black text-white/60 uppercase tracking-widest italic">Auth_Link_v2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Neural Hub Quick Export -->
+                <div class="profile-card rounded-[2rem] p-8 border border-white/5 relative glow-cyan">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
+                                <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                            </div>
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em]">Matrix Hub</h3>
+                        </div>
+                        <button onclick="copyConfig()" class="p-2 hover:bg-white/5 rounded-lg text-cyan-400/60 hover:text-cyan-400 transition-all">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="matrix-terminal rounded-2xl p-6 font-mono text-[9px] text-cyan-400/40 h-48 overflow-y-auto scrollbar-hide border border-cyan-400/10">
+                        <pre id="mcp-config-json" class="whitespace-pre-wrap">INITIALIZING MATRIX DATA...</pre>
+                    </div>
+                    
+                    <p class="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em] mt-4 text-center">Copy this config to your local Claude Desktop to enable local orchestration.</p>
+                </div>
+            </div>
+
+            <!-- Right Column: External Matrix Links -->
+            <div class="lg:col-span-8 space-y-8">
+                <!-- Linked Nodes Grid -->
+                <div>
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-2 h-2 rounded-full bg-purple-500 animate-pulse shadow-[0_0_10px_#a855f7]"></div>
+                            <h2 class="text-xs font-black uppercase tracking-[0.4em] text-purple-400">Active Matrix Nodes</h2>
+                        </div>
+                        <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest" id="mcp-count">Scanning...</span>
+                    </div>
+
+                    <div id="external-mcp-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dynamic content -->
+                        <div class="col-span-full h-32 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4 opacity-30">
+                            <i data-lucide="link-2" class="w-8 h-8"></i>
+                            <span class="text-[9px] font-black uppercase tracking-[0.3em]">No Active Neural Links</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add New Link Module -->
+                <div class="profile-card rounded-[3rem] p-10 border border-white/5 relative glow-purple overflow-hidden">
+                    <div class="absolute -top-32 -left-32 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full"></div>
+                    
+                    <div class="flex items-center justify-between mb-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                <i data-lucide="zap" class="w-6 h-6 text-purple-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-black uppercase tracking-tighter italic">Establish Neural Protocol</h3>
+                                <p class="text-[9px] text-white/30 uppercase tracking-widest mt-1">Connect third-party matrix nodes</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Selector Tiles -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
+                        <button onclick="selectProvider('stripe')" id="btn-stripe" class="provider-card p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-400/40 transition-all flex flex-col items-center gap-2 group">
+                            <i data-lucide="credit-card" class="w-5 h-5 text-white/20 group-hover:text-purple-400"></i>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/60">Stripe</span>
+                        </button>
+                        <button onclick="selectProvider('slack')" id="btn-slack" class="provider-card p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-400/40 transition-all flex flex-col items-center gap-2 group">
+                            <i data-lucide="slack" class="w-5 h-5 text-white/20 group-hover:text-purple-400"></i>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/60">Slack</span>
+                        </button>
+                        <button onclick="selectProvider('rest_api')" id="btn-rest_api" class="provider-card p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-400/40 transition-all flex flex-col items-center gap-2 group">
+                            <i data-lucide="webhook" class="w-5 h-5 text-white/20 group-hover:text-purple-400"></i>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/60">REST API</span>
+                        </button>
+                        <button onclick="selectProvider('remote_mcp')" id="btn-remote_mcp" class="provider-card p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-400/40 transition-all flex flex-col items-center gap-2 group">
+                            <i data-lucide="cloud" class="w-5 h-5 text-white/20 group-hover:text-purple-400"></i>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/60">Remote MCP</span>
+                        </button>
+                        <button onclick="selectProvider('custom')" id="btn-custom" class="provider-card p-4 rounded-2xl bg-purple-500/10 border border-purple-500/30 transition-all flex flex-col items-center gap-2 group selected">
+                            <i data-lucide="box" class="w-5 h-5 text-purple-400"></i>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-purple-400">Custom</span>
+                        </button>
+                    </div>
+
+                    <!-- Dynamic Inputs Area -->
+                    <div class="space-y-6 bg-black/40 p-8 rounded-[2rem] border border-white/5">
+                        <div id="field-name-container">
+                             <label class="text-[8px] font-mono text-white/20 uppercase tracking-widest block mb-2">Protocol Alias</label>
+                             <input type="text" id="mcp-name" placeholder="IDENT_NODE_01" class="w-full bg-obsidian border border-white/10 rounded-xl p-4 text-[10px] font-mono focus:border-purple-400 outline-none transition-all placeholder:text-white/5">
+                        </div>
+                        
+                        <div id="field-rest-url-container" style="display:none">
+                            <label class="text-[8px] font-mono text-white/20 uppercase tracking-widest block mb-2">Base Endpoint URL</label>
+                            <input type="url" id="rest-base-url" placeholder="https://api.vortex.com/v1" class="w-full bg-obsidian border border-purple-400/20 rounded-xl p-4 text-[10px] font-mono focus:border-purple-400 outline-none transition-all">
+                        </div>
+
+                        <div id="field-url-container" style="display:none">
+                            <label class="text-[8px] font-mono text-white/20 uppercase tracking-widest block mb-2">Secure MCP Link (SSE/HTTP)</label>
+                            <input type="url" id="mcp-url" placeholder="https://mcp.vortex.com/sse" class="w-full bg-obsidian border border-purple-400/20 rounded-xl p-4 text-[10px] font-mono focus:border-purple-400 outline-none transition-all">
+                        </div>
+
+                        <div id="field-config-container">
+                            <label id="config-label" class="text-[8px] font-mono text-white/20 uppercase tracking-widest block mb-2">Credentials Matrix (JSON/Token)</label>
+                            <textarea id="mcp-config" placeholder='{ "auth_key": "...." }' class="w-full bg-obsidian border border-white/10 rounded-xl p-4 text-[10px] font-mono focus:border-purple-400 outline-none transition-all h-32 scrollbar-hide"></textarea>
+                        </div>
+
+                        <div class="flex gap-4 pt-4">
+                            <button id="btn-test" onclick="testMCPConnection()" class="flex-1 py-4 bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase tracking-[0.3em] rounded-xl border border-white/5 transition-all flex items-center justify-center gap-2 group">
+                                <i data-lucide="shield-check" class="w-3 h-3 text-white/20 group-hover:text-cyan-400"></i> Test Link
+                            </button>
+                            <button onclick="linkNewMCP()" class="flex-1 py-4 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white text-[9px] font-black uppercase tracking-[0.3em] rounded-xl border border-purple-400/20 transition-all flex items-center justify-center gap-2 shadow-xl hover:shadow-purple-500/20">
+                                Establish Link <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="max-w-6xl mx-auto mt-12 mb-20 flex items-center justify-between opacity-20 hover:opacity-100 transition-opacity">
+            <div class="flex gap-8">
+                <a href="dashboard.html" class="text-[8px] font-mono uppercase tracking-widest hover:text-cyan-400 transition-colors">Return to Core Console</a>
+                <a href="javascript:void(0)" onclick="logoutHR()" class="text-[8px] font-mono uppercase tracking-widest hover:text-red-500 transition-colors">Sign Out / De-Sync</a>
+            </div>
+            <p class="text-[8px] font-mono uppercase tracking-[0.4em]">Integra Systems © 2026 / Neural Node 441</p>
+        </footer>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Toast Engine -->
+    <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3"></div>
+
     <script src="settings.js"></script>
     <script type="module">
         import { supabase } from './supabase-client.js';
-        window.supabase = supabase; // Make it globally accessible for other scripts
+        window.supabase = supabase;
     </script>
     <script src="script.js"></script>
     <script type="module" src="profile.js"></script>

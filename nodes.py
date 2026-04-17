@@ -52,10 +52,13 @@ def create_neural_node(node: NodeProtocol, user_id: str):
     result = _supabase_request("POST", "nodes", body)
     return result[0] if result else body
 
-def get_active_streams(user_id: str = None):
+def get_active_streams(user_id: str = None, since_date: str = None):
     """Returns only nodes that are NOT marked as deleted."""
     # Get everything for user and filter in memory for 100% reliability
-    all_nodes = _supabase_request("GET", f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc") if user_id else []
+    query = f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc"
+    if since_date:
+        query += f"&created_at=gte.{since_date}"
+    all_nodes = _supabase_request("GET", query) if user_id else []
     return [n for n in all_nodes if not n.get('is_deleted')]
 
 def get_node_by_room_id(room_id: str):
@@ -71,7 +74,7 @@ def delete_node(room_id: str):
     })
     return True
 
-def get_node_stats(user_id: str = None):
+def get_node_stats(user_id: str = None, since_date: str = None):
     """
     Calculates usage telemetry. 
     Neural Logic: Only counts nodes created AFTER the latest successful payment cycle.
@@ -87,7 +90,10 @@ def get_node_stats(user_id: str = None):
 
     # 2. Fetch Nodes with Date Filter if payment exists
     node_query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}"
-    if last_payment_date:
+    if since_date:
+        # Override with explicit date if provided (e.g. from subscription reset)
+        node_query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}&created_at=gte.{since_date}"
+    elif last_payment_date:
         # filter nodes >= last_payment_date
         node_query += f"&created_at=gte.{last_payment_date}"
     

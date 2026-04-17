@@ -506,7 +506,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- 8. Initial Initialization ---
     await renderInterviews();
-    await updateStats();
+    // Handle initial load
+    loadActiveStreams();
+
+    // --- REACTIVE NEURAL UPDATES ---
+    // Listen for events from the AI Agent (via chat-widget.js)
+    window.addEventListener('integra-system-event', (e) => {
+        const { event } = e.detail;
+        console.log(`[Neural Dashboard] Reacting to event: ${event}`);
+        
+        if (["node-created", "node-deleted", "matrix-update"].includes(event)) {
+            // Re-sync the dashboard data streams
+            loadActiveStreams();
+            
+            // Optional: Provide a subtle visual hint that a sync occurred
+            const statusNode = document.querySelector('.status-indicator');
+            if (statusNode) {
+                statusNode.classList.add('animate-ping');
+                setTimeout(() => statusNode.classList.remove('animate-ping'), 1000);
+            }
+        }
+    });
 });
 
 // --- Toast Notification Protocol ---

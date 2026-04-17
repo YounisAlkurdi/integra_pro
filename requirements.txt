@@ -7,3 +7,11 @@ pydantic
 livekit-api
 requests
 cryptography
+httpx
+beautifulsoup4
+langchain
+langchain-community
+langchain-core
+langchain-openai
+Pillow
+mcp

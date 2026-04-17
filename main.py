@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from utils import get_env_safe
 from auth import get_current_user, get_user_profile_data, get_active_subscription
@@ -8,6 +9,7 @@ from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node
 from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
 from mailer import send_interview_invitation
 import livekit_routes
+import agent_routes
 import os
 from dotenv import load_dotenv
 
@@ -15,6 +17,10 @@ load_dotenv()
 
 # --- 1. System Initialization ---
 app = FastAPI(title="Integra | Core Control Node")
+
+# Serve Neural Vision Assets
+os.makedirs("static/temp_images", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class EmailRequest(BaseModel):
     candidate_name: str
@@ -95,6 +101,7 @@ async def fetch_logs(node_id: str, user: dict = Depends(get_current_user)):
 # --- 4. LiveKit Endpoints (Token Generator) ---
 # All logic lives in livekit_routes.py — same pattern as payments.py
 app.include_router(livekit_routes.router)
+app.include_router(agent_routes.router)
 
 @app.get("/config")
 async def get_config():

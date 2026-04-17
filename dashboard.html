@@ -68,6 +68,9 @@
             <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
+            <a href="llm-config.html" class="sidebar-link hover-target" title="Neural Engine">
+                <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+            </a>
         </nav>
 
         <!-- System Actions -->
@@ -253,6 +256,51 @@
         </div>
     </div>
 
+    <!-- AI Neural Chat Widget -->
+    <div id="ai-chat-btn" class="fixed bottom-8 right-8 w-16 h-16 bg-cyan-400 text-obsidian rounded-2xl flex items-center justify-center cursor-pointer shadow-[0_0_30px_rgba(34,211,238,0.3)] hover:scale-110 transition-all z-[70] group hover-target">
+        <i data-lucide="message-square" class="w-6 h-6 group-hover:hidden"></i>
+        <i data-lucide="sparkles" class="w-6 h-6 hidden group-hover:block animate-pulse"></i>
+        <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-obsidian animate-bounce"></div>
+    </div>
+
+    <div id="ai-chat-window" class="fixed bottom-28 right-8 w-[400px] h-[600px] glass-panel border border-white/10 rounded-3xl shadow-2xl z-[70] flex flex-col hidden opacity-0 translate-y-10 transition-all duration-300 backdrop-blur-3xl overflow-hidden">
+        <div class="p-6 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-cyan-400/20 flex items-center justify-center border border-cyan-400/30">
+                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-tighter italic">Integra Neural Engine</h3>
+                    <p class="text-[8px] font-mono text-cyan-400/60 uppercase tracking-widest">Active Link: Encrypted</p>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="p-2 hover:bg-white/5 rounded-lg transition-all text-white/40 hover:text-white">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <div id="ai-chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar flex flex-col">
+            <div class="bg-white/5 border border-white/10 p-4 rounded-2xl text-[11px] font-mono leading-relaxed text-white/80 self-start rounded-bl-none">
+                System Initialized. <br><br>
+                أهلاً بك في Integra Control Console. أنا المساعد العصبي الخاص بك. يمكنني مساعدتك في إدارة المقابلات، تحليل البيانات، أو تنفيذ أوامر النظام. <br><br>
+                ماذا تريد أن تفعل اليوم؟
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-white/10 bg-white/[0.01]">
+            <div class="relative flex items-center gap-2">
+                <textarea id="ai-chat-input" rows="1" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pr-12 text-[11px] font-mono focus:border-cyan-400 outline-none transition-all placeholder:text-white/10 resize-none custom-scrollbar" placeholder="Enter Neural Command..."></textarea>
+                <button id="ai-chat-send" class="absolute right-3 p-2 bg-cyan-400 text-obsidian rounded-xl hover:bg-white transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="mt-4 flex items-center justify-between opacity-30">
+                <span class="text-[7px] font-mono uppercase tracking-[0.2em]">Context: Local_Control</span>
+                <span class="text-[7px] font-mono uppercase tracking-[0.2em]">Model: GPT-4o_Optimized</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
@@ -273,5 +321,6 @@
     </script>
     <script src="settings.js"></script>
     <script src="dashboard.js"></script>
+    <script type="module" src="chat-widget.js"></script>
 </body>
 </html>
