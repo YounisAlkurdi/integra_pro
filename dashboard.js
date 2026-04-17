@@ -263,36 +263,60 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        list.innerHTML = sessions.map(s => `
-            <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl hover:bg-white/[0.03] hover:border-cyan-400/20 transition-all duration-500 overflow-hidden reveal active cursor-pointer">
-                <div class="flex justify-between items-center gap-6 relative z-10">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-cyan-400/10 rounded-full flex items-center justify-center text-cyan-400 font-mono text-xs border border-cyan-400/20">
-                            ${(s.candidate_name || 'N').charAt(0).toUpperCase()}
+        list.innerHTML = sessions.map(s => {
+            const initials = (s.candidate_name || 'N').charAt(0).toUpperCase();
+            return `
+            <div class="group relative bg-[#050505] border border-white/5 p-8 rounded-[2rem] hover:border-cyan-400/30 transition-all duration-700 reveal active overflow-hidden">
+                <!-- Status Badge (Top Right) -->
+                <div class="absolute top-6 right-8 flex items-center gap-2">
+                    ${s.is_live ? `
+                        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                            <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></div>
+                            <span class="text-[7px] font-black text-cyan-400 uppercase tracking-widest">Live Now</span>
                         </div>
-                        <div>
-                            <h4 class="text-sm font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">${s.candidate_name || 'Unknown'}</h4>
-                            <div class="flex items-center gap-3 mt-1">
-                                <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">${s.position || 'N/A'}</p>
-                                <span class="text-[8px] text-white/10">•</span>
-                                <p class="text-[9px] font-mono text-cyan-400/40 uppercase tracking-[0.2em]">📅 ${formatDate(s.scheduled_at)}</p>
-                            </div>
-                        </div>
+                    ` : `
+                        <div class="px-3 py-1 bg-white/5 border border-white/10 text-white/40 text-[7px] font-bold uppercase rounded-full tracking-widest">${s.status}</div>
+                    `}
+                </div>
+
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center text-xl font-black text-white border border-white/10">
+                        ${initials}
                     </div>
-                    
-                    <div class="flex items-center gap-6">
-                        <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden sm:block">ID: ${s.room_id.substring(0, 8)}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="px-3 py-1 bg-cyan-400/5 border border-cyan-400/20 text-cyan-400 text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
-                            <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all" title="Copy Candidate Link"><i data-lucide="link" class="w-4 h-4"></i></button>
-                            <button onclick="terminateSession('${s.room_id}')" class="p-2 hover:text-red-500 transition-all" title="Terminate Session"><i data-lucide="x" class="w-4 h-4"></i></button>
-                            <button onclick="joinAsHR('${s.room_id}')" class="px-4 py-2 bg-white/5 hover:bg-white text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target"><i data-lucide="play" class="w-3 h-3 inline mr-1"></i> Join</button>
+                    <div class="flex-1">
+                        <h4 class="text-lg font-black text-white leading-tight">${s.candidate_name || 'youness'}</h4>
+                        <div class="flex items-center gap-2 text-[11px] font-bold text-white/40 mt-0.5">
+                            <span class="text-cyan-400">${s.participants_count || 3}</span>
+                            <span class="text-white/10">•</span>
+                            <span class="flex items-center gap-1">📅 ${formatDate(s.scheduled_at)}</span>
+                        </div>
+                        <div class="mt-3 space-y-1">
+                            <p class="text-[10px] font-mono text-white/30 uppercase tracking-wider">ID: ${s.room_id.substring(0, 8).toUpperCase()}</p>
+                            <p class="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em]">${s.status}</p>
                         </div>
                     </div>
                 </div>
-                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:via-transparent transition-all duration-700 pointer-events-none"></div>
+
+                <div class="mt-6 pt-6 border-t border-white/5 flex gap-2">
+                    <button onclick="joinAsHR('${s.room_id}')" class="flex-1 py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-cyan-400 transition-all shadow-lg active:scale-95">
+                        Join
+                    </button>
+                    <button onclick="copyLink('${s.room_id}')" class="px-5 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/40 hover:text-cyan-400 transition-all">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="terminateSession('${s.room_id}')" class="px-5 py-4 bg-white/5 hover:bg-red-500/10 border border-white/10 rounded-xl text-white/20 hover:text-red-500 transition-all" title="Purge Node">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abstract background glow -->
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-cyan-400/5 blur-[80px] rounded-full pointer-events-none group-hover:bg-cyan-400/10 transition-all duration-700"></div>
             </div>
-        `).join('');
+            `;
+        }).join('');
         
         lucide.createIcons();
         init3DTilt();

@@ -447,40 +447,57 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Terminate the session cleanly
      */
+    /**
+     * Terminate the session cleanly
+     */
     window.endSession = async function() {
-        showToast("TERMINATING CONNECTION...", "info");
+        showToast("DISCONNECTING...", "info");
 
-        // If I am the HR, I should terminate the room globally for everyone
-        if (localRole === 'hr' || localRole === 'admin') {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const authHeader = session ? `Bearer ${session.access_token}` : null;
-                
-                if (authHeader && currentRoomId) {
-                    // 1. Kick everyone out & Close LiveKit Room
-                    await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': authHeader }
-                    });
-
-                    // 2. Mark node as COMPLETED & is_deleted: true
-                    await fetch(`${API_BASE}/api/nodes/${currentRoomId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': authHeader }
-                    });
-                }
-            } catch (e) {
-                console.error("Failed to execute global termination protocol:", e);
-            }
-            
-            // Allow a brief moment for signals to propagate before navigating
-            setTimeout(() => {
+        // Disconnect locally
+        window.LiveKitSession?.disconnect();
+        
+        // Return to relevant page
+        setTimeout(() => {
+            if (localRole === 'hr' || localRole === 'admin') {
                 window.location.href = 'dashboard.html';
-            }, 800);
-        } else {
-            // Candidates just disconnect locally
-            window.LiveKitSession?.disconnect();
+            } else {
+                window.location.href = 'index.html';
+            }
+        }, 800);
+    };
+
+    /**
+     * Forcible termination (only for HR if they really want to purge the link)
+     */
+    window.terminateSessionProtocol = async function() {
+        if (!(localRole === 'hr' || localRole === 'admin')) return;
+        
+        showToast("TERMINATING SESSION FOR ALL...", "error");
+        
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const authHeader = session ? `Bearer ${session.access_token}` : null;
+            
+            if (authHeader && currentRoomId) {
+                // 1. Kick everyone out & Close LiveKit Room
+                await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': authHeader }
+                });
+
+                // 2. Mark node as COMPLETED & is_deleted: true
+                await fetch(`${API_BASE}/api/nodes/${currentRoomId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': authHeader }
+                });
+            }
+        } catch (e) {
+            console.error("Failed to execute global termination protocol:", e);
         }
+        
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1000);
     };
 
     // Wire Leave Button

@@ -291,3 +291,30 @@ async def end_room(room_name: str):
             status_code=500,
             detail=f"Failed to delete room: {str(e)}",
         )
+
+
+async def get_active_livekit_rooms():
+    """
+    Helper function to get a map of {room_name: participant_count}.
+    """
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    livekit_url = os.getenv("LIVEKIT_URL", "").replace("wss://", "https://").replace("ws://", "http://")
+
+    if not api_key or not api_secret or not livekit_url:
+        return {}
+
+    try:
+        from livekit.api import ListRoomsRequest
+        async with LiveKitAPI(livekit_url, api_key, api_secret) as lk_api:
+            res = await lk_api.room.list_rooms(ListRoomsRequest())
+            # Return dict of room_name -> num_participants
+            return {room.name: room.num_participants for room in res.rooms if room.num_participants > 0}
+    except Exception as e:
+        print(f"[LiveKit] Error fetching active rooms: {e}")
+        return {}
+
+@router.get("/active-rooms")
+async def list_active_rooms():
+    rooms_map = await get_active_livekit_rooms()
+    return {"active_rooms": rooms_map}

@@ -67,10 +67,12 @@ async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)
 @app.get("/api/nodes")
 async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
-    profile = get_user_profile_data(user)
-    sub = profile.get("subscription") or {}
-    reset_date = sub.get('created_at')
-    return get_active_streams(user_id=user["sub"], since_date=reset_date)
+    # Fetch real LiveKit active rooms
+    from livekit_routes import get_active_livekit_rooms
+    active_rooms = await get_active_livekit_rooms()
+    
+    # We don't filter the list itself by date, just show available nodes
+    return get_active_streams(user_id=user["sub"], since_date=None, active_rooms_map=active_rooms)
 
 @app.delete("/api/nodes/{room_id}")
 async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
@@ -86,7 +88,12 @@ async def sys_stats(user: dict = Depends(get_current_user)):
     profile = get_user_profile_data(user)
     sub = profile.get("subscription") or {}
     reset_date = sub.get('created_at')
-    return get_node_stats(user_id=user["sub"], since_date=reset_date)
+    
+    # Fetch real LiveKit active room IDs
+    from livekit_routes import get_active_livekit_rooms
+    active_rooms = await get_active_livekit_rooms()
+    
+    return get_node_stats(user_id=user["sub"], since_date=reset_date, active_rooms_map=active_rooms)
 
 # --- 4. Chat Logging Endpoints ---
 @app.post("/api/logs")

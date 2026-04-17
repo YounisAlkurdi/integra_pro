@@ -60,14 +60,37 @@ def create_neural_node(node: NodeProtocol, user_id: str):
     result = _supabase_request("POST", "nodes", body)
     return result[0] if result else body
 
-def get_active_streams(user_id: str = None, since_date: str = None):
+def get_active_streams(user_id: str = None, since_date: str = None, active_rooms_map: dict = None):
     """Returns only nodes that are NOT marked as deleted, optionally filtered by date."""
     query = f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc"
     if since_date:
-        query += f"&created_at=gte.{since_date}"
+        # Ultra-defensive sanitization for corrupted timestamps (e.g. from broken JSON strings)
+        # Take only the standard ISO8601 part, stop at spaces or plus signs
+        import re
+        match = re.search(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', since_date)
+        if match:
+            clean_date = match.group(0)
+            query += f"&created_at=gte.{clean_date}"
+        else:
+            # Fallback if regex fails but we have a value
+            clean_date = since_date.split(' ')[0].split('+')[0]
+            query += f"&created_at=gte.{clean_date}"
     
     all_nodes = _supabase_request("GET", query) if user_id else []
-    return [n for n in all_nodes if not n.get('is_deleted')]
+    
+    results = []
+    for n in all_nodes:
+        if not n.get('is_deleted'):
+            # Add virtual live flag based on LiveKit reality
+            rid = n.get('room_id')
+            if active_rooms_map and rid in active_rooms_map:
+                n['is_live'] = True
+                n['participants_count'] = active_rooms_map[rid]
+            else:
+                n['is_live'] = False
+                n['participants_count'] = 0
+            results.append(n)
+    return results
 
 def get_node_by_room_id(room_id: str):
     """Fetches a specific node by its room_id without user_id filtering."""
@@ -82,32 +105,44 @@ def delete_node(room_id: str):
     })
     return True
 
-def get_node_stats(user_id: str = None, since_date: str = None):
+def get_node_stats(user_id: str = None, since_date: str = None, active_rooms_map: dict = None):
     """
     Calculates usage telemetry within a specific period.
     """
     if not user_id: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
     
-    query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}"
+    query = f"nodes?select=status,is_deleted,created_at,room_id&user_id=eq.{user_id}"
     if since_date:
-        query += f"&created_at=gte.{since_date}"
+        # Ultra-defensive sanitization
+        import re
+        match = re.search(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', since_date)
+        if match:
+            clean_date = match.group(0)
+            query += f"&created_at=gte.{clean_date}"
+        else:
+            clean_date = since_date.split(' ')[0].split('+')[0]
+            query += f"&created_at=gte.{clean_date}"
         
     all_relevant_nodes = _supabase_request("GET", query)
     
     if not all_relevant_nodes:
-        return {"total": 0, "active_view": 0, "active": 0, "completed": 0, "threats": 0}
+        return {"total": 0, "active": 0, "completed": 0, "threats": 0}
 
     total_consumed = len(all_relevant_nodes)
-    # Only filter out officially deleted nodes
-    active_now = [n for n in all_relevant_nodes if not n.get('is_deleted')]
     
-    pending = sum(1 for n in active_now if n.get('status') == 'PENDING')
-    completed = sum(1 for n in active_now if n.get('status') == 'COMPLETED')
+    # Live count is based on the provided active_rooms_map from LiveKit Server
+    live_count = 0
+    if active_rooms_map:
+        # Count how many of THIS user's active rooms are in the map
+        user_room_ids = {n.get('room_id') for n in all_relevant_nodes if not n.get('is_deleted')}
+        live_count = sum(1 for rid in active_rooms_map.keys() if rid in user_room_ids)
+    
+    # Completed is based on DB status
+    completed = sum(1 for n in all_relevant_nodes if n.get('status') == 'COMPLETED')
     
     return {
         "total": total_consumed, 
-        "active_view": len(active_now),
-        "active": pending,
+        "active": live_count,
         "completed": completed,
         "threats": 0 
     }
