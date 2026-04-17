@@ -15,4 +15,3 @@ langchain-core
 langchain-openai
 Pillow
 mcp
-redis

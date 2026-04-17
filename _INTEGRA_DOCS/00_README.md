@@ -44,45 +44,44 @@
 
 ---
 
-## 🚦 الحالة الحالية (Dashboard)
+## 🚦 الحالة الحالية (Dashboard — SaaS Ready)
 
 | المكوّن | الحالة | الملاحظة |
 |---------|--------|---------|
-| FastAPI Backend | ✅ يعمل | محتاج تحديثات |
-| Supabase Auth | ✅ يعمل | Google + OTP |
-| LiveKit Video | ✅ يعمل | token 30 دقيقة |
-| Stripe Payment | ⚠️ جزئي | لا Webhook |
-| STT Engine | ✅ يعمل | Chrome/Edge فقط |
-| nodes → Supabase | ⚠️ جزئي | لا يزال JSON |
-| chat_logs | ❌ لا يعمل | لا يُحفظ |
-| interview_reports | ❌ لا يعمل | عشوائي |
-| QR Code | ❌ غير موجود | مُوثَّق في 14 |
-| profile.html | ❌ غير موجود | مُوثَّق في 13 |
+| FastAPI Backend | ✅ فعال (V1.1) | بنية تحتية نموذجية (Modular) |
+| Supabase Auth | ✅ كامل | JWT verification + RLS |
+| LiveKit Video | ✅ كامل | Secure rooms + Lobby system |
+| Stripe Payment | ✅ كامل | Integrates with Subscription engine |
+| STT Engine | ✅ فعال | Real-time transcription |
+| nodes → Supabase | ✅ كامل | Persistent state in cloud |
+| chat_logs | ✅ كامل | Memory buffer in Supabase |
+| audit_logs | ✅ كامل | Security event tracking active |
+| Hybrid Cache | ✅ كامل | Redis-ready with memory fallback |
 
 ---
 
-## 🔴 أهم 5 مهام الآن
+## 🔴 المهام النهائية (Final Stability Polish)
 
 ```
-1. ✅ ضع SUPABASE_JWT_SECRET في .env
-2. ✅ ارحّل nodes.py من JSON → Supabase
-3. ✅ أضف Stripe Webhook endpoint
-4. ✅ ابنِ join.html + QR system
-5. ✅ احفظ chat_logs بعد كل STT event
+1. [x] إعادة هيكلة المشروع إلى بنية SaaS (backend/)
+2. [x] تفعيل الـ Hybrid Caching و Rate Limiting
+3. [x] ربط الـ Agent بذاكرة Supabase المستمرة
+4. [x] مزامنة التوثيق مع الهيكل الجديد
+5. [ ] تفعيل الـ Production Deployment
 ```
 
 ---
 
-## 🛠️ بيئة التطوير
+## 🛠️ بيئة التشغيل والتحكم
 
 ```bash
-# تشغيل Backend:
+# تشغيل الـ Backend (SaaS Node):
 cd c:\tist_integra
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
-# تشغيل Frontend:
-# خيار 1: VS Code Live Server (مُوصى به)
-# خيار 2: python -m http.server 5500
+# المتطلبات الأساسية:
+# .env -> تأكد من وجود مفاتيح Supabase و Stripe و LiveKit
+# Redis -> (اختياري) لزيادة الأداء في بيئة الـ Production
 ```
 
 **Requirements:** Python 3.11+, Node.js 18+ (للمستقبل)

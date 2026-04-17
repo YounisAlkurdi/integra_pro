@@ -1,0 +1,120 @@
+/* --- reports.css --- */
+
+/* Specialized Glass Panels */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(15px) saturate(180%);
+    -webkit-backdrop-filter: blur(15px) saturate(180%);
+}
+
+/* Sidebar List Item Styling */
+.interview-item {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.interview-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.interview-item.active {
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.interview-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 40px;
+    background: #22d3ee;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 15px #22d3ee;
+    z-index: 10;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+/* Metrics Visualization */
+.metric-row {
+    position: relative;
+}
+
+.metric-bar-bg {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 15px;
+    position: relative;
+}
+
+.metric-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 15px currentColor;
+    opacity: 0.8;
+}
+
+/* Print Protocols */
+@media print {
+    aside, #report-actions, footer, .custom-cursor, .bg-noise, .grid-lines {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .glass-panel {
+        background: white !important;
+        color: black !important;
+        border: 1px solid #ddd !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
+        border-radius: 20px !important;
+    }
+
+    .text-white, .text-cyan-400, .text-white\/30, .text-white\/20 {
+        color: black !important;
+    }
+
+    .bg-white\/\[0\.02\], .bg-cyan-400\/5 {
+        background: #f8f8f8 !important;
+        border: 1px solid #eee !important;
+    }
+
+    .metric-bar-bg {
+        background: #eee !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .metric-fill {
+        box-shadow: none !important;
+        opacity: 1;
+    }
+}

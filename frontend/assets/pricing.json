@@ -1,0 +1,56 @@
+{
+  "pricing_data": {
+    "plans": [
+      {
+        "id": "starter",
+        "name": "System Core",
+        "tagline": "Advanced evaluation for specialized nodes.",
+        "monthly": { "price": "99" },
+        "yearly": { "price": "89" },
+        "features": [
+          "15 Neural Sessions / mo",
+          "20 Min Sync Limit",
+          "4 Node Capacity",
+          "Standard Analytics"
+        ],
+        "limits": { "interviews_per_month": 15, "max_duration_mins": 20, "max_participants": 4 },
+        "button_text": "Identify Node",
+        "highlight": false
+      },
+      {
+        "id": "professional",
+        "name": "Neural Nexus",
+        "tagline": "Advanced metrics for intelligence centers.",
+        "monthly": { "price": "299" },
+        "yearly": { "price": "259" },
+        "features": [
+          "40 Neural Sessions / mo",
+          "60 Min Sync Limit",
+          "8 Node Capacity",
+          "Neural Recording Included",
+          "Priority Response Handshake"
+        ],
+        "limits": { "interviews_per_month": 40, "max_duration_mins": 60, "max_participants": 8 },
+        "button_text": "Upgrade to Pro",
+        "highlight": true,
+        "badge": "High Priority"
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "tagline": "Custom deployments for high-security scaling.",
+        "monthly": { "price": "Custom" },
+        "yearly": { "price": "Custom" },
+        "features": [
+          "On-premise deployment",
+          "Custom AI model training",
+          "SLA guarantees",
+          "Dedicated Security Engineer"
+        ],
+        "limits": { "interviews_per_month": 9999, "max_duration_mins": 1440, "max_participants": 100 },
+        "button_text": "Contact Sales",
+        "highlight": false
+      }
+    ]
+  }
+}
