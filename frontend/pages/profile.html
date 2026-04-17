@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integra | Neural Identity Profile</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="/js/core/settings.js"></script>
+    <script src="../js/core/settings.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;800&display=swap');
         
@@ -89,28 +89,28 @@
         </div>
 
         <nav class="flex-1 flex flex-col gap-8">
-            <a href="/dashboard" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Console">
+            <a href="dashboard.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Console">
                 <i data-lucide="terminal" class="w-5 h-5"></i>
             </a>
-            <a href="/reports" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Archives">
+            <a href="reports.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Archives">
                 <i data-lucide="layers" class="w-5 h-5"></i>
             </a>
-            <a href="/appointments" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Appointments">
+            <a href="appointments.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Appointments">
                 <i data-lucide="calendar" class="w-5 h-5"></i>
             </a>
-            <a href="/billing" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Billing">
+            <a href="billing.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Billing">
                 <i data-lucide="credit-card" class="w-5 h-5"></i>
             </a>
-            <a href="/pricing" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Security labs">
+            <a href="pricing.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
-            <a href="/llm-config" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Neural Engine">
+            <a href="llm-config.html" class="sidebar-link hover-target p-3 rounded-xl transition-all opacity-40 hover:opacity-100" title="Neural Engine">
                 <i data-lucide="brain-circuit" class="w-5 h-5"></i>
             </a>
         </nav>
 
         <div class="flex flex-col gap-6 items-center">
-            <a href="/profile" class="sidebar-link active p-3 rounded-xl transition-all ring-2 ring-cyan-400/30" id="user-avatar-sidebar" title="Identity">
+            <a href="profile.html" class="sidebar-link active p-3 rounded-xl transition-all ring-2 ring-cyan-400/30" id="user-avatar-sidebar" title="Identity">
                 <div class="w-6 h-6 rounded-full bg-cyan-400/20 flex items-center justify-center text-[8px] font-bold text-cyan-400">YA</div>
             </a>
             <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Terminate">
@@ -296,7 +296,7 @@
 
         <footer class="max-w-6xl mx-auto mt-12 mb-20 flex items-center justify-between opacity-20 hover:opacity-100 transition-opacity">
             <div class="flex gap-8">
-                <a href="/dashboard" class="text-[8px] font-mono uppercase tracking-widest hover:text-cyan-400 transition-colors">Return to Core Console</a>
+                <a href="dashboard.html" class="text-[8px] font-mono uppercase tracking-widest hover:text-cyan-400 transition-colors">Return to Core Console</a>
                 <a href="javascript:void(0)" onclick="logoutHR()" class="text-[8px] font-mono uppercase tracking-widest hover:text-red-500 transition-colors">Sign Out / De-Sync</a>
             </div>
             <p class="text-[8px] font-mono uppercase tracking-[0.4em]">Integra Systems © 2026 / Neural Node 441</p>
@@ -307,10 +307,10 @@
     <div id="toast-container" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-3"></div>
 
     <script type="module">
-        import { supabase } from '/js/core/supabase-client.js';
+        import { supabase } from '../js/core/supabase-client.js';
         window.supabase = supabase;
     </script>
-    <script src="/js/core/script.js"></script>
-    <script type="module" src="/js/pages/profile.js"></script>
+    <script src="../js/core/script.js"></script>
+    <script type="module" src="../js/pages/profile.js"></script>
 </body>
 </html>

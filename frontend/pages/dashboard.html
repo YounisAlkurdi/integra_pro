@@ -28,10 +28,10 @@
     </script>
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
     
     <!-- Core Config -->
-    <script src="/js/core/settings.js"></script>
+    <script src="../js/core/settings.js"></script>
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -56,32 +56,32 @@
 
         <!-- Navigation Nodes -->
         <nav class="flex-1 flex flex-col gap-8">
-            <a href="/dashboard" class="sidebar-link active hover-target" title="Console">
+            <a href="dashboard.html" class="sidebar-link active hover-target" title="Console">
                 <i data-lucide="terminal" class="w-5 h-5"></i>
             </a>
-            <a href="/reports" class="sidebar-link hover-target" title="Archives">
+            <a href="reports.html" class="sidebar-link hover-target" title="Archives">
                 <i data-lucide="layers" class="w-5 h-5"></i>
             </a>
-            <a href="/audit" class="sidebar-link hover-target" title="Audit Logs">
+            <a href="audit.html" class="sidebar-link hover-target" title="Audit Logs">
                 <i data-lucide="clipboard-list" class="w-5 h-5"></i>
             </a>
-            <a href="/appointments" class="sidebar-link hover-target" title="Appointments">
+            <a href="appointments.html" class="sidebar-link hover-target" title="Appointments">
                 <i data-lucide="calendar" class="w-5 h-5"></i>
             </a>
-            <a href="/billing" class="sidebar-link hover-target" title="Billing">
+            <a href="billing.html" class="sidebar-link hover-target" title="Billing">
                 <i data-lucide="credit-card" class="w-5 h-5"></i>
             </a>
-            <a href="/pricing" class="sidebar-link hover-target" title="Security labs">
+            <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
-            <a href="/llm-config" class="sidebar-link hover-target" title="Neural Engine">
+            <a href="llm-config.html" class="sidebar-link hover-target" title="Neural Engine">
                 <i data-lucide="brain-circuit" class="w-5 h-5"></i>
             </a>
         </nav>
 
         <!-- System Actions -->
         <div class="flex flex-col gap-6 items-center">
-            <a href="/profile" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform hover-target overflow-hidden" id="user-avatar" title="الملف الشخصي">
+            <a href="profile.html" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform hover-target overflow-hidden" id="user-avatar" title="الملف الشخصي">
                 <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">YA</div>
             </a>
             <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="تسجيل الخروج">
@@ -352,7 +352,7 @@
                                 <i data-lucide="shield-alert" class="text-cyan-400 w-6 h-6"></i>
                                 <h2 class="text-xl font-black uppercase tracking-tighter italic">Security Audit Monitor</h2>
                             </div>
-                            <a href="/audit" class="text-[9px] font-mono text-cyan-400/60 hover:text-cyan-400 uppercase tracking-widest transition-all">View Full Logs →</a>
+                            <a href="audit.html" class="text-[9px] font-mono text-cyan-400/60 hover:text-cyan-400 uppercase tracking-widest transition-all">View Full Logs →</a>
                         </div>
                         
                         <div id="dashboard-audit-logs" class="space-y-3">
@@ -524,22 +524,22 @@
     <!-- Core Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
-        import { supabase } from '/js/core/supabase-client.js';
+        import { supabase } from '../js/core/supabase-client.js';
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 console.warn("No active identity found. Routing to entry point...");
-                window.location.href = '/';
+                window.location.href = 'index.html';
             }
             
             // Allow logout
             window.logoutHR = async () => {
                 await supabase.auth.signOut();
-                window.location.href = '/';
+                window.location.href = 'index.html';
             };
         });
     </script>
-    <script src="/js/pages/dashboard.js"></script>
-    <script type="module" src="/js/pages/chat-widget.js"></script>
+    <script src="../js/pages/dashboard.js"></script>
+    <script type="module" src="../js/pages/chat-widget.js"></script>
 </body>
 </html>

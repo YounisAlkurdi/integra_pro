@@ -130,6 +130,16 @@ async def root():
     from fastapi.responses import FileResponse
     return FileResponse("frontend/pages/index.html")
 
+@app.get("/{page_name}.html")
+async def serve_html_pages(page_name: str):
+    from fastapi.responses import FileResponse
+    import os
+    file_path = f"frontend/pages/{page_name}.html"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404, detail="Page not found")
+
 @app.get("/login")
 async def login_page():
     from fastapi.responses import FileResponse

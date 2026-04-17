@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Session Persistence Check ---
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-        window.location.href = '/dashboard';
+        window.location.href = 'dashboard.html';
         return;
     }
 
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/dashboard',
+                    redirectTo: window.location.origin + '/dashboard.html',
                     queryParams: {
                         prompt: 'select_account',
                         access_type: 'offline'
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (data.session) {
                 showToast("Identity Confirmed: Access Granted", "success");
-                setTimeout(() => window.location.href = '/dashboard', 1500);
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
             }
         } catch (err) {
             console.error("Neural Verification Failed:", err.message);

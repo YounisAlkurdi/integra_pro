@@ -315,7 +315,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 btnText.innerHTML = `<span class="neural-active flex items-center gap-4">NEGOTIATING LINK... <i data-lucide="activity" class="w-5 h-5"></i></span>`;
                 if (window.lucide) lucide.createIcons();
 
-                // --- Show Professional Protocol Overlay ---
+                const isScheduled = document.getElementById('toggle-schedule')?.checked;
+                
+                // Show Professional Protocol Overlay
                 if (overlay) {
                     overlay.classList.remove('hidden');
                     overlay.classList.add('flex', 'expand-handshake');
@@ -349,13 +351,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const result = await saveNodeToBackend(nodeData);
                 
                 if (result && result.room_id) {
-                    showToast("Neural Link Established", "success");
-                    
-                    const isScheduled = document.getElementById('toggle-schedule')?.checked;
+                    createdInterview = result;
 
                     if (!isScheduled) {
                         // --- CASE 1: Instant Join ---
+                        showToast("Secure Node Initialized — Entering Room...", "success");
+                        btnText.innerHTML = `<span class="neural-active flex items-center gap-4">ENTERING ROOM... <i data-lucide="log-in" class="w-5 h-5"></i></span>`;
+                        if (window.lucide) lucide.createIcons();
+                        
                         await joinAsHR(result.room_id);
+                        
+                        // Prevent UI reset by returning early
+                        return;
                     } else {
                         // --- CASE 2: Scheduled Link ---
                         const resultDiv = document.getElementById('interviewCreatedResult');
@@ -375,12 +382,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                             setTimeout(() => resultDiv.classList.remove('neural-active'), 1000);
                         }
 
-                        await sendEmailInvitation(nodeData, result.room_id);
-                        createForm.reset();
-                        if (document.getElementById('toggle-schedule')) {
-                            document.getElementById('toggle-schedule').checked = false;
-                            document.getElementById('schedule-container').classList.add('hidden');
+                        showToast("Secure Node Initialized", "success");
+                        btnText.innerHTML = `<span class="neural-active flex items-center gap-4">LINK ESTABLISHED <i data-lucide="check" class="w-5 h-5"></i></span>`;
+                        if (window.lucide) lucide.createIcons();
+
+                        if (nodeData.candidate_email) {
+                            await sendEmailInvitation(nodeData, result.room_id);
                         }
+                        
+                        // createForm.reset(); // Don't fully reset, user might want to see what they just submitted
                         loadActiveStreams();
                     }
                 } else {
@@ -390,8 +400,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             } catch (err) {
                 showToast("Connection Failed: " + err.message, "error");
             } finally {
+                // Only run this cleanup if we haven't redirected (Instant Join returns early)
                 btn.disabled = false;
-                btnText.innerHTML = originalBtnHtml;
+                setTimeout(() => {
+                    btnText.innerHTML = originalBtnHtml;
+                }, 2000); // Keep success text for a moment
+                
                 if (overlay) {
                     setTimeout(() => {
                         overlay.classList.add('opacity-0');

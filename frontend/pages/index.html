@@ -29,7 +29,7 @@
     </script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
     <!-- Icons & Spline -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -49,7 +49,7 @@
 
     <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 backdrop-blur-xl bg-obsidian/30">
         <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
-            <a href="/" class="text-2xl font-bold tracking-tighter hover-target">
+            <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target">
                 INTEGRA<span class="text-cyan-400">.</span>
             </a>
 
@@ -64,7 +64,7 @@
                     class="hover:text-white hover:tracking-[0.25em] transition-all hover-target">Pricing</a>
             </nav>
 
-            <a href="/login"
+            <a href="login.html"
                 class="text-[10px] uppercase tracking-[0.2em] font-bold border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all hover-target hidden sm:block">
                 Authenticate
             </a>
@@ -188,7 +188,7 @@
                     <!-- Column 2: Image (Right) - Clean, no contrast/grayscale shift -->
                     <div
                         class="relative min-h-[400px] bg-black overflow-hidden border-l border-white/5 order-1 md:order-2">
-                        <img src="/assets/images/cv.png" alt="Visual Detection Interface"
+                        <img src="../assets/images/cv.png" alt="Visual Detection Interface"
                             class="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000">
                         <div class="absolute inset-0 bg-gradient-to-l from-obsidian/40 via-transparent to-transparent">
                         </div>
@@ -305,7 +305,7 @@
                                 <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Standard Analytics
                             </li>
                         </ul>
-                        <button class="w-full py-4 border border-white/20 text-xs uppercase tracking-widest font-bold hover:bg-white hover:text-black transition-colors rounded-full" onclick="window.location.href='/login'">Identify Node</button>
+                        <button class="w-full py-4 border border-white/20 text-xs uppercase tracking-widest font-bold hover:bg-white hover:text-black transition-colors rounded-full" onclick="window.location.href='login.html'">Identify Node</button>
                     </div>
 
                     <!-- Professional (Popular) -->
@@ -340,7 +340,7 @@
                                 <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Priority Response Handshake
                             </li>
                         </ul>
-                        <button class="w-full py-4 bg-cyan-400 text-obsidian text-xs uppercase tracking-widest font-bold hover:bg-white transition-colors border border-cyan-400 rounded-full" onclick="window.location.href='/login'">Upgrade to Pro</button>
+                        <button class="w-full py-4 bg-cyan-400 text-obsidian text-xs uppercase tracking-widest font-bold hover:bg-white transition-colors border border-cyan-400 rounded-full" onclick="window.location.href='login.html'">Upgrade to Pro</button>
                     </div>
 
                     <!-- Enterprise -->
@@ -379,7 +379,7 @@
         <div class="max-w-[95%] mx-auto px-6">
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24">
                 <div class="lg:col-span-2 hover-target">
-                    <a href="/" class="text-3xl font-bold tracking-tighter mb-8 block">INTEGRA<span
+                    <a href="index.html" class="text-3xl font-bold tracking-tighter mb-8 block">INTEGRA<span
                             class="text-cyan-400">.</span></a>
                     <p class="text-white/30 text-sm font-light max-w-sm mb-8 leading-relaxed">
                         Protecting the truth in a synthetic world. Enterprise security protocols designed to
@@ -431,16 +431,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
-        import { supabase } from '/js/core/supabase-client.js';
+        import { supabase } from '../js/core/supabase-client.js';
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                window.location.href = '/dashboard';
+                window.location.href = 'dashboard.html';
             }
         });
     </script>
-    <script src="/js/core/settings.js"></script>
-    <script src="/js/core/script.js"></script>
+    <script src="../js/core/settings.js"></script>
+    <script src="../js/core/script.js"></script>
 </body>
 </html>
 >
