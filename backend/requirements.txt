@@ -1,9 +1,60 @@
-fastapi
-uvicorn
-PyJWT
-python-dotenv
-stripe
-pydantic
-livekit-api
-requests
-cryptography
+# ============================================================
+# INTEGRA NEURAL ENGINE — requirements.txt
+# استراتيجية: تحديد النطاق (>=) بدل النسخة الدقيقة (==)
+# لتجنب تعارض تبعيات langchain-core بين الحزم
+# ============================================================
+
+# --- Web Server & Framework ---
+fastapi>=0.115.0,<0.116.0
+uvicorn[standard]>=0.34.0,<0.35.0
+python-multipart>=0.0.20
+pydantic>=2.7.4,<3.0.0
+pydantic-settings>=2.4.0,<3.0.0
+python-dotenv>=1.0.0
+
+# --- Auth & Security ---
+PyJWT>=2.8.0
+cryptography>=42.0.0
+passlib[bcrypt]>=1.7.4
+
+# --- Database & HTTP Clients ---
+supabase>=2.10.0
+httpx>=0.28.0
+requests>=2.32.0
+
+# --- AI/ML & Computer Vision ---
+numpy>=1.26.0,<2.0.0
+opencv-python>=4.9.0
+opencv-contrib-python>=4.9.0
+mediapipe>=0.10.14
+
+# ============================================================
+# LangChain Ecosystem — 0.3.x series
+# نُقيّد على النطاق <0.4.0 ونترك pip يحل langchain-core تلقائياً
+# ============================================================
+langchain>=0.3.20,<0.4.0
+langchain-community>=0.3.20,<0.4.0
+langchain-text-splitters>=0.3.0,<0.4.0
+langgraph>=0.2.60,<0.3.0
+
+# --- LangChain Provider Packages ---
+langchain-openai>=0.3.0,<0.4.0
+langchain-anthropic>=0.3.0,<0.4.0
+langchain-google-genai>=2.0.0,<3.0.0
+langchain-groq>=0.3.0,<0.4.0
+langchain-ollama>=0.3.0,<0.4.0
+
+# --- HuggingFace & Local Models ---
+transformers>=4.40.0
+huggingface_hub>=0.23.0
+
+# --- MCP (Model Context Protocol) ---
+mcp>=1.6.0
+
+# --- External Services ---
+stripe>=11.0.0
+livekit-api>=0.8.0
+
+# --- Agent Tool Dependencies ---
+beautifulsoup4>=4.12.0
+Pillow>=10.0.0

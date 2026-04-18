@@ -12,7 +12,12 @@ from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesP
 from langchain.agents import create_react_agent, create_tool_calling_agent, AgentExecutor
 
 router = APIRouter(prefix="/api/agent", tags=["Neural Agent"])
-from langchain_community.chat_message_histories import ChatMessageHistory
+
+# ChatMessageHistory: compatible import for langchain 0.3.x
+try:
+    from langchain_core.chat_history import InMemoryChatMessageHistory as ChatMessageHistory
+except ImportError:
+    from langchain_community.chat_message_histories import ChatMessageHistory
 
 # Persistent Neural Buffer (In-memory storage for session history)
 MEMORY_BUFFER = {}
