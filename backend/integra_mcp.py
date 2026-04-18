@@ -37,7 +37,7 @@ def list_active_streams(user_id: str) -> str:
     uid = sanitize_uid(user_id)
     sub = get_active_subscription(uid)
     since = sub.get('created_at') if sub else None
-    interviews = get_active_streams(user_id=uid, since_date=since)
+    interviews = get_active_streams(user_id=uid)
     return json.dumps(interviews, indent=2)
 
 @mcp.tool()
@@ -85,7 +85,7 @@ def get_neural_link_status(user_id: str) -> str:
     uid = sanitize_uid(user_id)
     sub = get_active_subscription(uid)
     since = sub.get('created_at') if sub else None
-    stats = get_node_stats(user_id=uid, since_date=since)
+    stats = get_node_stats(user_id=uid)
     return json.dumps(stats, indent=2)
 
 @mcp.tool()
@@ -119,7 +119,7 @@ def sync_neural_quotas(user_id: str) -> str:
     
     # 3. Calculate Real Usage based on Subscription Reset Date
     since = sub.get('created_at')
-    stats = get_node_stats(uid, since_date=since)
+    stats = get_node_stats(uid)
     
     return json.dumps({
         "plan_id": sub.get('plan_id'),
