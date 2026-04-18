@@ -1,3 +1,7 @@
+# Fix for Vercel: add backend/ directory to Python path so all local modules are found
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
+
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
