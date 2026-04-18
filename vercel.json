@@ -2,46 +2,110 @@
   "version": 2,
   "builds": [
     {
-      "src": "main.py",
+      "src": "backend/main.py",
       "use": "@vercel/python"
     },
     {
-      "src": "*.html",
+      "src": "frontend/**",
       "use": "@vercel/static"
     },
     {
-      "src": "*.js",
+      "src": "assets/**",
       "use": "@vercel/static"
     },
     {
-      "src": "*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "pricing.json",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "{Design,Images,video,frames,Spline_Skill}/**",
+      "src": "data/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "main.py"
+      "dest": "backend/main.py"
     },
     {
       "src": "/create-payment-intent",
-      "dest": "main.py"
+      "dest": "backend/main.py"
     },
     {
       "src": "/config",
-      "dest": "main.py"
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/data/$1"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "/frontend/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/frontend/js/$1"
+    },
+    {
+      "src": "/pages/(.*)",
+      "dest": "/frontend/pages/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/frontend/pages/index.html"
+    },
+    {
+      "src": "/index\\.html",
+      "dest": "/frontend/pages/index.html"
+    },
+    {
+      "src": "/login\\.html",
+      "dest": "/frontend/pages/login.html"
+    },
+    {
+      "src": "/dashboard\\.html",
+      "dest": "/frontend/pages/dashboard.html"
+    },
+    {
+      "src": "/appointments\\.html",
+      "dest": "/frontend/pages/appointments.html"
+    },
+    {
+      "src": "/billing\\.html",
+      "dest": "/frontend/pages/billing.html"
+    },
+    {
+      "src": "/checkout\\.html",
+      "dest": "/frontend/pages/checkout.html"
+    },
+    {
+      "src": "/integra-session\\.html",
+      "dest": "/frontend/pages/integra-session.html"
+    },
+    {
+      "src": "/llm-config\\.html",
+      "dest": "/frontend/pages/llm-config.html"
+    },
+    {
+      "src": "/pricing\\.html",
+      "dest": "/frontend/pages/pricing.html"
+    },
+    {
+      "src": "/profile\\.html",
+      "dest": "/frontend/pages/profile.html"
+    },
+    {
+      "src": "/reports\\.html",
+      "dest": "/frontend/pages/reports.html"
+    },
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/frontend/pages/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/frontend/pages/$1"
     }
   ]
 }
