@@ -1,0 +1,17 @@
+# Exclude non-essential files from Vercel
+scripts/
+_INTEGRA_DOCS/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+venv/
+.env
+
+# Git
+.git/
+.gitignore
