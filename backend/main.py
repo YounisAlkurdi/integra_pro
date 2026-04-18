@@ -8,6 +8,7 @@ from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node
 from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
 from mailer import send_interview_invitation
 import livekit_routes
+import agent_routes
 import os
 from dotenv import load_dotenv
 
@@ -96,6 +97,9 @@ async def fetch_logs(node_id: str, user: dict = Depends(get_current_user)):
 # --- 4. LiveKit Endpoints (Token Generator) ---
 # All logic lives in livekit_routes.py — same pattern as payments.py
 app.include_router(livekit_routes.router)
+
+# --- 5. Neural Agent Endpoints ---
+app.include_router(agent_routes.router)
 
 @app.get("/config")
 async def get_config():

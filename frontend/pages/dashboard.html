@@ -68,6 +68,9 @@
             <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
+            <a href="llm-config.html" class="sidebar-link hover-target" title="العقل التحليلي — LLM Config">
+                <i data-lucide="brain" class="w-5 h-5"></i>
+            </a>
         </nav>
 
         <!-- System Actions -->
@@ -253,6 +256,48 @@
         </div>
     </div>
 
+    <!-- AI Agent Chat Widget -->
+    <!-- Chat Button -->
+    <button id="ai-chat-btn" class="fixed bottom-10 right-10 z-[80] w-14 h-14 bg-cyan-400 rounded-full shadow-[0_0_40px_rgba(34,211,238,0.4)] hover:shadow-[0_0_60px_rgba(34,211,238,0.6)] flex items-center justify-center transition-all hover:scale-110 hover-target animate-bounce" title="المساعد الذكي">
+        <i data-lucide="bot" class="text-obsidian w-6 h-6"></i>
+    </button>
+
+    <!-- Chat Window -->
+    <div id="ai-chat-window" class="fixed bottom-28 right-10 w-96 max-w-[calc(100vw-5rem)] h-[500px] max-h-[70vh] glass-panel border border-white/10 rounded-3xl shadow-2xl z-[80] flex flex-col hidden opacity-0 translate-y-10 transition-all duration-300" dir="rtl">
+        <!-- Chat Header -->
+        <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-cyan-400/20 border border-cyan-400/50 flex flex-col items-center justify-center">
+                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black italic tracking-tighter text-white">Integra System Agent</h3>
+                    <p class="text-[8px] font-mono uppercase tracking-[0.2em] text-cyan-400">MCP/LangChain Linked</p>
+                </div>
+            </div>
+            <button id="ai-chat-close" class="text-white/40 hover:text-white transition-colors hover-target">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="ai-chat-messages" class="flex-1 p-5 overflow-y-auto space-y-4 custom-scrollbar flex flex-col">
+            <div class="p-4 rounded-2xl bg-white/[0.05] border border-white/10 text-white/70 text-[11px] font-mono leading-relaxed self-start max-w-[85%] rounded-tl-none">
+                أهلاً بك. أنا المساعد الذكي لنظام Integra. أستطيع قراءة لوحة التحكم، وإجراء التحليلات باستخدام أدوات MCP المتاحة. كيف يمكنني مساعدتك؟
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-4 border-t border-white/10 bg-black/40 rounded-b-3xl">
+            <div class="relative flex items-center">
+                <input autocomplete="off" type="text" id="ai-chat-input" placeholder="اطلب تقريراً أو اسأل عن إعدادات النظام..." class="w-full bg-transparent border-none text-white text-[11px] font-mono placeholder:text-white/20 outline-none pr-3 pl-12 h-10">
+                <button id="ai-chat-send" class="absolute left-2 w-8 h-8 rounded-full bg-cyan-400 flex flex-col items-center justify-center text-obsidian hover:bg-white transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] hover-target">
+                    <i data-lucide="send" class="w-4 h-4 -ml-0.5 mt-0.5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
@@ -273,5 +318,6 @@
     </script>
     <script src="../js/core/settings.js"></script>
     <script src="../js/pages/dashboard.js"></script>
+    <script type="module" src="../js/components/chat-widget.js"></script>
 </body>
 </html>
