@@ -406,6 +406,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 hrName = user.user_metadata?.full_name || user.email?.split('@')[0] || hrName;
             }
         } catch (_) {}
+        
+        // منع التضارب: إضافة رقم عشوائي صغير للاسم حتى لو شخصين دخلوا بنفس الحساب ما يطردوا بعض
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        hrName = `${hrName} #${randomSuffix}`;
 
         const params = new URLSearchParams({ room: rid, role: 'hr', name: hrName });
         window.location.href = `integra-session.html?${params.toString()}`;
