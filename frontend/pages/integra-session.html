@@ -86,7 +86,7 @@
                 <div class="text-xl font-mono text-white/80 tabular-nums" id="timer">00:30</div>
             </div>
             <div class="h-8 w-px bg-white/10"></div>
-            <button onclick="copyInviteLink()" class="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 hover:text-obsidian transition-all control-btn font-black">
+            <button id="btn-copy-invite" onclick="copyInviteLink()" class="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 hover:text-obsidian transition-all control-btn font-black">
                 Copy Invite
             </button>
         </div>
@@ -209,7 +209,7 @@
                         <i data-lucide="scroll-text" class="w-4 h-4"></i>
                         STT
                     </button>
-                    <button class="flex-1 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors tab-btn" data-tab="intel">
+                    <button id="tab-intel-btn" class="flex-1 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors tab-btn" data-tab="intel">
                         <i data-lucide="brain" class="w-4 h-4"></i>
                         Intel
                     </button>

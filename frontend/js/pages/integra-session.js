@@ -52,6 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const candidateStatusEl = $('candidate-status');
     const adminFeedLabel    = $('admin-feed-label');
     const candidateFeedLabel = $('candidate-feed-label');
+    const btnCopyInvite     = $('btn-copy-invite');
+    const tabIntelBtn       = $('tab-intel-btn');
+
+    // Hide forensic tools from candidates
+    if (localRole === 'candidate') {
+        if (btnCopyInvite) btnCopyInvite.style.display = 'none';
+        if (tabIntelBtn) tabIntelBtn.style.display = 'none';
+    }
 
     // ── Toast ─────────────────────────────────────────────────────────────────
     window.showToast = function(message, type = 'info') {
@@ -73,6 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Log ──────────────────────────────────────────────────────────────────
     function addLog(message, type = 'system') {
         if (!logList) return;
+        
+        // Suppress redundant or unwanted fetch errors
+        if (message.includes('Failed to fetch')) return;
+
         const colors = { system: 'text-white/40', audio: 'text-cyan-400', video: 'text-purple-400', error: 'text-red-400' };
         const empty = logList.querySelector('[data-empty]');
         if (empty) empty.remove();
