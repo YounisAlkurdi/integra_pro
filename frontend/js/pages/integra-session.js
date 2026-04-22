@@ -1,13 +1,11 @@
 /**
- * integra-session.js — UI Controller v3
+ * integra-session.js — UI Controller v4 (Canvas Overlay Added)
  *
- * Fixes vs v2:
- *  - Animation loop replaced with visibility-aware throttled interval
- *    (was: rAF 60fps on 48 divs = ~2880 DOM mutations/sec; now: 8fps, paused when tab hidden)
- *  - Dynamic Video Grid: updateGrid(n) adjusts CSS grid columns/rows automatically
- *    (1 participant = full width, 2 = side-by-side, 3+ = 2-col grid)
- *  - Reconnection events (lk:reconnecting / lk:reconnected) surfaced to UI
- *  - Speaking highlight also updates local PiP border when local speaks
+ * Changes vs v3:
+ *  - candidateIdentity tracked alongside candidateVideo
+ *  - createParticipantPanel() injects a <canvas> overlay per panel
+ *  - drawForensicCanvas() draws bbox / zone label / head arrow / iris dots
+ *    exactly like index.html — called at the end of updateForensicUI()
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,42 +21,58 @@ document.addEventListener('DOMContentLoaded', () => {
     let screenSharing = false;
     let sttEnabled    = false;
     let sessionSeconds = 0;
-    let maxSeconds     = 600; // Default 10 mins
+    let maxSeconds     = 600;
     let timerInterval  = null;
-    
-    // Auto-detect role from URL
+
     const urlParams = new URLSearchParams(window.location.search);
-    let localRole = urlParams.get('role') || 'candidate';
-    let localName = urlParams.get('name') || '';
+    let localRole     = urlParams.get('role') || 'candidate';
+    let localName     = urlParams.get('name') || '';
     let currentRoomId = urlParams.get('room');
 
-    // Map of identity → { role, name, feedEl, statusEl }
     const participantFeeds = new Map();
+    let candidateVideo    = null;
+    let candidateIdentity = null;   // ← NEW: track identity for canvas lookup
+    let forensicWS        = null;
+    let forensicInterval  = null;
+
+    // ── FIX 1: $ defined FIRST before any usage ───────────────────────────────
+    const $ = id => document.getElementById(id);
+
+    // ── Spatial Grid Init ─────────────────────────────────────────────────────
+    function initSpatialGrid() {
+        const grid = $('spatialGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.className = "bg-white/5 border border-white/5 rounded-lg transition-all duration-300";
+            grid.appendChild(cell);
+        }
+    }
+    initSpatialGrid();
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
-    const $ = id => document.getElementById(id);
-    const localVideo        = $('local-video');
-    const remoteArea        = $('remote-area');
-    const remotePlaceholder = $('remote-placeholder');
-    const joinLobby         = $('join-lobby');
-    const connectionBadge   = $('connection-badge');
-    const sttActiveDot      = $('stt-active-dot');
-    const timerEl           = $('timer');
-    const logList           = $('log-list');
-    const camOffPlaceholder = $('camera-off-placeholder');
-    const adminFeedEl       = $('admin-feed');
-    const candidateFeedEl   = $('candidate-feed');
-    const adminStatusEl     = $('admin-status');
-    const candidateStatusEl = $('candidate-status');
-    const adminFeedLabel    = $('admin-feed-label');
+    const localVideo         = $('local-video');
+    const remoteArea         = $('remote-area');
+    const remotePlaceholder  = $('remote-placeholder');
+    const joinLobby          = $('join-lobby');
+    const connectionBadge    = $('connection-badge');
+    const sttActiveDot       = $('stt-active-dot');
+    const timerEl            = $('timer');
+    const logList            = $('log-list');
+    const camOffPlaceholder  = $('camera-off-placeholder');
+    const adminFeedEl        = $('admin-feed');
+    const candidateFeedEl    = $('candidate-feed');
+    const adminStatusEl      = $('admin-status');
+    const candidateStatusEl  = $('candidate-status');
+    const adminFeedLabel     = $('admin-feed-label');
     const candidateFeedLabel = $('candidate-feed-label');
-    const btnCopyInvite     = $('btn-copy-invite');
-    const tabIntelBtn       = $('tab-intel-btn');
+    const btnCopyInvite      = $('btn-copy-invite');
+    const tabIntelBtn        = $('tab-intel-btn');
 
-    // Hide forensic tools from candidates
     if (localRole === 'candidate') {
         if (btnCopyInvite) btnCopyInvite.style.display = 'none';
-        if (tabIntelBtn) tabIntelBtn.style.display = 'none';
+        if (tabIntelBtn)   tabIntelBtn.style.display   = 'none';
     }
 
     // ── Toast ─────────────────────────────────────────────────────────────────
@@ -81,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Log ──────────────────────────────────────────────────────────────────
     function addLog(message, type = 'system') {
         if (!logList) return;
-        
-        // Suppress redundant or unwanted fetch errors
         if (message.includes('Failed to fetch')) return;
 
         const colors = { system: 'text-white/40', audio: 'text-cyan-400', video: 'text-purple-400', error: 'text-red-400' };
@@ -99,15 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Timer ─────────────────────────────────────────────────────────────────
     function startTimer(initialSeconds) {
         sessionSeconds = initialSeconds;
-        
         if (timerInterval) clearInterval(timerInterval);
-        
-        // Initial draw
         updateTimerUI();
 
         timerInterval = setInterval(() => {
             sessionSeconds--;
-            
+
             if (sessionSeconds <= 0) {
                 clearInterval(timerInterval);
                 if (timerEl) timerEl.textContent = "00:00";
@@ -118,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             updateTimerUI();
 
-            // Warn when 2 minutes left
             if (sessionSeconds === 120) {
                 showToast("WARNING: 120 SECONDS UNTIL LINK TERMINATION", "error");
                 timerEl.classList.add('text-red-500', 'animate-pulse');
@@ -131,8 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = String(Math.max(0, Math.floor(sessionSeconds / 60))).padStart(2, '0');
         const s = String(Math.max(0, sessionSeconds % 60)).padStart(2, '0');
         timerEl.textContent = `${m}:${s}`;
-        
-        // If expired or negative, style as error
+
         if (sessionSeconds <= 0) {
             timerEl.classList.add('text-red-500');
         } else if (sessionSeconds <= 120) {
@@ -149,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .select('created_at, max_duration_mins, scheduled_at')
                 .eq('room_id', roomId)
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (e) {
@@ -159,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Feed management ───────────────────────────────────────────────────────
-    // Determine which static feed box to use (only 2 slots: HR → admin, candidate → candidate)
     function getFeedBoxForRole(role) {
         if (role === 'hr' || role === 'admin') {
             return { feedEl: adminFeedEl, statusEl: adminStatusEl, labelEl: adminFeedLabel };
@@ -193,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const { feedEl } = getFeedBoxForRole(role);
         if (!feedEl) return;
 
-        // Remove placeholder text
         clearFeedPlaceholder(role);
         setFeedStatus(role, 'LIVE', true);
 
@@ -217,21 +222,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Dynamic Video Grid Layout ──────────────────────────────────────────────
-    // Adjusts the remote-area CSS grid based on number of participants.
-    // This prevents panels stacking on top of each other.
+    // ── Dynamic Video Grid Layout ─────────────────────────────────────────────
     function updateGrid(count) {
         if (!remoteArea) return;
-        // Reset inline grid styles
         remoteArea.style.display = 'grid';
         remoteArea.style.gap = '12px';
         remoteArea.style.width = '100%';
         remoteArea.style.height = '100%';
 
-        if (count <= 0) {
-            remoteArea.style.gridTemplateColumns = '1fr';
-            remoteArea.style.gridTemplateRows = '1fr';
-        } else if (count === 1) {
+        if (count <= 1) {
             remoteArea.style.gridTemplateColumns = '1fr';
             remoteArea.style.gridTemplateRows = '1fr';
         } else if (count === 2) {
@@ -241,30 +240,26 @@ document.addEventListener('DOMContentLoaded', () => {
             remoteArea.style.gridTemplateColumns = '1fr 1fr';
             remoteArea.style.gridTemplateRows = '1fr 1fr';
         } else {
-            // 4+ participants: 2-column, auto rows
             remoteArea.style.gridTemplateColumns = '1fr 1fr';
             remoteArea.style.gridTemplateRows = `repeat(${Math.ceil(count / 2)}, 1fr)`;
         }
     }
 
     // ── Remote participant video panel ────────────────────────────────────────
+    // CHANGED: added <canvas> overlay inside each panel
     function createParticipantPanel(identity, name, role) {
-        // Remove placeholder
         if (remotePlaceholder) remotePlaceholder.classList.add('hidden');
 
         const panel = document.createElement('div');
         panel.id = `panel-${identity}`;
-        // No longer 'absolute inset-0' — grid handles sizing
         panel.className = 'relative w-full h-full flex items-center justify-center bg-black rounded-[2rem] overflow-hidden transition-all min-h-0';
         panel.setAttribute('data-identity', identity);
 
-        // Video slot (will be populated when track arrives)
         const videoSlot = document.createElement('div');
         videoSlot.id = `video-slot-${identity}`;
         videoSlot.className = 'absolute inset-0';
         panel.appendChild(videoSlot);
 
-        // Waiting placeholder
         const waiting = document.createElement('div');
         waiting.id = `waiting-${identity}`;
         waiting.className = 'absolute inset-0 flex flex-col items-center justify-center';
@@ -277,13 +272,25 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         panel.appendChild(waiting);
 
-        // Name label
+        // ── NEW: forensic canvas overlay ──────────────────────────────────────
+        const overlayCanvas = document.createElement('canvas');
+        overlayCanvas.id = `canvas-${identity}`;
+        overlayCanvas.style.cssText = [
+            'position:absolute',
+            'inset:0',
+            'width:100%',
+            'height:100%',
+            'pointer-events:none',
+            'z-index:5',
+        ].join(';');
+        panel.appendChild(overlayCanvas);
+        // ─────────────────────────────────────────────────────────────────────
+
         const label = document.createElement('div');
         label.className = 'absolute bottom-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-xl rounded-lg text-[9px] font-mono uppercase tracking-widest border border-white/5 z-10';
         label.innerHTML = `<span class="text-cyan-400 font-bold mr-2">●</span><span>${name || identity}</span>`;
         panel.appendChild(label);
 
-        // Speaking ring
         const ring = document.createElement('div');
         ring.id = `ring-${identity}`;
         ring.className = 'absolute inset-0 rounded-[2rem] border-2 border-cyan-400 opacity-0 transition-opacity duration-200 pointer-events-none z-10';
@@ -291,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         remoteArea.appendChild(panel);
 
-        // Update grid layout for new count
         const count = remoteArea.querySelectorAll('[data-identity]').length;
         updateGrid(count);
 
@@ -302,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = $(`panel-${identity}`);
         if (panel) panel.remove();
 
-        // Show placeholder if no more remote participants
         const remaining = remoteArea.querySelectorAll('[data-identity]');
         if (remotePlaceholder && remaining.length === 0) {
             remotePlaceholder.classList.remove('hidden');
@@ -312,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Update control button visual state ──────────────────────────────────
+    // ── Update control button visual state ───────────────────────────────────
     function updateControlBtn(id, isActive, iconOn, iconOff) {
         const btn = $(id);
         if (!btn) return;
@@ -336,30 +341,25 @@ document.addEventListener('DOMContentLoaded', () => {
         localRole = role;
         localName = participantName;
 
-        // Hide connecting overlay
         if (joinLobby) joinLobby.style.display = 'none';
 
-        // Update badge
         if (connectionBadge) {
             connectionBadge.textContent = 'LIVE';
             connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 uppercase tracking-widest animate-pulse';
         }
 
-        // Set local label name
         const localLabel = $('local-label');
         if (localLabel) localLabel.textContent = participantName;
 
-        // Set my own feed label and status
         setFeedLabel(role, participantName);
         setFeedStatus(role, 'LIVE', true);
 
         addLog(`Connected to room: ${roomName} as ${role.toUpperCase()}`);
-        
-        // Fetch limits and creation time
+
         fetchRoomMeta(roomName).then(meta => {
             const createdAt = new Date(meta.created_at).getTime();
             const now = Date.now();
-            const totalDuration = meta.duration_seconds || 600; // Default 10 mins
+            const totalDuration = meta.duration_seconds || 600;
             const elapsed = Math.floor((now - createdAt) / 1000);
             const remaining = totalDuration - elapsed;
 
@@ -369,13 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { window.endSession?.(); }, 2000);
             } else {
                 startTimer(remaining);
-                addLog(`Session active. ${Math.floor(remaining/60)}m ${remaining%60}s remaining.`, 'system');
+                addLog(`Session active. ${Math.floor(remaining / 60)}m ${remaining % 60}s remaining.`, 'system');
             }
         });
 
         showToast(`Connected as ${participantName}`, 'success');
 
-        // Attach local video
         try {
             const room = window.LiveKitSession.getRoom();
             if (room?.localParticipant) {
@@ -393,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('[UI] Could not attach local video:', err);
         }
 
-        // Start STT for local user
         if (window.STTEngine?.isSupported()) {
             window.STTEngine.start({
                 identity: participantName,
@@ -432,50 +430,41 @@ document.addEventListener('DOMContentLoaded', () => {
             connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
         }
 
-        // Reset all statuses
         setFeedStatus('hr', 'OFFLINE', false);
         setFeedStatus('candidate', 'OFFLINE', false);
 
         addLog('Session terminated by server', 'error');
-        
-        // Show the termination overlay
+
         const overlay = $('termination-overlay');
         if (overlay) {
             overlay.classList.remove('hidden');
-            // Ensure icons are created if overlay was hidden
             if (window.lucide) window.lucide.createIcons({ nodes: [overlay] });
-            
+
             setTimeout(() => {
                 overlay.classList.remove('opacity-0');
                 overlay.classList.add('opacity-100');
             }, 50);
         } else {
-            // Fallback
             showToast('Session ended', 'error');
             setTimeout(() => { window.location.href = 'index.html'; }, 2000);
         }
     });
 
-    /**
-     * Terminate the session cleanly
-     */
+    // ── FIX 2: Single endSession with full HR termination logic ──────────────
     window.endSession = async function() {
         showToast("TERMINATING CONNECTION...", "info");
 
-        // If I am the HR, I should terminate the room globally for everyone
         if (localRole === 'hr' || localRole === 'admin') {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const authHeader = session ? `Bearer ${session.access_token}` : null;
-                
+
                 if (authHeader && currentRoomId) {
-                    // 1. Kick everyone out & Close LiveKit Room
                     await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
                     });
 
-                    // 2. Mark node as COMPLETED & is_deleted: true
                     await fetch(`${API_BASE}/api/nodes/${currentRoomId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
@@ -484,18 +473,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 console.error("Failed to execute global termination protocol:", e);
             }
-            
-            // Allow a brief moment for signals to propagate before navigating
+
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
             }, 800);
         } else {
-            // Candidates just disconnect locally
             window.LiveKitSession?.disconnect();
         }
     };
 
-    // Wire Leave Button
     $('btn-leave')?.addEventListener('click', () => {
         window.endSession();
     });
@@ -505,10 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`${name} joined as ${role.toUpperCase()}`, 'audio');
         showToast(`${name} joined`, 'success');
 
-        // Create panel immediately (video added when track arrives)
         createParticipantPanel(identity, name, role);
 
-        // Update their feed label
         setFeedLabel(role, name);
         setFeedStatus(role, 'CONNECTED', true);
     });
@@ -520,17 +504,15 @@ document.addEventListener('DOMContentLoaded', () => {
         removeParticipantPanel(identity);
     });
 
-    // New event: add or remove a video element for a specific participant
+    // CHANGED: save candidateIdentity when candidate video arrives
     window.addEventListener('lk:participant-video', (e) => {
         const { identity, name, role, element, action } = e.detail;
 
         if (action === 'add' && element) {
-            // Put video into the panel's video slot
-            const slot = $(`video-slot-${identity}`);
+            const slot    = $(`video-slot-${identity}`);
             const waiting = $(`waiting-${identity}`);
             if (slot) {
                 slot.appendChild(element);
-                // Style the video element properly
                 element.className = 'w-full h-full object-cover';
             }
             if (waiting) waiting.classList.add('hidden');
@@ -538,22 +520,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (action === 'remove') {
-            const slot = $(`video-slot-${identity}`);
+            const slot    = $(`video-slot-${identity}`);
             const waiting = $(`waiting-${identity}`);
             if (slot) slot.innerHTML = '';
             if (waiting) waiting.classList.remove('hidden');
+            if (role === 'candidate') {
+                candidateVideo    = null;
+                candidateIdentity = null;   // ← clear identity too
+                stopForensicEngine();
+            }
+        }
+
+        // Auto-start forensic engine for HR when candidate video arrives
+        if (action === 'add' && role === 'candidate' && (localRole === 'hr' || localRole === 'admin')) {
+            candidateVideo    = element;
+            candidateIdentity = identity;   // ← save identity
+            startForensicEngine();
         }
     });
 
     window.addEventListener('lk:speaking-changed', (e) => {
         const { speakers } = e.detail;
 
-        // Reset all rings
         remoteArea.querySelectorAll('[id^="ring-"]').forEach(ring => {
             ring.style.opacity = '0';
         });
 
-        // Light up active speakers
         speakers.forEach(id => {
             const ring = $(`ring-${id}`);
             if (ring) ring.style.opacity = '1';
@@ -570,11 +562,9 @@ document.addEventListener('DOMContentLoaded', () => {
         camEnabled = e.detail.enabled;
         updateControlBtn('btn-toggle-cam', camEnabled, 'video', 'video-off');
         if (camOffPlaceholder) camOffPlaceholder.classList.toggle('hidden', camEnabled);
-        // Update local video stream visibility
         if (localVideo) localVideo.style.opacity = camEnabled ? '1' : '0';
     });
 
-    // Local camera track published → wire it to the PiP element
     window.addEventListener('lk:local-camera', (e) => {
         const stream = new MediaStream([e.detail.track.mediaStreamTrack]);
         if (localVideo) {
@@ -588,7 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Error: ${msg}`, 'error');
         showToast(msg, 'error');
 
-        // Check if it's a "Not Started" error from our backend
         if (msg.includes('Access allowed') || msg.includes('الدخول متاح')) {
             if (joinLobby) {
                 const [msgAr, msgEn] = msg.split(' | ');
@@ -618,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // --- BEAUTIFUL "ROOM FULL" UI ---
         if (msg.includes('Room is full') || msg.includes('الغرفة ممتلئة')) {
             if (joinLobby) {
                 const [msgAr, msgEn] = msg.split(' | ');
@@ -653,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // --- BEAUTIFUL "EXPIRED / TERMINATED" UI ---
         if (msg.includes('expired') || msg.includes('انتهت صلاحيته')) {
             if (joinLobby) {
                 joinLobby.innerHTML = `
@@ -716,7 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const state  = window.LiveKitSession?.getState?.();
         const myRole = state?.localRole || localRole;
         const myName = e.detail.name || state?.participantName || 'User';
-        
+
         appendTranscription(myRole, e.detail.text, true);
         saveLogToServer(myName, e.detail.text);
     });
@@ -726,11 +713,10 @@ document.addEventListener('DOMContentLoaded', () => {
         appendTranscription(myRole, e.detail.text, false);
     });
 
-    // ── Remote transcriptions → correct feed & Persist to Server ───────────────
     window.addEventListener('lk:transcription', (e) => {
         const { role, text, isFinal, name } = e.detail;
         appendTranscription(role, text, isFinal);
-        
+
         if (isFinal) {
             saveLogToServer(name || role.toUpperCase(), text);
         }
@@ -739,12 +725,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Control Buttons ───────────────────────────────────────────────────────
     $('btn-toggle-mic')?.addEventListener('click', async () => {
         await window.LiveKitSession?.toggleMic();
-        // State update comes via 'lk:mic-toggled' event
     });
 
     $('btn-toggle-cam')?.addEventListener('click', async () => {
         await window.LiveKitSession?.toggleCamera();
-        // State update comes via 'lk:cam-toggled' event
     });
 
     $('btn-screenshare')?.addEventListener('click', async () => {
@@ -796,12 +780,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Audio Visualizer Bars ─────────────────────────────────────────────────
-    // FIX: Was using requestAnimationFrame (60fps) on 48 elements = ~2880 DOM
-    // mutations/second, stealing CPU from audio/video processing.
-    // Now: throttled to 8fps (125ms interval) and PAUSED when tab is hidden.
     const audioBars = $('audio-bars');
     if (audioBars) {
-        const BAR_COUNT = 32; // Reduced from 48 — still looks good, 33% less work
+        const BAR_COUNT = 32;
         for (let i = 0; i < BAR_COUNT; i++) {
             const bar = document.createElement('div');
             bar.className = 'flex-1 rounded-full bg-cyan-400/40';
@@ -821,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     bar.style.height = `${h}%`;
                     bar.style.opacity = active ? '0.6' : '0.15';
                 });
-            }, 125); // 8fps instead of 60fps
+            }, 125);
         }
 
         function stopBarAnimation() {
@@ -829,7 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
             barInterval = null;
         }
 
-        // Pause when tab is hidden to free CPU for WebRTC
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopBarAnimation();
@@ -841,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startBarAnimation();
     }
 
-    // ── Local camera preview (before joining) ─────────────────────────────────
+    // ── Local camera preview ──────────────────────────────────────────────────
     async function initPreviewCamera() {
         try {
             if (!navigator.mediaDevices) return;
@@ -853,9 +833,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initPreviewCamera();
 
-    // ── Join Session Function ────────────────────────────────────────────────
+    // ── Join Session Function ─────────────────────────────────────────────────
     window.joinSession = async function() {
-        const btn = $('btn-join');
+        const btn       = $('btn-join');
         const inputRoom = document.getElementById('input-room');
         const inputName = document.getElementById('input-name');
         const inputRole = document.getElementById('input-role');
@@ -869,13 +849,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // --- PRE-CONNECT SCHEDULE CHECK ---
         const meta = await fetchRoomMeta(roomName);
         if (meta && meta.scheduled_at) {
             const scheduledAt = new Date(meta.scheduled_at);
             const now = new Date();
-            const buffer = 5 * 60 * 1000; // 5 mins
-            
+            const buffer = 5 * 60 * 1000;
+
             if (scheduledAt > (now.getTime() + buffer)) {
                 const diff = scheduledAt - now;
                 const minutes = Math.floor(diff / 60000);
@@ -901,7 +880,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 role: role
             });
 
-            // --- LOBBY SYSTEM LOGIC ---
             if (result && result.status === "AWAITING_APPROVAL") {
                 if (joinLobby) {
                     joinLobby.innerHTML = `
@@ -926,19 +904,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     lucide.createIcons({ nodes: [joinLobby] });
                 }
 
-                // Poll for status
                 if (window._pollStatusInterval) clearInterval(window._pollStatusInterval);
                 window._pollStatusInterval = setInterval(async () => {
                     try {
                         const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
                         if (!checkRaw.ok) return;
                         const check = await checkRaw.json();
-                        
+
                         if (check.status === "APPROVED") {
                             clearInterval(window._pollStatusInterval);
                             window._pollStatusInterval = null;
-                            // Join automatically now that we are approved
-                            window.joinSession(); 
+                            window.joinSession();
                         } else if (check.status === "REJECTED") {
                             clearInterval(window._pollStatusInterval);
                             window._pollStatusInterval = null;
@@ -954,14 +930,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- START TIMER LOGIC ---
             if (meta) {
                 const startTime = new Date(meta.created_at).getTime();
                 const now = new Date().getTime();
                 const elapsedSeconds = Math.floor((now - startTime) / 1000);
                 const totalAllowedSeconds = (meta.max_duration_mins || 10) * 60;
                 const remainingSeconds = totalAllowedSeconds - elapsedSeconds;
-                
+
                 console.log(`[Timer] Total: ${totalAllowedSeconds}s, Elapsed: ${elapsedSeconds}s, Remaining: ${remainingSeconds}s`);
                 startTimer(remainingSeconds);
             }
@@ -977,13 +952,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $('btn-join')?.addEventListener('click', window.joinSession);
 
-    // ── Initial log ──────────────────────────────────────────────────────────
     if (logList) {
         logList.innerHTML = '';
         addLog('System initialized. Awaiting session...');
     }
 
-    // --- HR LOBBY MONITOR ---
+    // ── HR Lobby Monitor ──────────────────────────────────────────────────────
     if (localRole === 'hr' || localRole === 'interviewer') {
         const lobbyContainer = document.createElement('div');
         lobbyContainer.id = 'hr-lobby-notifs';
@@ -999,13 +973,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const checkLogic = async () => {
                 if (!currentRoomId) return;
                 const now = new Date();
-                
+
                 if (scheduledAt) {
                     const diff = scheduledAt - now;
                     const fiveMins = 5 * 60 * 1000;
                     if (diff > fiveMins) {
-                        console.log(`[HR Monitor] Too early. Check-back in 1 min. Remaining: ${Math.round(diff/60000)}m`);
-                        setTimeout(startSmartMonitoring, 60000); 
+                        console.log(`[HR Monitor] Too early. Check-back in 1 min. Remaining: ${Math.round(diff / 60000)}m`);
+                        setTimeout(startSmartMonitoring, 60000);
                         return;
                     }
                 }
@@ -1040,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </button>
                             </div>
                         `;
-                        
+
                         card.querySelector('.btn-approve').onclick = async () => {
                             await fetch(`${API_BASE}/api/livekit/decide-request`, {
                                 method: 'POST',
@@ -1064,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         lucide.createIcons({ nodes: [card] });
                     });
                 } catch (e) { console.error("Lobby check failed:", e); }
-                
+
                 setTimeout(checkLogic, 5000);
             };
 
@@ -1074,30 +1048,373 @@ document.addEventListener('DOMContentLoaded', () => {
         startSmartMonitoring();
     }
 
-    /**
-     * Terminate the session cleanly
-     */
-    window.endSession = function() {
-        window.LiveKitSession.disconnect();
-        window.location.href = 'dashboard.html';
-    };
-
-    /**
-     * Copy invite link for candidate
-     */
+    // ── Copy Invite Link ──────────────────────────────────────────────────────
     window.copyInviteLink = function() {
         const inputRoom = document.getElementById('input-room');
-        const room      = inputRoom ? inputRoom.value.trim() : 'integra-room-01';
-        const base      = window.location.origin + window.location.pathname.replace('integra-session.html', '');
-        const link      = `${base}integra-session.html?room=${room}&role=candidate`;
-        
+        const room = inputRoom ? inputRoom.value.trim() : 'integra-room-01';
+        const base = window.location.origin + window.location.pathname.replace('integra-session.html', '');
+        const link = `${base}integra-session.html?room=${room}&role=candidate`;
+
         navigator.clipboard.writeText(link).then(() => {
             if (typeof showToast === 'function') showToast('Invite link copied!', 'success');
         });
     };
 
+    // ── triggerCognitiveTest ──────────────────────────────────────────────────
     window.triggerCognitiveTest = function() {
         if (typeof showToast === 'function') showToast('Cognitive Challenge Protocol Initiated', 'info');
+        addForensicLog("Cognitive Challenge Triggered", "warning");
     };
+
+    // ── Forensic Engine ───────────────────────────────────────────────────────
+    function startForensicEngine() {
+        if (forensicWS || forensicInterval) return;
+
+        console.log("[Forensics] Initializing Engine...");
+        addForensicLog("Engine Initializing...", "system");
+
+        const wsUrl = `ws://${window.location.hostname}:8001/ws`;
+        forensicWS = new WebSocket(wsUrl);
+
+        forensicWS.onopen = () => {
+            console.log("[Forensics] WebSocket Connected");
+            addForensicLog("Forensic Link Established", "success");
+
+            const connBadge = $('connBadge');
+            if (connBadge) {
+                connBadge.textContent = 'ONLINE';
+                connBadge.className = 'text-[9px] font-black px-2 py-1 bg-cyan-400/10 text-cyan-400 border border-cyan-400/20 rounded uppercase tracking-widest';
+            }
+
+            const statusChip = $('statusChip');
+            if (statusChip) {
+                statusChip.textContent = 'Safe';
+                statusChip.className = 'text-[9px] font-black px-2 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded uppercase tracking-widest';
+            }
+        };
+
+        forensicWS.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                updateForensicUI(data);
+            } catch (err) {
+                console.error("[Forensics] Data Parse Error:", err);
+            }
+        };
+
+        forensicWS.onerror = (err) => {
+            console.error("[Forensics] WebSocket Error:", err);
+            addForensicLog("Engine Link Error", "error");
+        };
+
+        forensicWS.onclose = () => {
+            console.warn("[Forensics] WebSocket Closed");
+            stopForensicEngine();
+        };
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        forensicInterval = setInterval(() => {
+            if (!candidateVideo || forensicWS.readyState !== WebSocket.OPEN) return;
+
+            canvas.width  = 320;
+            canvas.height = 240;
+            ctx.drawImage(candidateVideo, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                if (blob && forensicWS.readyState === WebSocket.OPEN) {
+                    forensicWS.send(blob);
+                }
+            }, 'image/jpeg', 0.6);
+        }, 500);
+    }
+
+    function stopForensicEngine() {
+        if (forensicInterval) clearInterval(forensicInterval);
+        if (forensicWS) forensicWS.close();
+        forensicInterval = null;
+        forensicWS = null;
+        addForensicLog("Engine Offline", "system");
+
+        const connBadge = $('connBadge');
+        if (connBadge) {
+            connBadge.textContent = 'OFFLINE';
+            connBadge.className = 'text-[9px] font-black px-2 py-1 bg-white/5 text-white/30 border border-white/10 rounded uppercase tracking-widest';
+        }
+
+        const statusChip = $('statusChip');
+        if (statusChip) {
+            statusChip.textContent = 'Standby';
+            statusChip.className = 'text-[9px] font-black px-2 py-1 bg-white/5 text-white/30 border border-white/10 rounded uppercase tracking-widest';
+        }
+    }
+
+    // ── NEW: Draw forensic overlay on candidate's canvas ─────────────────────
+    function drawForensicCanvas(data) {
+        if (!candidateIdentity) return;
+        const canvas = $(`canvas-${candidateIdentity}`);
+        if (!canvas || !candidateVideo) return;
+
+        // Match canvas dimensions to the displayed video element
+        canvas.width  = candidateVideo.videoWidth  || candidateVideo.clientWidth  || 640;
+        canvas.height = candidateVideo.videoHeight || candidateVideo.clientHeight || 480;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const status = data.status || 'NO_FACE';
+        const color  = status === 'FOCUSED'    ? '#22d3ee'   // cyan-400
+                     : status === 'SUSPICIOUS' ? '#ffb800'   // amber
+                                               : '#ff3535';  // red
+
+        // ── BBox corner brackets ──────────────────────────────────────────────
+        if (data.bbox) {
+            const [x1, y1, x2, y2] = data.bbox;
+            const cL = 18;
+            ctx.strokeStyle = color;
+            ctx.lineWidth   = 2.5;
+
+            [
+                [x1,      y1 + cL, x1, y1,      x1 + cL, y1     ],   // top-left
+                [x2 - cL, y1,      x2, y1,      x2,      y1 + cL],   // top-right
+                [x1,      y2 - cL, x1, y2,      x1 + cL, y2     ],   // bottom-left
+                [x2 - cL, y2,      x2, y2,      x2,      y2 - cL],   // bottom-right
+            ].forEach(([ax, ay, bx, by, cx2, cy2]) => {
+                ctx.beginPath();
+                ctx.moveTo(ax, ay);
+                ctx.lineTo(bx, by);
+                ctx.lineTo(cx2, cy2);
+                ctx.stroke();
+            });
+
+            // ── Zone label above bbox ─────────────────────────────────────────
+            const zone = data.zone || 'CENTER';
+            if (zone !== 'CENTER') {
+                const zoneLabels = {
+                    LEFT:       '◄ LEFT',
+                    RIGHT:      'RIGHT ►',
+                    DOWN:       '▼ DOWN',
+                    UP:         '▲ UP',
+                    DOWN_LEFT:  '▼◄ PHONE',
+                    DOWN_RIGHT: '▼► PHONE',
+                    UP_LEFT:    '▲◄ ABOVE',
+                    UP_RIGHT:   '▲► ABOVE',
+                };
+                ctx.font      = 'bold 11px "Space Mono", monospace';
+                ctx.fillStyle = color;
+                ctx.fillText(zoneLabels[zone] || zone, x1, Math.max(14, y1 - 10));
+            }
+
+            // ── Head direction arrow ──────────────────────────────────────────
+            if (data.head_pose) {
+                const cx   = (x1 + x2) / 2;
+                const cy   = (y1 + y2) / 2;
+                const yaw  = data.head_pose.yaw   || 0;
+                const pitch = data.head_pose.pitch || 0;
+
+                if (Math.abs(yaw) > 4 || Math.abs(pitch) > 4) {
+                    const ex = cx + yaw * 1.8;
+                    const ey = cy + pitch * 1.8;
+                    const aL = 10;
+                    const angle = Math.atan2(ey - cy, ex - cx);
+
+                    ctx.strokeStyle = 'rgba(255,184,0,0.85)';
+                    ctx.lineWidth   = 2;
+
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+
+                    // Arrowhead
+                    ctx.beginPath();
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - aL * Math.cos(angle - 0.4), ey - aL * Math.sin(angle - 0.4));
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - aL * Math.cos(angle + 0.4), ey - aL * Math.sin(angle + 0.4));
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // ── Iris + nose landmark dots ─────────────────────────────────────────
+        if (data.landmarks) {
+            const isBlinking  = data.is_blinking === true;
+            ctx.fillStyle     = isBlinking ? '#ffb800' : '#ffffff';
+            const dotRadius   = isBlinking ? 5 : 3;
+
+            Object.values(data.landmarks).forEach(pt => {
+                if (!Array.isArray(pt) || pt.length < 2) return;
+                ctx.beginPath();
+                ctx.arc(pt[0], pt[1], dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function updateForensicUI(data) {
+        if (!data) return;
+
+        const score     = data.metrics?.focus_score || 0;
+        const scoreEl   = $('scoreBig');
+        const scoreFill = $('scoreFill');
+
+        if (scoreEl) {
+            scoreEl.innerHTML = `${Math.round(score)}<span class="text-cyan-400">%</span>`;
+            if (score > 85)      scoreEl.className = "text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.4)]";
+            else if (score > 60) scoreEl.className = "text-5xl font-black text-yellow-400";
+            else                 scoreEl.className = "text-5xl font-black text-red-500";
+        }
+        if (scoreFill) {
+            scoreFill.style.width = `${score}%`;
+            scoreFill.className = `h-full transition-all duration-500 ${score > 85 ? 'bg-cyan-400' : score > 60 ? 'bg-yellow-400' : 'bg-red-500'}`;
+        }
+
+        const threatEl = $('threatLvl');
+        if (threatEl) {
+            const status = data.status || 'SAFE';
+            threatEl.textContent = status === 'FOCUSED' ? 'MINIMAL' : status;
+            threatEl.className = (status === 'SAFE' || status === 'FOCUSED')
+                ? "text-xs font-mono font-black text-cyan-400 uppercase tracking-widest"
+                : status === 'CAUTION'
+                    ? "text-xs font-mono font-black text-yellow-400 uppercase tracking-widest"
+                    : "text-xs font-mono font-black text-red-500 uppercase tracking-widest animate-pulse";
+
+            const chip = $('statusChip');
+            if (chip) {
+                chip.textContent = status === 'FOCUSED' ? 'Safe' : status;
+                chip.className = `text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest border ${
+                    (status === 'SAFE' || status === 'FOCUSED') ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                    status === 'CAUTION' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                    'bg-red-500/10 text-red-500 border-red-500/20'
+                }`;
+            }
+        }
+
+        if ($('aiProb'))   $('aiProb').textContent  = `${(data.second_screen_prob || 0).toFixed(1)}%`;
+        if ($('driftVal')) $('driftVal').textContent = `±${data.dominance?.toFixed(3) || '0.001'}`;
+
+        if (data.head_pose) {
+            const yaw   = data.head_pose.yaw   || 0;
+            const pitch = data.head_pose.pitch || 0;
+
+            if ($('yawVal'))   $('yawVal').textContent   = `${Math.round(yaw)}°`;
+            if ($('pitchVal')) $('pitchVal').textContent = `${Math.round(pitch)}°`;
+            if ($('yawBar'))   $('yawBar').style.width   = `${Math.min(100, Math.max(0, (yaw + 45) * (100 / 90)))}%`;
+            if ($('pitchBar')) $('pitchBar').style.width = `${Math.min(100, Math.max(0, (pitch + 45) * (100 / 90)))}%`;
+        }
+
+        const probs = {
+            'Side':  data.second_screen_prob || 0,
+            'Phone': data.phone_prob         || 0,
+            'Above': data.screen_above_prob  || 0
+        };
+
+        Object.entries(probs).forEach(([key, prob]) => {
+            const pct    = Math.round(prob);
+            const valEl  = $(`tp${key}`);
+            const cardEl = $(`tc${key}`);
+
+            if (valEl) valEl.textContent = `${pct}%`;
+            if (cardEl) {
+                if (pct > 70)      cardEl.className = "bg-red-500/10 border border-red-500/50 rounded-2xl p-3 text-center transition-all animate-pulse";
+                else if (pct > 30) cardEl.className = "bg-yellow-500/10 border border-yellow-500/50 rounded-2xl p-3 text-center transition-all";
+                else               cardEl.className = "bg-white/5 border border-white/5 rounded-2xl p-3 text-center transition-all";
+            }
+        });
+
+        if ($('earBar')) {
+            const ear    = data.ear || 0;
+            if ($('earVal')) $('earVal').textContent = ear.toFixed(2);
+            const earPct = Math.min(100, Math.max(0, (ear - 0.15) * 500));
+            $('earBar').style.width = `${earPct}%`;
+            $('earBar').className   = ear < 0.22
+                ? "h-full bg-yellow-500 transition-all duration-300"
+                : "h-full bg-cyan-400 transition-all duration-300";
+        }
+
+        if ($('blinkVal')) {
+            const isBlinking = data.is_blinking;
+            $('blinkVal').textContent = isBlinking ? "BLINK" : "OPEN";
+            $('blinkVal').className   = isBlinking
+                ? "text-xs font-mono font-bold text-yellow-500 uppercase"
+                : "text-xs font-mono font-bold text-green-500 uppercase";
+            if ($('blinkPulse')) $('blinkPulse').style.width = isBlinking ? "100%" : "0%";
+        }
+
+        if ($('faceMapStatus')) {
+            const hasFace = data.status !== 'NO_FACE';
+            $('faceMapStatus').textContent = hasFace ? "LOCK ACTIVE" : "CALIBRATION REQUIRED";
+            $('faceMapStatus').className   = hasFace
+                ? "text-[8px] text-cyan-400 font-mono uppercase tracking-widest"
+                : "text-[8px] text-white/10 font-mono uppercase tracking-widest";
+
+            const indicator = $('faceMapIndicator');
+            if (indicator) {
+                indicator.className = hasFace
+                    ? "w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"
+                    : "w-2 h-2 bg-white/5 rounded-full";
+            }
+
+            const row = $('faceMapRow');
+            if (row) row.classList.toggle('active', hasFace);
+        }
+
+        if ($('lexicalStatus')) {
+            $('lexicalStatus').textContent = data.status === 'NO_FACE' ? "IDLE" : "PROCESSING...";
+        }
+
+        if ($('domZone')) $('domZone').textContent = data.zone || 'CENTER';
+        updateGazeGrid(data.zone);
+
+        if (data.status === 'SUSPICIOUS' || data.status === 'DISTRACTED') {
+            addForensicLog(`${data.status}: ${data.reason}`, 'warning');
+        }
+
+        // ── NEW: draw canvas overlay on every frame ───────────────────────────
+        drawForensicCanvas(data);
+    }
+
+    function updateGazeGrid(zone) {
+        const grid = $('spatialGrid');
+        if (!grid) return;
+
+        const zones = {
+            'UP_LEFT': 0, 'UP': 1, 'UP_RIGHT': 2,
+            'LEFT': 3,    'CENTER': 4, 'RIGHT': 5,
+            'DOWN_LEFT': 6, 'DOWN': 7, 'DOWN_RIGHT': 8
+        };
+        const idx   = zones[zone] ?? 4;
+        const cells = grid.children;
+
+        for (let i = 0; i < cells.length; i++) {
+            cells[i].className = i === idx
+                ? "bg-cyan-500/40 border border-cyan-400/50 transition-all duration-300"
+                : "bg-white/5 border border-white/5";
+        }
+    }
+
+    function addForensicLog(msg, type = 'system') {
+        const log = $('forensic-log');
+        if (!log) return;
+
+        const colors = {
+            system:  'text-white/40',
+            warning: 'text-yellow-400',
+            error:   'text-red-400',
+            success: 'text-green-400'
+        };
+
+        const el = document.createElement('div');
+        el.className = `flex gap-3 animate-slide-up ${colors[type] || colors.system}`;
+        el.innerHTML = `
+            <span class="text-[9px] font-mono text-white/20">${new Date().toLocaleTimeString('en', { hour12: false })}</span>
+            <p class="text-[10px] font-mono uppercase tracking-wider">${msg}</p>
+        `;
+        log.prepend(el);
+        if (log.children.length > 20) log.lastElementChild.remove();
+    }
 
 });
