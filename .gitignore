@@ -8,6 +8,7 @@ env/
 venv/
 cvenv
 ENV/
+cvenv
 
 # OS files
 .DS_Store
