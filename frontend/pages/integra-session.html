@@ -303,14 +303,49 @@
                         <div class="h-2 bg-white/5 rounded-full overflow-hidden">
                             <div id="scoreFill" class="h-full bg-cyan-400 transition-all duration-500" style="width: 0%"></div>
                         </div>
-                        <div class="flex justify-between items-center mt-4 pt-4 border-t border-white/5">
+                        <div class="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-white/5">
+                            <!-- Behavioral AI -->
                             <div class="flex flex-col">
-                                <span class="text-[9px] text-white/30 uppercase font-black tracking-widest">AI Prob.</span>
-                                <span id="aiProb" class="text-xs font-mono font-bold">0.00%</span>
+                                <span class="text-[8px] text-white/30 uppercase font-black tracking-[0.2em] mb-1">Behavioral AI</span>
+                                <div class="flex items-end gap-1">
+                                    <span id="aiProb" class="text-lg font-black text-white leading-none">0.00<span class="text-[10px] text-white/40">%</span></span>
+                                    <span class="text-[8px] text-cyan-400/60 font-mono mb-0.5">BIO-MAP</span>
+                                </div>
                             </div>
+
+                            <!-- Lexical AI (The Main Upgrade) -->
+                            <div class="flex flex-col items-center">
+                                <span class="text-[8px] text-white/30 uppercase font-black tracking-[0.2em] mb-1">Lexical Forensic</span>
+                                <div class="flex flex-col items-center">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span id="lexAIProb" class="text-lg font-black text-cyan-400 leading-none">0.00%</span>
+                                        <div id="lexicalPulse" class="w-1.5 h-1.5 bg-white/10 rounded-full"></div>
+                                    </div>
+                                    <span id="lexicalStatus" class="text-[8px] text-white/20 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded">Awaiting Speech</span>
+                                </div>
+                            </div>
+
+                            <!-- Forensic Confidence -->
                             <div class="flex flex-col items-end">
-                                <span class="text-[9px] text-white/30 uppercase font-black tracking-widest">Drift</span>
-                                <span id="driftVal" class="text-xs font-mono font-bold">±0.000</span>
+                                <span class="text-[8px] text-white/30 uppercase font-black tracking-[0.2em] mb-1">NLP Confidence</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="nlpConf" class="text-xs font-mono font-bold text-white/60 italic">0.00</span>
+                                    <div class="w-10 h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div id="nlpConfFill" class="h-full bg-white/20 transition-all duration-700" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Linguistic Pattern Indicators (The Professional Touch) -->
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <div class="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
+                                <span class="text-[8px] text-white/30 uppercase font-black">Pattern Match</span>
+                                <span id="patternMatch" class="text-[9px] font-mono text-cyan-400/60">NEURAL_SYNC</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 bg-white/5 rounded-xl border border-white/5">
+                                <span class="text-[8px] text-white/30 uppercase font-black">Word Density</span>
+                                <span id="wordDensity" class="text-[9px] font-mono text-white/40">0.0 wpm</span>
                             </div>
                         </div>
                     </div>

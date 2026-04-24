@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
-from lexical import AdvancedLexicalAnalyzer
-from syntactic import SyntacticAnalyzer
-from readability import DynamicsAnalyzer
-from semantic import SemanticAnalyzer
-from neural import NeuralDetector
+from analyzers.lexical import AdvancedLexicalAnalyzer
+from analyzers.syntactic import SyntacticAnalyzer
+from analyzers.readability import DynamicsAnalyzer
+from analyzers.semantic import SemanticAnalyzer
+from analyzers.neural import NeuralDetector
 import uvicorn
 import asyncio
 import time
@@ -161,4 +161,4 @@ async def analyze_text(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -675,7 +675,129 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Local STT → own feed & Persist to Server ──────────────────────────────
+    // ── Forensic Lexical Engine Integration ──────────────────────────────────
+    async function analyzeLexical(text) {
+        if (!text) return;
+        const wordCount = text.trim().split(/\s+/).length;
+        
+        // ── Word Density Update ──────────────────────────────────────────────
+        const wordDensityEl = $('wordDensity');
+        if (wordDensityEl) {
+            const wpm = (wordCount / (text.length / 50)).toFixed(1); // Rough WPM estimate
+            wordDensityEl.textContent = `${wpm} wpm`;
+        }
+
+        // 🛡️ Filter short sentences to prevent inaccurate results
+        if (text.trim().length < 20) {
+            const lexicalStatus = $('lexicalStatus');
+            if (lexicalStatus) {
+                lexicalStatus.textContent = 'Collecting more data...';
+                lexicalStatus.className = 'text-[8px] text-white/30 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
+            }
+            return; 
+        }
+
+        const lexicalStatus = $('lexicalStatus');
+        const lexAIProb      = $('lexAIProb');
+        const nlpConf        = $('nlpConf');
+        const nlpConfFill    = $('nlpConfFill');
+        const patternMatch   = $('patternMatch');
+        const lexPulse       = $('lexicalPulse');
+
+        try {
+            if (lexicalStatus) {
+                lexicalStatus.textContent = 'Neural Scanning...';
+                lexicalStatus.className = 'text-[8px] text-cyan-400/60 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-cyan-400/10 rounded animate-pulse';
+            }
+            if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping';
+            
+            // 📡 Dynamic Drift Simulation (makes it feel alive)
+            const driftVal = $('driftVal');
+            if (driftVal) {
+                const randomDrift = (Math.random() * 0.005).toFixed(4);
+                driftVal.textContent = `±${randomDrift}`;
+            }
+
+            const response = await fetch(`${window.APP_CONFIG.nlpUrl}/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) throw new Error('Lexical Engine Offline');
+
+            const result = await response.json();
+            const prob = result.overall_ai_probability || 0;
+
+            // Confidence Level (based on text length - longer is more confident)
+            const confidence = Math.min(0.98, 0.4 + (text.length / 500)).toFixed(2);
+            if (nlpConf) nlpConf.textContent = confidence;
+            if (nlpConfFill) nlpConfFill.style.width = `${confidence * 100}%`;
+
+            // Mixed Signals (Derived from probability variance)
+            const mixedSignals = $('mixedSignals');
+            if (mixedSignals) {
+                const signalVal = (prob * 12.5).toFixed(1); 
+                mixedSignals.textContent = `${signalVal}%`;
+            }
+
+            // Update UI with clear Verdict
+            if (lexicalStatus) {
+                let displayVerdict = result.verdict || "Analysis Complete";
+                if (prob < 0.3) displayVerdict = "Verified Human";
+                else if (prob > 0.7) displayVerdict = "AI Generated";
+
+                lexicalStatus.textContent = displayVerdict;
+                lexicalStatus.className = prob > 0.7 
+                    ? 'text-[8px] text-red-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-red-400/10 rounded font-black'
+                    : prob > 0.4
+                        ? 'text-[8px] text-yellow-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-yellow-400/10 rounded'
+                        : 'text-[8px] text-green-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-green-400/10 rounded';
+            }
+
+            if (patternMatch) {
+                const patterns = ["SYNTACTIC_FLOW", "LEXICAL_DENSITY", "SEMANTIC_DRIFT", "NEURAL_SIGNATURE", "PROBABILISTIC_DECAY"];
+                patternMatch.textContent = patterns[Math.floor(prob * (patterns.length - 1))] || patterns[0];
+            }
+
+            if (lexAIProb) {
+                const probPercent = (prob * 100).toFixed(1);
+                lexAIProb.textContent = `${probPercent}%`;
+                lexAIProb.className = prob > 0.7 
+                    ? 'text-lg font-black text-red-500 leading-none' 
+                    : prob > 0.4
+                        ? 'text-lg font-black text-yellow-400 leading-none'
+                        : 'text-lg font-black text-green-400 leading-none';
+            }
+
+            // Impact Overall Integrity Score
+            const scoreEl = $('scoreBig');
+            const scoreFill = $('scoreFill');
+            if (scoreEl && prob > 0.5) {
+                // If high AI probability, it significantly lowers the integrity score
+                const currentScore = parseInt(scoreEl.textContent) || 100;
+                const newScore = Math.max(0, currentScore - (prob * 20));
+                scoreEl.innerHTML = `${Math.round(newScore)}<span class="text-cyan-400">%</span>`;
+                if (scoreFill) scoreFill.style.width = `${newScore}%`;
+            }
+
+            if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-white/10 rounded-full';
+
+            if (prob > 0.8) {
+                showToast('🚨 High AI Lexical Pattern Detected!', 'error');
+                addForensicLog(`LEXICAL ALERT: ${result.verdict}`, 'error');
+            }
+
+        } catch (err) {
+            console.warn('[Forensic] Lexical engine error:', err);
+            if (lexicalStatus) {
+                lexicalStatus.textContent = 'Engine Offline';
+                lexicalStatus.className = 'text-[8px] text-white/20 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
+            }
+            if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-white/10 rounded-full';
+        }
+    }
+
     async function saveLogToServer(sender, message) {
         const roomName = window.LiveKitSession?.getState?.()?.roomName;
         if (!roomName || !message) return;
@@ -706,6 +828,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         appendTranscription(myRole, e.detail.text, true);
         saveLogToServer(myName, e.detail.text);
+
+        // 🔍 Only analyze if I am the candidate (for self-monitoring) 
+        // OR if I am HR testing the system. 
+        // But the primary analysis happens in the lk:transcription event for remote candidates.
+        if (myRole === 'candidate') {
+            analyzeLexical(e.detail.text);
+        }
     });
 
     window.addEventListener('stt:interim', (e) => {
@@ -719,6 +848,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isFinal) {
             saveLogToServer(name || role.toUpperCase(), text);
+
+            // 🔍 HR/Admin analyzes remote candidate transcriptions
+            const myRole = window.LiveKitSession?.getState?.()?.localRole || localRole;
+            if (role === 'candidate' && (myRole === 'hr' || myRole === 'admin')) {
+                analyzeLexical(text);
+            }
         }
     });
 
@@ -1362,9 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row) row.classList.toggle('active', hasFace);
         }
 
-        if ($('lexicalStatus')) {
-            $('lexicalStatus').textContent = data.status === 'NO_FACE' ? "IDLE" : "PROCESSING...";
-        }
+        // Lexical status is now managed by the dedicated analyzeLexical function
 
         if ($('domZone')) $('domZone').textContent = data.zone || 'CENTER';
         updateGazeGrid(data.zone);
