@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+spacy
+textstat
+scikit-learn
+pandas
+numpy
+torch
+transformers
+scipy
+python-dotenv
+nltk

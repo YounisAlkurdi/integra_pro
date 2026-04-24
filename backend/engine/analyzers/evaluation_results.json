@@ -1,0 +1,15 @@
+{
+  "accuracy": 0.56,
+  "precision": 0.5411,
+  "recall": 0.79,
+  "f1": 0.6423,
+  "confusion_matrix": {
+    "TP": 158,
+    "TN": 66,
+    "FP": 134,
+    "FN": 42
+  },
+  "samples": 400,
+  "neural_online": true,
+  "latency_ms_per_sample": 514.9
+}
