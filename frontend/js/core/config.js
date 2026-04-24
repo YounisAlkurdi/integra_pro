@@ -24,4 +24,9 @@ window.APP_CONFIG = {
 
     // STT default language
     sttLang: 'ar-SA',
+
+    // Forensic NLP Engine (Research-Grade)
+    nlpUrl: window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
+            ? 'http://127.0.0.1:8001' 
+            : 'https://integra-nlp.vercel.app', 
 };

@@ -4,10 +4,12 @@ __pycache__/
 *$py.class
 .env
 .venv
+vnlp
 env/
 venv/
 cvenv
 ENV/
+cvenv
 
 # OS files
 .DS_Store
