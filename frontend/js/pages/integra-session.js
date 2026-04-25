@@ -1345,11 +1345,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const scaleX = canvas.width / 320;
         const scaleY = canvas.height / 240;
 
+        // Check if the video is mirrored (usually true for local participant preview)
+        const transform = window.getComputedStyle(candidateVideo).transform;
+        const isMirrored = transform !== 'none' && transform.includes('matrix(-1,') 
+                        || candidateVideo.style.transform.includes('scaleX(-1)')
+                        || (typeof localRole !== 'undefined' && localRole === 'candidate');
+
+        const flipX = (x) => isMirrored ? (320 - x) * scaleX : x * scaleX;
+
         // ── BBox corner brackets ──────────────────────────────────────────────
         if (data.bbox) {
-            const x1 = data.bbox[0] * scaleX;
+            const x1 = isMirrored ? flipX(data.bbox[2]) : flipX(data.bbox[0]);
             const y1 = data.bbox[1] * scaleY;
-            const x2 = data.bbox[2] * scaleX;
+            const x2 = isMirrored ? flipX(data.bbox[0]) : flipX(data.bbox[2]);
             const y2 = data.bbox[3] * scaleY;
             
             const cL = 18;
@@ -1391,8 +1399,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.head_pose) {
                 const cx   = (x1 + x2) / 2;
                 const cy   = (y1 + y2) / 2;
-                const yaw  = data.head_pose.yaw   || 0;
+                let yaw  = data.head_pose.yaw   || 0;
                 const pitch = data.head_pose.pitch || 0;
+
+                if (isMirrored) yaw = -yaw; // Flip yaw direction
 
                 if (Math.abs(yaw) > 4 || Math.abs(pitch) > 4) {
                     const ex = cx + yaw * 1.8 * scaleX;
@@ -1428,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.values(data.landmarks).forEach(pt => {
                 if (!Array.isArray(pt) || pt.length < 2) return;
                 ctx.beginPath();
-                ctx.arc(pt[0] * scaleX, pt[1] * scaleY, dotRadius, 0, Math.PI * 2);
+                ctx.arc(flipX(pt[0]), pt[1] * scaleY, dotRadius, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
