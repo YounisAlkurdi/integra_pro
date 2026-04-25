@@ -733,30 +733,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             const prob = result.overall_ai_probability || 0;
 
+            // Check text length to avoid false positives on short sentences
+            const wordCount = text.split(' ').filter(w => w.length > 0).length;
+            if (wordCount < 4) {
+                if (lexicalStatus) {
+                    lexicalStatus.innerHTML = `<span class="text-orange-400">SHORT SENTENCE</span>`;
+                    lexicalStatus.className = 'text-[9px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-orange-400/10 rounded border border-orange-400/20';
+                }
+                if (patternMatch) patternMatch.textContent = "INSUFFICIENT_DATA";
+                return; // Not enough data for NLP
+            }
+
             // Confidence Level (based on text length - longer is more confident)
-            const confidence = Math.min(0.98, 0.4 + (text.length / 500)).toFixed(2);
+            const confidence = Math.min(0.98, 0.4 + (wordCount / 50)).toFixed(2);
             if (nlpConf) nlpConf.textContent = confidence;
             if (nlpConfFill) nlpConfFill.style.width = `${confidence * 100}%`;
 
-            // Mixed Signals (Derived from probability variance)
-            const mixedSignals = $('mixedSignals');
-            if (mixedSignals) {
-                const signalVal = (prob * 12.5).toFixed(1); 
-                mixedSignals.textContent = `${signalVal}%`;
-            }
-
             // Update UI with clear Verdict
             if (lexicalStatus) {
-                let displayVerdict = result.verdict || "Analysis Complete";
-                if (prob < 0.3) displayVerdict = "Verified Human";
-                else if (prob > 0.7) displayVerdict = "AI Generated";
-
-                lexicalStatus.textContent = displayVerdict;
-                lexicalStatus.className = prob > 0.7 
-                    ? 'text-[8px] text-red-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-red-400/10 rounded font-black'
-                    : prob > 0.4
-                        ? 'text-[8px] text-yellow-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-yellow-400/10 rounded'
-                        : 'text-[8px] text-green-400 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-green-400/10 rounded';
+                if (prob < 0.3) {
+                    lexicalStatus.innerHTML = `<span class="text-green-400 font-black"><i data-lucide="user-check" class="w-3 h-3 inline pb-0.5"></i> HUMAN</span>`;
+                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-green-400/10 rounded border border-green-400/20';
+                } else if (prob > 0.7) {
+                    lexicalStatus.innerHTML = `<span class="text-red-400 font-black"><i data-lucide="bot" class="w-3 h-3 inline pb-0.5"></i> AI GENERATED</span>`;
+                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-red-400/10 rounded border border-red-400/20';
+                } else {
+                    lexicalStatus.innerHTML = `<span class="text-yellow-400 font-black">UNCERTAIN</span>`;
+                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-yellow-400/10 rounded border border-yellow-400/20';
+                }
+                lucide.createIcons({ nodes: [lexicalStatus] });
             }
 
             if (patternMatch) {
