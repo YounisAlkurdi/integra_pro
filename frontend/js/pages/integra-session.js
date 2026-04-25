@@ -460,6 +460,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const authHeader = session ? `Bearer ${session.access_token}` : null;
 
                 if (authHeader && currentRoomId) {
+                    // Temporarily disable global termination so the candidate isn't kicked if HR simply leaves
+                    // To completely destroy the room, a dedicated "End Interview for All" button should be used instead.
+                    /*
                     await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
@@ -469,6 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
                     });
+                    */
                 }
             } catch (e) {
                 console.error("Failed to execute global termination protocol:", e);
@@ -1039,29 +1043,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     lucide.createIcons({ nodes: [joinLobby] });
                 }
 
-                if (window._pollStatusInterval) clearInterval(window._pollStatusInterval);
-                window._pollStatusInterval = setInterval(async () => {
+                let pollDelay = 3000;
+                if (window._pollStatusInterval) clearTimeout(window._pollStatusInterval);
+                
+                const pollRequestStatus = async () => {
                     try {
                         const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
-                        if (!checkRaw.ok) return;
+                        if (!checkRaw.ok) {
+                            // Retry with backoff if server error
+                            pollDelay = Math.min(pollDelay * 1.5, 15000);
+                            window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
+                            return;
+                        }
+                        
                         const check = await checkRaw.json();
 
                         if (check.status === "APPROVED") {
-                            clearInterval(window._pollStatusInterval);
                             window._pollStatusInterval = null;
                             window.joinSession();
                         } else if (check.status === "REJECTED") {
-                            clearInterval(window._pollStatusInterval);
                             window._pollStatusInterval = null;
                             showToast("تم رفض طلب الدخول | Entry rejected", "error");
                             if (joinLobby) {
                                 joinLobby.innerHTML = `<h3 class="text-red-500 font-bold">Entry Rejected</h3>`;
                             }
+                        } else {
+                            // Still PENDING, exponential backoff
+                            pollDelay = Math.min(pollDelay * 1.5, 15000);
+                            window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
                         }
                     } catch (e) {
                         console.error("Polling error:", e);
+                        pollDelay = Math.min(pollDelay * 1.5, 15000);
+                        window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
                     }
-                }, 3000);
+                };
+                
+                pollRequestStatus();
                 return;
             }
 
@@ -1101,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const knownRequests = new Set();
 
+        let hrPollDelay = 5000;
         async function startSmartMonitoring() {
             const meta = await fetchRoomMeta(currentRoomId);
             const scheduledAt = meta?.scheduled_at ? new Date(meta.scheduled_at) : null;
@@ -1121,60 +1140,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
-                    const requests = await res.json();
+                    if (res.ok) {
+                        const requests = await res.json();
+                        
+                        // If there are pending requests, we poll faster. Otherwise, exponential backoff.
+                        if (requests.length > 0) {
+                            hrPollDelay = 5000; // reset to 5s if there is activity
+                        } else {
+                            hrPollDelay = Math.min(hrPollDelay * 1.2, 20000); // Backoff up to 20s
+                        }
 
-                    requests.forEach(req => {
-                        const reqKey = `${req.participant_name}`;
-                        if (knownRequests.has(reqKey)) return;
-                        knownRequests.add(reqKey);
+                        requests.forEach(req => {
+                            const reqKey = `${req.participant_name}`;
+                            if (knownRequests.has(reqKey)) return;
+                            knownRequests.add(reqKey);
 
-                        const card = document.createElement('div');
-                        card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
-                        card.innerHTML = `
-                            <div class="flex items-start gap-4 mb-4">
-                                <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                                    <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                            const card = document.createElement('div');
+                            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+                            card.innerHTML = `
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                                        <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                                        <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
-                                    <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
+                                        رفض
+                                    </button>
+                                    <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
+                                        قبول
+                                    </button>
                                 </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
-                                    رفض
-                                </button>
-                                <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
-                                    قبول
-                                </button>
-                            </div>
-                        `;
+                            `;
 
-                        card.querySelector('.btn-approve').onclick = async () => {
-                            await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
-                            });
-                            card.remove();
-                        };
+                            card.querySelector('.btn-approve').onclick = async () => {
+                                await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
+                                });
+                                card.remove();
+                            };
 
-                        card.querySelector('.btn-deny').onclick = async () => {
-                            await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
-                            });
-                            card.remove();
-                            knownRequests.delete(reqKey);
-                        };
+                            card.querySelector('.btn-deny').onclick = async () => {
+                                await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
+                                });
+                                card.remove();
+                                knownRequests.delete(reqKey);
+                            };
 
-                        lobbyContainer.appendChild(card);
-                        lucide.createIcons({ nodes: [card] });
-                    });
-                } catch (e) { console.error("Lobby check failed:", e); }
+                            lobbyContainer.appendChild(card);
+                            lucide.createIcons({ nodes: [card] });
+                        });
+                    } else {
+                        hrPollDelay = Math.min(hrPollDelay * 1.2, 20000);
+                    }
+                } catch (e) { 
+                    console.error("Lobby check failed:", e); 
+                    hrPollDelay = Math.min(hrPollDelay * 1.5, 20000);
+                }
 
-                setTimeout(checkLogic, 5000);
+                setTimeout(checkLogic, hrPollDelay);
             };
 
             checkLogic();

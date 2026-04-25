@@ -141,6 +141,18 @@ async def get_livekit_token(req: TokenRequest):
                     p_list = await lk_api.room.list_participants(ListParticipantsRequest(room=req.roomName))
                     current_p = len(p_list.participants)
                     
+                    # Ensure only one candidate per room
+                    if req.role.lower() == "candidate":
+                        candidate_count = 0
+                        for p in p_list.participants:
+                            if p.metadata and '"role":"candidate"' in p.metadata and p.identity != req.participantName:
+                                candidate_count += 1
+                        
+                        if candidate_count >= 1:
+                            msg_ar = "عذراً، يوجد مرشح آخر داخل الغرفة بالفعل."
+                            msg_en = "Sorry, another candidate is already in the room."
+                            raise HTTPException(status_code=403, detail=f"{msg_ar} | {msg_en}")
+
                     if current_p >= max_p:
                         msg_ar = f"الغرفة ممتلئة. الحد الأقصى هو {max_p} مشاركين."
                         msg_en = f"Room is full. Maximum {max_p} participants allowed."
