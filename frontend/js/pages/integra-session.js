@@ -1299,8 +1299,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (blob && forensicWS.readyState === WebSocket.OPEN) {
                     forensicWS.send(blob);
                 }
-            }, 'image/jpeg', 0.6);
-        }, 500);
+            }, 'image/jpeg', 0.5);
+        }, 100);
     }
 
     function stopForensicEngine() {
@@ -1341,9 +1341,17 @@ document.addEventListener('DOMContentLoaded', () => {
                      : status === 'SUSPICIOUS' ? '#ffb800'   // amber
                                                : '#ff3535';  // red
 
+        // The forensic engine receives 320x240 frames
+        const scaleX = canvas.width / 320;
+        const scaleY = canvas.height / 240;
+
         // ── BBox corner brackets ──────────────────────────────────────────────
         if (data.bbox) {
-            const [x1, y1, x2, y2] = data.bbox;
+            const x1 = data.bbox[0] * scaleX;
+            const y1 = data.bbox[1] * scaleY;
+            const x2 = data.bbox[2] * scaleX;
+            const y2 = data.bbox[3] * scaleY;
+            
             const cL = 18;
             ctx.strokeStyle = color;
             ctx.lineWidth   = 2.5;
@@ -1387,8 +1395,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pitch = data.head_pose.pitch || 0;
 
                 if (Math.abs(yaw) > 4 || Math.abs(pitch) > 4) {
-                    const ex = cx + yaw * 1.8;
-                    const ey = cy + pitch * 1.8;
+                    const ex = cx + yaw * 1.8 * scaleX;
+                    const ey = cy + pitch * 1.8 * scaleY;
                     const aL = 10;
                     const angle = Math.atan2(ey - cy, ex - cx);
 
@@ -1420,7 +1428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.values(data.landmarks).forEach(pt => {
                 if (!Array.isArray(pt) || pt.length < 2) return;
                 ctx.beginPath();
-                ctx.arc(pt[0], pt[1], dotRadius, 0, Math.PI * 2);
+                ctx.arc(pt[0] * scaleX, pt[1] * scaleY, dotRadius, 0, Math.PI * 2);
                 ctx.fill();
             });
         }

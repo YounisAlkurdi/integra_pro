@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Integra PRO v4</title>
+<title>Integra PRO v5</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Tajawal:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -14,17 +14,14 @@
 }
 body{background:var(--bg);color:#cbd5e1;font-family:'Tajawal',sans-serif;height:100vh;display:grid;grid-template-rows:48px 1fr 36px;overflow:hidden}
 
-/* Header */
 header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--card);border-bottom:1px solid var(--border)}
 .logo{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:5px;color:var(--g)}
 .logo em{color:#fff;font-style:normal}
 .hbadge{display:flex;align-items:center;gap:16px}
 .conn{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 10px;border-radius:3px;border:1px solid var(--g);color:var(--g)}
 
-/* Main */
 main{display:grid;grid-template-columns:1fr 320px;gap:12px;padding:12px;overflow:hidden}
 
-/* Video */
 .vid-col{display:flex;flex-direction:column;gap:10px}
 .vid-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;flex:1;border:1px solid var(--border)}
 video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
@@ -32,22 +29,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);poi
 .vid-hud{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center}
 .status-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;padding:4px 18px;border-radius:3px;border:1px solid var(--active);color:var(--active);background:rgba(0,0,0,0.65);transition:all .25s}
 
-/* Alert banner */
 .alert-banner{height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;background:rgba(255,53,53,0.08);border:1px solid rgba(255,53,53,0.2);color:var(--r);opacity:0;transition:opacity .3s}
 .alert-banner.show{opacity:1}
 
-/* Side panel */
 .side{display:flex;flex-direction:column;gap:10px;overflow-y:auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
 .clabel{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:#334155;text-transform:uppercase;margin-bottom:10px}
 
-/* Score */
 .score-big{font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;line-height:1;transition:color .3s}
 .score-track{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin:8px 0 3px;overflow:hidden}
 .score-fill{height:100%;border-radius:2px;transition:width .4s,background .3s}
 .score-sub{font-size:10px;color:#475569}
 
-/* Threat cards row */
 .threat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .threat-card{background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 8px;text-align:center;border:1px solid var(--border);transition:border-color .3s}
 .threat-card.active{border-color:var(--r)}
@@ -55,7 +48,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);poi
 .threat-pct{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;display:block;transition:color .3s}
 .threat-lbl{font-size:9px;color:#475569;display:block;letter-spacing:1px}
 
-/* Spatial map — 3x3 grid مثل تسعة مناطق */
 .spatial-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
 .spatial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}
 .zone-cell{aspect-ratio:1;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:#334155;font-family:'IBM Plex Mono',monospace;transition:all .3s;position:relative;overflow:hidden}
@@ -64,7 +56,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);poi
 .zone-cell .zone-heat{position:absolute;inset:0;opacity:0;transition:opacity .5s}
 .zone-cell .zone-label{position:relative;z-index:1;font-size:8px;text-align:center;padding:2px}
 
-/* Head + gaze meters */
 .meter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .meter-box{background:rgba(0,0,0,0.2);border-radius:8px;padding:10px;border:1px solid var(--border);transition:border-color .3s}
 .meter-val{font-family:'IBM Plex Mono',monospace;font-size:14px;display:block;color:var(--y)}
@@ -72,21 +63,17 @@ canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);poi
 .hbar{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:6px;position:relative;overflow:visible}
 .hbar-fill{height:100%;background:var(--y);transition:all .1s;border-radius:2px}
 
-/* EAR bar — خاص بمؤشر الرمش */
 .ear-bar-track{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:6px;overflow:hidden}
 .ear-bar-fill{height:100%;background:var(--b);border-radius:2px;transition:width .15s,background .2s}
 
-/* Reason pill */
 .rpill{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 10px;border-radius:3px;border:1px solid;margin-top:8px;letter-spacing:1px;transition:all .3s}
 
-/* Log */
 .elog{list-style:none;display:flex;flex-direction:column;gap:3px;max-height:110px;overflow-y:auto}
 .elog li{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#334155;padding:3px 8px;border-left:2px solid #0d1726}
 .elog li.ld{color:var(--r);border-color:var(--r)}
 .elog li.lp{color:var(--y);border-color:var(--y)}
 .elog li.ls{color:var(--b);border-color:var(--b)}
 
-/* Footer */
 footer{display:flex;align-items:center;justify-content:center;gap:32px;padding:0 20px;background:var(--card);border-top:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#1e293b}
 footer b{color:#334155}
 </style>
@@ -94,7 +81,7 @@ footer b{color:#334155}
 <body>
 
 <header>
-  <div class="logo">INTEGRA <em>PRO</em> <span style="color:#1e293b;font-size:9px">v4</span></div>
+  <div class="logo">INTEGRA <em>PRO</em> <span style="color:#1e293b;font-size:9px">v5</span></div>
   <div class="hbadge">
     <span id="fpsEl" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#334155">0 fps</span>
     <div class="conn" id="connBadge">● CONNECTING</div>
@@ -117,7 +104,6 @@ footer b{color:#334155}
 
   <div class="side">
 
-    <!-- Focus -->
     <div class="card">
       <div class="clabel">مؤشر التركيز</div>
       <div class="score-big" id="scoreBig">0%</div>
@@ -125,7 +111,6 @@ footer b{color:#334155}
       <div class="score-sub" id="scoreDistr">0 تشتت</div>
     </div>
 
-    <!-- Threat detection -->
     <div class="card">
       <div class="clabel">كشف التهديدات</div>
       <div class="threat-row">
@@ -148,20 +133,16 @@ footer b{color:#334155}
       <div id="reasonPill" class="rpill" style="margin-top:10px">FOCUSED</div>
     </div>
 
-    <!-- Spatial map -->
     <div class="card">
       <div class="clabel">خريطة النظر — Gaze Map</div>
       <div class="spatial-wrap">
-        <div class="spatial-grid" id="spatialGrid">
-          <!-- سيتم بناؤها بـ JS -->
-        </div>
+        <div class="spatial-grid" id="spatialGrid"></div>
         <div style="font-size:9px;color:#1e293b;font-family:'IBM Plex Mono',monospace;margin-top:4px">
           ● = الموقع الحالي
         </div>
       </div>
     </div>
 
-    <!-- Pose meters -->
     <div class="card">
       <div class="clabel">الرأس والعين</div>
       <div class="meter-row">
@@ -187,12 +168,10 @@ footer b{color:#334155}
         </div>
       </div>
 
-      <!-- ══ EAR + BLINK indicator (جديد) ══ -->
       <div class="meter-row" style="margin-top:8px">
         <div class="meter-box">
           <span class="meter-val" id="earVal" style="color:var(--b)">0.30</span>
           <span class="meter-lbl">EAR (رمش)</span>
-          <!-- شريط EAR: 0.0 → مغلق / 0.4 → مفتوح تماماً -->
           <div class="ear-bar-track">
             <div class="ear-bar-fill" id="earBar" style="width:75%"></div>
           </div>
@@ -200,16 +179,13 @@ footer b{color:#334155}
         <div class="meter-box" id="blinkBox">
           <span class="meter-val" id="blinkVal" style="color:#00e5a0">OPEN</span>
           <span class="meter-lbl">BLINK</span>
-          <!-- نبضة بصرية صغيرة عند الرمش -->
           <div style="height:4px;margin-top:6px;border-radius:2px;background:rgba(255,255,255,0.05)">
             <div id="blinkPulse" style="height:100%;width:0%;border-radius:2px;background:var(--y);transition:width .1s"></div>
           </div>
         </div>
       </div>
-      <!-- ══════════════════════════════════ -->
     </div>
 
-    <!-- Log -->
     <div class="card">
       <div class="clabel">السجل</div>
       <ul class="elog" id="eventLog"></ul>
@@ -220,16 +196,15 @@ footer b{color:#334155}
 
 <footer>
   <span>SESSION <b id="sessEl">00:00</b></span>
-  <span>ENGINE <b>solvePnP + XY DELTA + ZONES</b></span>
+  <span>ENGINE <b>v5.1 FIXED</b></span>
   <span>DOMINANT <b id="domZone">CENTER</b></span>
 </footer>
 
 <script>
-// ── Spatial grid setup ──────────────────────────────────
 const ZONES_ORDER = [
-  'UP_LEFT',   'UP',     'UP_RIGHT',
-  'LEFT',      'CENTER', 'RIGHT',
-  'DOWN_LEFT', 'DOWN',   'DOWN_RIGHT'
+  'UP_LEFT','UP','UP_RIGHT',
+  'LEFT','CENTER','RIGHT',
+  'DOWN_LEFT','DOWN','DOWN_RIGHT'
 ];
 const ZONE_LABELS = {
   'UP_LEFT':'↖','UP':'↑','UP_RIGHT':'↗',
@@ -254,18 +229,16 @@ ZONES_ORDER.forEach(z => {
   grid.appendChild(cell);
 });
 
-// ── Zone heat tracking ──────────────────────────────────
 const zoneAccum = {};
 ZONES_ORDER.forEach(z => zoneAccum[z] = 0);
-let totalZoneFrames = 0;
 
-// ── State ───────────────────────────────────────────────
-const video  = document.getElementById('webcam');
-const canvas = document.getElementById('overlay');
-const ctx    = canvas.getContext('2d');
+const video   = document.getElementById('webcam');
+const canvas  = document.getElementById('overlay');
+const ctx     = canvas.getContext('2d');
 let fc = 0, fpsTimer = Date.now(), prevDis = 0;
 const sessStart = Date.now();
 
+// Camera
 navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
   .then(s => {
     video.srcObject = s;
@@ -273,24 +246,39 @@ navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
       canvas.width  = video.videoWidth;
       canvas.height = video.videoHeight;
     };
-  });
+  })
+  .catch(e => console.error('Camera error:', e));
 
+// FIX 1: Port يطابق server.py (8000)
 const ws = new WebSocket('ws://localhost:8000/ws');
+let sending = false;
 
 ws.onopen = () => {
   const b = document.getElementById('connBadge');
-  b.textContent = '● LIVE'; b.style.color = b.style.borderColor = '#00e5a0';
+  b.textContent = '● LIVE';
+  b.style.color = b.style.borderColor = '#00e5a0';
 
+  // FIX 2: رفع FPS من ~16 إلى ~30 (33ms بدلاً من 60ms)
+  // + guard لمنع تراكم الفريمات إذا السيرفر بطيء
   setInterval(() => {
-    if (ws.readyState !== 1) return;
+    if (ws.readyState !== 1 || sending) return;
+    if (!video.videoWidth) return;
+
     const t = document.createElement('canvas');
-    t.width = video.videoWidth; t.height = video.videoHeight;
+    t.width  = video.videoWidth;
+    t.height = video.videoHeight;
     t.getContext('2d').drawImage(video, 0, 0);
-    t.toBlob(b => ws.send(b), 'image/jpeg', 0.8);
-  }, 60);
+
+    sending = true;
+    // FIX 2: جودة 0.65 بدلاً من 0.8 — أسرع بلا خسارة ملحوظة
+    t.toBlob(b => {
+      ws.send(b);
+    }, 'image/jpeg', 0.65);
+  }, 33);
 };
 
 ws.onmessage = ({ data }) => {
+  sending = false;   // جاهز للفريم التالي
   const d = JSON.parse(data);
   fc++;
   updateUI(d);
@@ -303,41 +291,40 @@ ws.onmessage = ({ data }) => {
   }
   const sec = Math.floor((Date.now() - sessStart) / 1000);
   document.getElementById('sessEl').textContent =
-    String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+    String(Math.floor(sec/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0');
 };
 
 ws.onerror = ws.onclose = () => {
+  sending = false;
   const b = document.getElementById('connBadge');
-  b.textContent = '● OFFLINE'; b.style.color = '#ff3535';
+  b.textContent = '● OFFLINE';
+  b.style.color = '#ff3535';
 };
 
-// ── UI ──────────────────────────────────────────────────
 function updateUI(d) {
   const status = d.status || 'NO_FACE';
   const m      = d.metrics || {};
-  const pose   = d.head_pose || {yaw:0,pitch:0};
-  const gaze   = d.gaze || {x:0,y:0};
-  const reason = d.reason || 'OK';
-  const zone   = d.zone   || 'CENTER';
+  const pose   = d.head_pose || {yaw:0, pitch:0};
+  const gaze   = d.gaze     || {x:0, y:0};
+  const reason = d.reason   || 'OK';
+  const zone   = d.zone     || 'CENTER';
   const ss     = d.second_screen_prob || 0;
   const ph     = d.phone_prob         || 0;
   const ab     = d.screen_above_prob  || 0;
   const dom    = d.dominant_zone || 'CENTER';
 
-  const color = status==='FOCUSED' ? '#00e5a0'
-              : status==='SUSPICIOUS' ? '#ffb800' : '#ff3535';
+  const color = status === 'FOCUSED'    ? '#00e5a0'
+              : status === 'SUSPICIOUS' ? '#ffb800' : '#ff3535';
 
   document.documentElement.style.setProperty('--active', color);
 
-  // Status
   const chip = document.getElementById('statusChip');
   chip.textContent = {
-    'FOCUSED':'FOCUSED','DISTRACTED':'✗ DISTRACTED',
-    'SUSPICIOUS':'⚠ SUSPICIOUS','NO_FACE':'NO FACE'
+    'FOCUSED':'FOCUSED', 'DISTRACTED':'✗ DISTRACTED',
+    'SUSPICIOUS':'⚠ SUSPICIOUS', 'NO_FACE':'NO FACE'
   }[status] || status;
   chip.style.color = chip.style.borderColor = color;
 
-  // Alert banner
   const banner = document.getElementById('alertBanner');
   const alertMap = {
     'SECOND_SCREEN_SIDE': '🖥 شاشة جانبية محتملة',
@@ -354,114 +341,91 @@ function updateUI(d) {
     banner.classList.remove('show');
   }
 
-  // Score
   const score = m.focus_score || 0;
-  document.getElementById('scoreBig').textContent = score + '%';
-  document.getElementById('scoreBig').style.color = color;
+  document.getElementById('scoreBig').textContent    = score + '%';
+  document.getElementById('scoreBig').style.color    = color;
   const fill = document.getElementById('scoreFill');
   fill.style.width = score + '%'; fill.style.background = color;
-  document.getElementById('scoreDistr').textContent =
-    (m.distractions || 0) + ' تشتت';
+  document.getElementById('scoreDistr').textContent = (m.distractions || 0) + ' تشتت';
 
-  // Threats
   function setThreat(id, pct, thresh) {
     const tc = document.getElementById('tc' + id);
     const tp = document.getElementById('tp' + id);
     tp.textContent = Math.round(pct) + '%';
     const isHigh = pct > thresh;
-    tp.style.color = isHigh ? '#ff3535' : pct > thresh*0.5 ? '#ffb800' : '#334155';
+    tp.style.color = isHigh ? '#ff3535' : pct > thresh * 0.5 ? '#ffb800' : '#334155';
     tc.classList.toggle('active', isHigh);
   }
   setThreat('Side',  ss, 60);
   setThreat('Phone', ph, 50);
   setThreat('Above', ab, 50);
 
-  // Reason pill
   const reasonMap = {
-    'OK':                 {t:'✓ FOCUSED',            c:'#00e5a0',b:'rgba(0,229,160,0.15)'},
-    'EYE_SHIFT':          {t:'👁 EYE SHIFT',          c:'#ff3535',b:'rgba(255,53,53,0.15)'},
-    'HEAD_TURN':          {t:'↔ HEAD TURN',           c:'#ffb800',b:'rgba(255,184,0,0.15)'},
-    'HEAD+GAZE':          {t:'⚠ HEAD + EYES',         c:'#ff3535',b:'rgba(255,53,53,0.15)'},
-    'SECOND_SCREEN_SIDE': {t:'🖥 SECOND SCREEN',      c:'#ff3535',b:'rgba(255,53,53,0.2)'},
-    'PHONE_BELOW':        {t:'📱 PHONE BELOW',        c:'#ffb800',b:'rgba(255,184,0,0.2)'},
-    'SCREEN_ABOVE':       {t:'⬆ SCREEN ABOVE',        c:'#3b9eff',b:'rgba(59,158,255,0.15)'},
-    'LOOKING_DOWN':       {t:'↓ LOOKING DOWN',        c:'#ffb800',b:'rgba(255,184,0,0.1)'},
+    'OK':                 {t:'✓ FOCUSED',       c:'#00e5a0', b:'rgba(0,229,160,0.15)'},
+    'EYE_SHIFT':          {t:'👁 EYE SHIFT',     c:'#ff3535', b:'rgba(255,53,53,0.15)'},
+    'HEAD_TURN':          {t:'↔ HEAD TURN',      c:'#ffb800', b:'rgba(255,184,0,0.15)'},
+    'HEAD+GAZE':          {t:'⚠ HEAD + EYES',    c:'#ff3535', b:'rgba(255,53,53,0.15)'},
+    'SECOND_SCREEN_SIDE': {t:'🖥 SECOND SCREEN', c:'#ff3535', b:'rgba(255,53,53,0.2)'},
+    'PHONE_BELOW':        {t:'📱 PHONE BELOW',   c:'#ffb800', b:'rgba(255,184,0,0.2)'},
+    'SCREEN_ABOVE':       {t:'⬆ SCREEN ABOVE',   c:'#3b9eff', b:'rgba(59,158,255,0.15)'},
+    'LOOKING_DOWN':       {t:'↓ LOOKING DOWN',   c:'#ffb800', b:'rgba(255,184,0,0.1)'},
   };
   const rs = reasonMap[reason] || reasonMap['OK'];
   const rp = document.getElementById('reasonPill');
   rp.textContent = rs.t; rp.style.color = rs.c;
   rp.style.borderColor = rs.b; rp.style.background = rs.b;
 
-  // Spatial grid — highlight current zone
   ZONES_ORDER.forEach(z => {
     const cell = document.getElementById('zone_' + z);
-    cell.classList.remove('active-zone','danger-zone');
+    cell.classList.remove('active-zone', 'danger-zone');
     if (z === zone) {
       cell.classList.add(zone === 'CENTER' ? 'active-zone' : 'danger-zone');
     }
   });
 
-  // Heatmap accumulation
-  totalZoneFrames++;
   if (zone in zoneAccum) zoneAccum[zone]++;
   const maxZ = Math.max(...Object.values(zoneAccum), 1);
   ZONES_ORDER.forEach(z => {
-    const heat = document.getElementById('heat_' + z);
+    const heat  = document.getElementById('heat_' + z);
     const ratio = zoneAccum[z] / maxZ;
-    if (z === 'CENTER') {
-      heat.style.background = `rgba(0,229,160,${ratio*0.3})`;
-    } else {
-      heat.style.background = `rgba(255,53,53,${ratio*0.5})`;
-    }
+    heat.style.background = z === 'CENTER'
+      ? `rgba(0,229,160,${ratio * 0.3})`
+      : `rgba(255,53,53,${ratio * 0.5})`;
     heat.style.opacity = '1';
   });
 
-  // Dominant zone
   document.getElementById('domZone').textContent = dom;
 
-  // Meters
   function setMeter(valId, barId, val, range, unit='', decimals=0) {
     document.getElementById(valId).textContent =
-      (val >= 0 && unit==='°' ? '+' : '') +
+      (val >= 0 && unit === '°' ? '+' : '') +
       (decimals ? val.toFixed(decimals) : Math.round(val)) + unit;
-    // normalize to 0-100% bar (center = 50%)
     const pct = 50 + (val / range) * 50;
-    document.getElementById(barId).style.width = Math.max(0,Math.min(100,pct)) + '%';
+    document.getElementById(barId).style.width = Math.max(0, Math.min(100, pct)) + '%';
   }
-  setMeter('yawVal',   'yawBar',   pose.yaw||0,   25, '°');
-  setMeter('pitchVal', 'pitchBar', pose.pitch||0, 18, '°');
-  setMeter('gazeXVal', 'gazeXBar', gaze.x||0,     1,  '', 2);
-  setMeter('gazeYVal', 'gazeYBar', gaze.y||0,     1,  '', 2);
+  setMeter('yawVal',   'yawBar',   pose.yaw   || 0, 25, '°');
+  setMeter('pitchVal', 'pitchBar', pose.pitch  || 0, 18, '°');
+  setMeter('gazeXVal', 'gazeXBar', gaze.x     || 0, 1,  '', 2);
+  setMeter('gazeYVal', 'gazeYBar', gaze.y     || 0, 1,  '', 2);
 
-  // ── Blink / EAR indicator (جديد) ──────────────────────
   const ear      = typeof d.ear === 'number' ? d.ear : 0.3;
   const blinking = d.is_blinking === true;
 
-  // قيمة EAR
   document.getElementById('earVal').textContent = ear.toFixed(2);
-
-  // شريط EAR: 0.0 → 0% / 0.4 → 100%  (فوق 0.4 تعامل كـ 100%)
   const earPct = Math.min(100, (ear / 0.40) * 100);
   const earBar = document.getElementById('earBar');
-  earBar.style.width = earPct.toFixed(1) + '%';
-  // اللون: أزرق عادي → أصفر عند اقتراب العتبة → أحمر عند الرمش
+  earBar.style.width      = earPct.toFixed(1) + '%';
   earBar.style.background = blinking ? '#ff3535' : ear < 0.22 ? '#ffb800' : '#3b9eff';
 
-  // نص حالة الرمش
-  const blinkVal  = document.getElementById('blinkVal');
-  const blinkBox  = document.getElementById('blinkBox');
+  const blinkVal   = document.getElementById('blinkVal');
+  const blinkBox   = document.getElementById('blinkBox');
   const blinkPulse = document.getElementById('blinkPulse');
+  blinkVal.textContent         = blinking ? 'BLINK ●' : 'OPEN';
+  blinkVal.style.color         = blinking ? '#ffb800' : '#00e5a0';
+  blinkBox.style.borderColor   = blinking ? 'rgba(255,184,0,0.35)' : 'var(--border)';
+  blinkPulse.style.width       = blinking ? '100%' : '0%';
+  blinkPulse.style.background  = blinking ? '#ffb800' : 'transparent';
 
-  blinkVal.textContent  = blinking ? 'BLINK ●' : 'OPEN';
-  blinkVal.style.color  = blinking ? '#ffb800' : '#00e5a0';
-  blinkBox.style.borderColor = blinking ? 'rgba(255,184,0,0.35)' : 'var(--border)';
-
-  // نبضة قصيرة عند كل رمش (تملأ الشريط ثم تفرغ)
-  blinkPulse.style.width = blinking ? '100%' : '0%';
-  blinkPulse.style.background = blinking ? '#ffb800' : 'transparent';
-  // ─────────────────────────────────────────────────────
-
-  // Log
   const dis = m.distractions || 0;
   if (dis > prevDis) {
     const cls = reason.includes('PHONE') ? 'lp'
@@ -471,63 +435,59 @@ function updateUI(d) {
   }
 }
 
-function addLog(msg, cls='ld') {
+function addLog(msg, cls = 'ld') {
   const log = document.getElementById('eventLog');
   const li  = document.createElement('li');
-  li.className = cls;
-  li.textContent = '['+new Date().toTimeString().slice(0,8)+'] '+msg;
+  li.className  = cls;
+  li.textContent = '[' + new Date().toTimeString().slice(0, 8) + '] ' + msg;
   log.prepend(li);
   if (log.children.length > 25) log.removeChild(log.lastChild);
 }
 
-// ── Canvas ──────────────────────────────────────────────
 function drawCanvas(d) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const status = d.status || 'NO_FACE';
-  const color  = status==='FOCUSED' ? '#00e5a0'
-               : status==='SUSPICIOUS' ? '#ffb800' : '#ff3535';
+  const color  = status === 'FOCUSED'    ? '#00e5a0'
+               : status === 'SUSPICIOUS' ? '#ffb800' : '#ff3535';
 
   if (d.bbox) {
-    const [x1,y1,x2,y2] = d.bbox;
+    const [x1, y1, x2, y2] = d.bbox;
     const cL = 20;
     ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-    [[x1,y1+cL,x1,y1,x1+cL,y1],[x2-cL,y1,x2,y1,x2,y1+cL],
-     [x1,y2-cL,x1,y2,x1+cL,y2],[x2-cL,y2,x2,y2,x2,y2-cL]].forEach(p=>{
-      ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[2],p[3]);ctx.lineTo(p[4],p[5]);ctx.stroke();
+    [[x1,y1+cL,x1,y1,x1+cL,y1], [x2-cL,y1,x2,y1,x2,y1+cL],
+     [x1,y2-cL,x1,y2,x1+cL,y2], [x2-cL,y2,x2,y2,x2,y2-cL]].forEach(p => {
+      ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(p[2],p[3]); ctx.lineTo(p[4],p[5]); ctx.stroke();
     });
 
-    // Zone label on video
     const zone = d.zone || 'CENTER';
     if (zone !== 'CENTER') {
-      ctx.font = 'bold 11px IBM Plex Mono, monospace';
+      ctx.font      = 'bold 11px IBM Plex Mono, monospace';
       ctx.fillStyle = color;
       const lbl = {
-        'LEFT':'◄ LEFT','RIGHT':'RIGHT ►',
-        'DOWN':'▼ DOWN','UP':'▲ UP',
-        'DOWN_LEFT':'▼◄ PHONE','DOWN_RIGHT':'▼► PHONE',
-        'UP_LEFT':'▲◄ ABOVE','UP_RIGHT':'▲► ABOVE',
+        'LEFT':'◄ LEFT', 'RIGHT':'RIGHT ►',
+        'DOWN':'▼ DOWN', 'UP':'▲ UP',
+        'DOWN_LEFT':'▼◄ PHONE', 'DOWN_RIGHT':'▼► PHONE',
+        'UP_LEFT':'▲◄ ABOVE', 'UP_RIGHT':'▲► ABOVE',
       }[zone] || zone;
       ctx.fillText(lbl, x1, y1 - 10);
     }
 
-    // Head arrow
     if (d.head_pose) {
-      const cx=(x1+x2)/2, cy=(y1+y2)/2;
-      const yw=d.head_pose.yaw||0, pi=d.head_pose.pitch||0;
-      if (Math.abs(yw)>4||Math.abs(pi)>4) {
-        const ex=cx+yw*1.8, ey=cy+pi*1.8;
-        ctx.strokeStyle='rgba(255,184,0,0.8)';ctx.lineWidth=2;
-        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
-        const a=Math.atan2(ey-cy,ex-cx),aL=10;
+      const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+      const yw = d.head_pose.yaw || 0, pi = d.head_pose.pitch || 0;
+      if (Math.abs(yw) > 4 || Math.abs(pi) > 4) {
+        const ex = cx + yw * 1.8, ey = cy + pi * 1.8;
+        ctx.strokeStyle = 'rgba(255,184,0,0.8)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+        const a = Math.atan2(ey - cy, ex - cx), aL = 10;
         ctx.beginPath();
-        ctx.moveTo(ex,ey);ctx.lineTo(ex-aL*Math.cos(a-.4),ey-aL*Math.sin(a-.4));
-        ctx.moveTo(ex,ey);ctx.lineTo(ex-aL*Math.cos(a+.4),ey-aL*Math.sin(a+.4));
+        ctx.moveTo(ex, ey); ctx.lineTo(ex - aL * Math.cos(a - .4), ey - aL * Math.sin(a - .4));
+        ctx.moveTo(ex, ey); ctx.lineTo(ex - aL * Math.cos(a + .4), ey - aL * Math.sin(a + .4));
         ctx.stroke();
       }
     }
   }
 
-  // Iris dots + blink overlay على الـ canvas
   if (d.landmarks) {
     const isBlinking = d.is_blinking === true;
     ctx.fillStyle = isBlinking ? '#ffb800' : '#fff';

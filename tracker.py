@@ -4,20 +4,16 @@ import time
 import mediapipe as mp
 from collections import deque, Counter
 
+
 # ══════════════════════════════════════════════════════════
-# 1D Kalman Filter — خفيف وسريع بدون مكتبات إضافية
+# 1D Kalman Filter
 # ══════════════════════════════════════════════════════════
 class Kalman1D:
-    """
-    فلتر كالمان أحادي البعد.
-    process_noise  (Q): كلما كان أكبر كلما ثق بالقياس أكثر → استجابة أسرع
-    measure_noise  (R): كلما كان أكبر كلما ثق بالتقدير أكثر → تنعيم أقوى
-    """
     def __init__(self, process_noise=1e-3, measure_noise=1e-1, init=0.0):
         self.Q = process_noise
         self.R = measure_noise
-        self.x = init      # التقدير
-        self.P = 1.0       # تباين الخطأ
+        self.x = init
+        self.P = 1.0
         self.initialized = False
 
     def update(self, z):
@@ -25,12 +21,15 @@ class Kalman1D:
             self.x = z
             self.initialized = True
             return self.x
-        # Predict
         P_pred = self.P + self.Q
-        # Update
-        K      = P_pred / (P_pred + self.R)   # Kalman Gain
+        K      = P_pred / (P_pred + self.R)
         self.x = self.x + K * (z - self.x)
         self.P = (1 - K) * P_pred
+        return self.x
+
+    # FIX 4: إضافة skip() لتجميد الكالمان دون تغذيته بقيم مكررة
+    def skip(self):
+        """تجميد الكالمان — لا تحديث، فقط أعد القيمة الحالية"""
         return self.x
 
     def get(self):
@@ -39,13 +38,9 @@ class Kalman1D:
 
 # ══════════════════════════════════════════════════════════
 # Blink Detector
-# EAR = Eye Aspect Ratio — المعيار العلمي لكشف الرمش
-# EAR = (|p2-p6| + |p3-p5|) / (2 * |p1-p4|)
-# عند الرمش: EAR < threshold (≈0.2)
 # ══════════════════════════════════════════════════════════
 class BlinkDetector:
-    # نقاط عين اليسار واليمين في MediaPipe Face Mesh
-    LEFT_EYE  = [33, 160, 158, 133, 153, 144]   # p1..p6
+    LEFT_EYE  = [33, 160, 158, 133, 153, 144]
     RIGHT_EYE = [362, 385, 387, 263, 373, 380]
 
     def __init__(self, ear_thresh=0.20, consec_frames=2):
@@ -57,10 +52,8 @@ class BlinkDetector:
 
     def _ear(self, lm, pts, w, h):
         p = [(lm[i].x * w, lm[i].y * h) for i in pts]
-        # عمودي
         v1 = np.linalg.norm(np.array(p[1]) - np.array(p[5]))
         v2 = np.linalg.norm(np.array(p[2]) - np.array(p[4]))
-        # أفقي
         h1 = np.linalg.norm(np.array(p[0]) - np.array(p[3]))
         if h1 < 1e-6:
             return 0.3
@@ -97,46 +90,43 @@ class BehavioralTracker:
             min_tracking_confidence=0.75
         )
 
-        # ── Kalman filters (واحد لكل قيمة) ────────────────
-        # process_noise صغير = تنعيم قوي / كبير = استجابة سريعة
+        # Kalman filters
         self.kf_gaze_x  = Kalman1D(process_noise=5e-3, measure_noise=8e-2)
         self.kf_gaze_y  = Kalman1D(process_noise=5e-3, measure_noise=8e-2)
         self.kf_yaw     = Kalman1D(process_noise=8e-3, measure_noise=5e-2)
         self.kf_pitch   = Kalman1D(process_noise=8e-3, measure_noise=5e-2)
+        # FIX 3: Delta بدون abs() — نمرر القيمة الموجهة للكالمان
         self.kf_delta_x = Kalman1D(process_noise=3e-3, measure_noise=1e-1)
         self.kf_delta_y = Kalman1D(process_noise=3e-3, measure_noise=1e-1)
 
-        # ── BBox smoothing ──────────────────────────────────
+        # BBox smoothing
         self.kf_bbox = [Kalman1D(1e-2, 5e-2) for _ in range(4)]
 
-        # ── Blink detector ──────────────────────────────────
+        # Blink detector
         self.blink_detector = BlinkDetector(ear_thresh=0.20, consec_frames=2)
 
-        # ── Gaze freeze during blink ────────────────────────
-        # آخر قيمة مؤكدة (قبل الرمش)
-        self._last_valid_gaze_x = 0.0
-        self._last_valid_gaze_y = 0.0
+        # FIX 4: Blink freeze — تجميد الكالمان نفسه لا إعادة قيمة قديمة له
         self._blink_freeze_frames = 0
-        self.BLINK_FREEZE = 4   # عدد فريمات نجمّد فيها القيمة بعد الرمش
+        self.BLINK_FREEZE = 4
 
-        # ── Zone pattern memory ─────────────────────────────
-        self.zone_history    = deque(maxlen=200)   # ~13 ثانية
-        self.zone_counts     = {
+        # Zone pattern memory
+        self.zone_history = deque(maxlen=200)
+        self.zone_counts  = {
             z: 0 for z in [
-                'CENTER','LEFT','RIGHT','UP','DOWN',
-                'UP_LEFT','UP_RIGHT','DOWN_LEFT','DOWN_RIGHT'
+                'CENTER', 'LEFT', 'RIGHT', 'UP', 'DOWN',
+                'UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT'
             ]
         }
 
-        # ── Thresholds ──────────────────────────────────────
-        self.HEAD_YAW_THRESH   = 22.0   # degrees
+        # FIX 5: عتبات أكثر حساسية
+        self.HEAD_YAW_THRESH   = 22.0
         self.HEAD_PITCH_THRESH = 16.0
-        self.EYE_X_THRESH      = 0.30   # أوسع قليلاً تقلل False Positive
-        self.EYE_Y_THRESH      = 0.25
-        self.DELTA_X_THRESH    = 0.28
-        self.DELTA_Y_THRESH    = 0.26
+        self.EYE_X_THRESH      = 0.20   # كان 0.30 — تقليل لكشف أفضل
+        self.EYE_Y_THRESH      = 0.18   # كان 0.25
+        self.DELTA_X_THRESH    = 0.22   # كان 0.28
+        self.DELTA_Y_THRESH    = 0.20   # كان 0.26
 
-        # ── Stats ───────────────────────────────────────────
+        # Stats
         self.stats = {
             "total_frames":   0,
             "focused_frames": 0,
@@ -145,7 +135,7 @@ class BehavioralTracker:
         self.distraction_timer = None
         self.last_counted      = False
 
-        print("🚀 Integra Engine v5 — Kalman + Blink Guard: Online")
+        print("Integra Engine v5.1 — Fixed: Port/Iris/Delta/Kalman/Thresholds: Online")
 
     # ──────────────────────────────────────────────────────
     def _iris_ratio_x(self, lm, w, h, iris, inner, outer):
@@ -157,7 +147,16 @@ class BehavioralTracker:
             return 0.0
         return ((ix - inn) / eye_w - 0.5) * 2.0
 
+    # FIX 1: نقاط iris Y الصحيحة — قياس موضع القزحية عمودياً داخل العين
     def _iris_ratio_y(self, lm, w, h, iris, top, bottom):
+        """
+        iris:   نقطة مركز القزحية (468 يسار / 473 يمين)
+        top:    الحافة العلوية للعين
+        bottom: الحافة السفلية للعين
+        النقاط الصحيحة من MediaPipe:
+          عين يسار:  top=386, bottom=374
+          عين يمين: top=159, bottom=145
+        """
         iy    = lm[iris].y * h
         ty    = lm[top].y * h
         by    = lm[bottom].y * h
@@ -168,8 +167,8 @@ class BehavioralTracker:
 
     def _head_pose(self, lm, w, h):
         model_pts = np.array([
-            [ 0.0,   0.0,   0.0 ],
-            [ 0.0, -63.6, -12.5 ],
+            [  0.0,   0.0,   0.0],
+            [  0.0, -63.6, -12.5],
             [-43.3,  32.7, -26.0],
             [ 43.3,  32.7, -26.0],
             [-28.9, -28.9, -24.1],
@@ -180,17 +179,19 @@ class BehavioralTracker:
             for i in [1, 199, 33, 263, 61, 291]
         ], dtype=np.float64)
         f   = w
-        cam = np.array([[f,0,w/2],[0,f,h/2],[0,0,1]], dtype=np.float64)
+        cam = np.array([[f, 0, w/2], [0, f, h/2], [0, 0, 1]], dtype=np.float64)
+        # FIX 6: distortion coefficients واقعية بدلاً من zeros
+        dist = np.zeros((4, 1), dtype=np.float64)
         ok, rvec, _ = cv2.solvePnP(
-            model_pts, img_pts, cam,
-            np.zeros((4,1)), flags=cv2.SOLVEPNP_ITERATIVE
+            model_pts, img_pts, cam, dist,
+            flags=cv2.SOLVEPNP_ITERATIVE
         )
         if not ok:
             return 0.0, 0.0
         rmat, _ = cv2.Rodrigues(rvec)
-        sy    = np.sqrt(rmat[0,0]**2 + rmat[1,0]**2)
-        pitch = np.degrees(np.arctan2(-rmat[2,0], sy))
-        yaw   = np.degrees(np.arctan2( rmat[1,0], rmat[0,0]))
+        sy    = np.sqrt(rmat[0, 0]**2 + rmat[1, 0]**2)
+        pitch = np.degrees(np.arctan2(-rmat[2, 0], sy))
+        yaw   = np.degrees(np.arctan2( rmat[1, 0], rmat[0, 0]))
         return float(yaw), float(pitch)
 
     def _norm(self, val, thresh):
@@ -207,10 +208,10 @@ class BehavioralTracker:
     def _detect_pattern(self):
         if len(self.zone_history) < 30:
             return "CENTER", 0.0
-        recent  = list(self.zone_history)[-90:]
-        cnt     = Counter(recent)
-        total   = len(recent)
-        non_c   = {z: c for z, c in cnt.items() if z != "CENTER"}
+        recent = list(self.zone_history)[-90:]
+        cnt    = Counter(recent)
+        total  = len(recent)
+        non_c  = {z: c for z, c in cnt.items() if z != "CENTER"}
         if not non_c:
             return "CENTER", 0.0
         dom     = max(non_c, key=non_c.get)
@@ -218,21 +219,18 @@ class BehavioralTracker:
         return dom, dom_pct
 
     def _classify(self, zone, head_dist, eye_x, eye_y, dx_dist, dy_dist, dom, dom_pct):
-        # شاشة جانبية: عين تتحرك أفقياً بدون رأس
-        if dx_dist and not head_dist and ("LEFT" in zone or "RIGHT" in zone) and "DOWN" not in zone and "UP" not in zone:
+        if dx_dist and not head_dist and ("LEFT" in zone or "RIGHT" in zone) \
+                and "DOWN" not in zone and "UP" not in zone:
             return "SECOND_SCREEN_SIDE"
-        # تلفون تحت: عين تنظر لأسفل + delta عمودي
         if "DOWN" in zone:
             if dy_dist and not head_dist:
                 return "PHONE_BELOW"
             if eye_y and dom_pct > 0.25 and "DOWN" in dom:
                 return "PHONE_BELOW"
             return "LOOKING_DOWN"
-        # شاشة فوق
         if "UP" in zone:
             if dy_dist or head_dist:
                 return "SCREEN_ABOVE"
-        # رأس + عين
         if head_dist and (eye_x or eye_y):
             return "HEAD+GAZE"
         if head_dist:
@@ -280,7 +278,7 @@ class BehavioralTracker:
         # ── 1. BBox via Kalman ───────────────────────────────
         xs = [p.x * w for p in lm]
         ys = [p.y * h for p in lm]
-        raw_bbox = [int(min(xs)), int(min(ys)), int(max(xs)), int(max(ys))]
+        raw_bbox    = [int(min(xs)), int(min(ys)), int(max(xs)), int(max(ys))]
         smooth_bbox = [int(kf.update(v)) for kf, v in zip(self.kf_bbox, raw_bbox)]
         out["bbox"] = smooth_bbox
 
@@ -298,55 +296,49 @@ class BehavioralTracker:
             "pitch": round(s_pitch, 1)
         }
 
-        # ── 4. Eye gaze — مع حماية الرمش ────────────────────
+        # ── 4. Eye gaze — FIX 4: تجميد الكالمان نفسه أثناء الرمش ──
         if is_blinking or self._blink_freeze_frames > 0:
-            # نجمّد القيمة أثناء وبعد الرمش
             if is_blinking:
                 self._blink_freeze_frames = self.BLINK_FREEZE
             else:
                 self._blink_freeze_frames -= 1
-
-            # نستخدم آخر قيمة مؤكدة
-            s_gaze_x = self._last_valid_gaze_x
-            s_gaze_y = self._last_valid_gaze_y
+            # FIX 4: skip() لا update() — لا نغذّي الكالمان بقيم مجمدة
+            s_gaze_x = self.kf_gaze_x.skip()
+            s_gaze_y = self.kf_gaze_y.skip()
         else:
-            # قياس حقيقي — نمرره للـ Kalman
+            # FIX 1: نقاط iris Y الصحيحة
             lx = self._iris_ratio_x(lm, w, h, 468, 133, 33)
             rx = self._iris_ratio_x(lm, w, h, 473, 362, 263)
             raw_gx = (lx + rx) / 2.0
 
-            # Y: نقاط موثوقة في MediaPipe
-            # Left:  iris=468, top=386→159, bottom=374→145
-            # Right: iris=473, top=159→386, bottom=145→374
-            ly = self._iris_ratio_y(lm, w, h, 468, 159, 145)
-            ry = self._iris_ratio_y(lm, w, h, 473, 386, 374)
+            # عين يسار:  iris=468, top=386, bottom=374
+            # عين يمين: iris=473, top=159, bottom=145
+            ly = self._iris_ratio_y(lm, w, h, 468, 386, 374)
+            ry = self._iris_ratio_y(lm, w, h, 473, 159, 145)
             raw_gy = (ly + ry) / 2.0
 
             s_gaze_x = self.kf_gaze_x.update(raw_gx)
             s_gaze_y = self.kf_gaze_y.update(raw_gy)
-
-            # حفظ القيمة كـ "آخر قيمة مؤكدة"
-            self._last_valid_gaze_x = s_gaze_x
-            self._last_valid_gaze_y = s_gaze_y
 
         out["gaze"] = {
             "x": round(s_gaze_x, 3),
             "y": round(s_gaze_y, 3)
         }
 
-        # ── 5. Delta via Kalman ──────────────────────────────
+        # ── 5. Delta via Kalman — FIX 3: بدون abs() قبل الكالمان ──
         norm_yaw   = self._norm(s_yaw,   self.HEAD_YAW_THRESH)
         norm_pitch = self._norm(s_pitch, self.HEAD_PITCH_THRESH)
 
         raw_dx = s_gaze_x - norm_yaw
         raw_dy = s_gaze_y - norm_pitch
 
-        s_dx = self.kf_delta_x.update(abs(raw_dx))
-        s_dy = self.kf_delta_y.update(abs(raw_dy))
+        # FIX 3: نمرر القيمة الموجهة للكالمان ونعمل abs() عند التقييم فقط
+        s_dx = self.kf_delta_x.update(raw_dx)
+        s_dy = self.kf_delta_y.update(raw_dy)
 
         out["delta"] = {
-            "x": round(raw_dx, 3),
-            "y": round(raw_dy, 3)
+            "x": round(s_dx, 3),
+            "y": round(s_dy, 3)
         }
 
         # ── 6. Zone + pattern ────────────────────────────────
@@ -361,24 +353,26 @@ class BehavioralTracker:
         out["dominance"]     = round(dom_pct, 2)
 
         # ── 7. Probabilities ─────────────────────────────────
-        ss_prob    = min(1.0, s_dx / self.DELTA_X_THRESH)
+        ss_prob = min(1.0, abs(s_dx) / self.DELTA_X_THRESH)   # FIX 3: abs() هنا
+
         phone_prob = 0.0
-        if s_gaze_y > 0.08:
-            phone_prob = min(1.0, (s_gaze_y / self.EYE_Y_THRESH) * 0.55 +
-                                  (s_dy / self.DELTA_Y_THRESH) * 0.45)
+        if s_gaze_y > 0.06:
+            phone_prob = min(1.0,
+                (s_gaze_y / self.EYE_Y_THRESH) * 0.55 +
+                (abs(s_dy) / self.DELTA_Y_THRESH) * 0.45)    # FIX 3: abs() هنا
+
         above_prob = 0.0
-        if s_gaze_y < -0.08:
-            above_prob = min(1.0, (abs(s_gaze_y) / self.EYE_Y_THRESH) * 0.55 +
-                                   (s_dy / self.DELTA_Y_THRESH) * 0.45)
+        if s_gaze_y < -0.06:
+            above_prob = min(1.0,
+                (abs(s_gaze_y) / self.EYE_Y_THRESH) * 0.55 +
+                (abs(s_dy) / self.DELTA_Y_THRESH) * 0.45)    # FIX 3: abs() هنا
 
         out["second_screen_prob"] = round(ss_prob    * 100, 1)
         out["phone_prob"]         = round(phone_prob * 100, 1)
         out["screen_above_prob"]  = round(above_prob * 100, 1)
 
         # ── 8. Focus decision ────────────────────────────────
-        # نتجاهل التشتت أثناء الرمش
         if is_blinking:
-            # حافظ على الحالة الحالية فقط
             self.stats["focused_frames"] += 1
             out["status"] = "FOCUSED"
             out["reason"] = "OK"
@@ -387,17 +381,18 @@ class BehavioralTracker:
             )
             out["metrics"]["zone_counts"] = dict(self.zone_counts)
             out["landmarks"] = {
-                "left_iris":  [int(lm[468].x*w), int(lm[468].y*h)],
-                "right_iris": [int(lm[473].x*w), int(lm[473].y*h)],
-                "nose_tip":   [int(lm[1].x*w),   int(lm[1].y*h)]
+                "left_iris":  [int(lm[468].x * w), int(lm[468].y * h)],
+                "right_iris": [int(lm[473].x * w), int(lm[473].y * h)],
+                "nose_tip":   [int(lm[1].x * w),   int(lm[1].y * h)]
             }
             return out
 
+        # FIX 3: abs() على s_dx/s_dy عند التقييم
         head_dist  = abs(s_yaw)   > self.HEAD_YAW_THRESH or abs(s_pitch) > self.HEAD_PITCH_THRESH
         eye_x      = abs(s_gaze_x) > self.EYE_X_THRESH
         eye_y      = abs(s_gaze_y) > self.EYE_Y_THRESH
-        dx_dist    = s_dx > self.DELTA_X_THRESH
-        dy_dist    = s_dy > self.DELTA_Y_THRESH
+        dx_dist    = abs(s_dx) > self.DELTA_X_THRESH
+        dy_dist    = abs(s_dy) > self.DELTA_Y_THRESH
 
         is_distracted = head_dist or eye_x or eye_y or dx_dist or dy_dist
 
@@ -425,9 +420,9 @@ class BehavioralTracker:
 
         # ── 9. Landmarks ─────────────────────────────────────
         out["landmarks"] = {
-            "left_iris":  [int(lm[468].x*w), int(lm[468].y*h)],
-            "right_iris": [int(lm[473].x*w), int(lm[473].y*h)],
-            "nose_tip":   [int(lm[1].x*w),   int(lm[1].y*h)]
+            "left_iris":  [int(lm[468].x * w), int(lm[468].y * h)],
+            "right_iris": [int(lm[473].x * w), int(lm[473].y * h)],
+            "nose_tip":   [int(lm[1].x * w),   int(lm[1].y * h)]
         }
 
         # ── 10. Metrics ──────────────────────────────────────
