@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>كاشف التزييف العميق - التقرير الشامل</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-400">🔬 كاشف التزييف العميق (التحليل الشامل)</h1>
+        
+        <div class="flex gap-4 mb-8">
+            <input type="file" id="vid" accept="video/*" class="flex-1 block w-full text-sm text-slate-400 file:bg-blue-600 file:text-white file:rounded-lg file:px-6 file:py-3 file:border-0 cursor-pointer hover:file:bg-blue-700 transition">
+            <button type="button" onclick="startProcess(event)" id="btn" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold transition">تحليل الفيديو</button>
+        </div>
+
+        <div id="loader" class="hidden text-center text-blue-400 animate-pulse my-10 text-xl font-bold">
+            ⏳ جاري استخراج الفريمات وتحليل الوجوه عبر ViT...
+        </div>
+
+        <div id="reportContainer" class="hidden space-y-6">
+            <div id="verdictBox" class="p-6 rounded-2xl border-4 text-center">
+                <h2 class="text-xl text-slate-300">الحكم النهائي:</h2>
+                <div id="verdictText" class="text-5xl font-black mt-2 mb-4"></div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-slate-900 p-4 rounded-xl">
+                    <div>Fake Score:<br><span id="finalScore" class="text-xl font-bold"></span></div>
+                    <div>متوسط الاحتمال:<br><span id="meanScore" class="text-xl font-bold"></span></div>
+                    <div>فريمات >60%:<br><span id="highPct" class="text-xl font-bold"></span></div>
+                    <div>فريمات محللة:<br><span id="framesCount" class="text-xl font-bold"></span></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-700">
+                <h3 class="text-center text-slate-400 mb-4 font-bold">الرسومات البيانية والوجوه المستخرجة</h3>
+                <img id="plotImg" src="" alt="Report Graphs" class="w-full rounded-xl shadow-lg">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function startProcess(event) {
+            if(event) event.preventDefault(); // منع التحديث
+
+            const fileInput = document.getElementById('vid');
+            const file = fileInput.files[0];
+            if (!file) return alert("الرجاء اختيار فيديو!");
+
+            const btn = document.getElementById('btn');
+            const loader = document.getElementById('loader');
+            const report = document.getElementById('reportContainer');
+
+            loader.classList.remove('hidden');
+            report.classList.add('hidden');
+            btn.disabled = true;
+
+            const fd = new FormData(); 
+            fd.append('file', file);
+            
+            try {
+                // تأكد من أن السيرفر يعمل على بورت 8000
+                const response = await fetch('http://127.0.0.1:8000/analyze', { 
+                    method: 'POST', 
+                    body: fd 
+                });
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                document.getElementById('verdictText').innerText = data.verdict;
+                document.getElementById('finalScore').innerText = data.final_score + '%';
+                document.getElementById('meanScore').innerText = data.mean_sc + '%';
+                document.getElementById('highPct').innerText = data.high_pct + '%';
+                document.getElementById('framesCount').innerText = data.frames_analyzed;
+                
+                document.getElementById('plotImg').src = "data:image/png;base64," + data.report_image;
+
+                const vBox = document.getElementById('verdictBox');
+                vBox.className = "p-6 rounded-2xl border-4 text-center " + 
+                    (data.verdict === 'REAL' ? "border-green-500 bg-green-900/20 text-green-400" :
+                     data.verdict === 'DEEPFAKE' ? "border-red-500 bg-red-900/20 text-red-400" :
+                     "border-yellow-500 bg-yellow-900/20 text-yellow-400");
+
+                report.classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                alert("خطأ في الاتصال بالسيرفر!");
+            } finally {
+                loader.classList.add('hidden');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
