@@ -108,6 +108,118 @@ document.addEventListener('DOMContentLoaded', () => {
         logList.scrollTop = logList.scrollHeight;
     }
 
+    // ── Verification Manager (Gatekeeper) ─────────────────────────────────────
+    window.VerificationManager = {
+        stream: null,
+        recorder: null,
+        chunks: [],
+        requestId: null,
+        roomName: null,
+        participantName: null,
+
+        async init(requestId, roomName, participantName) {
+            this.requestId = requestId;
+            this.roomName = roomName;
+            this.participantName = participantName;
+            
+            $('verification-overlay')?.classList.remove('hidden');
+            
+            const recordBtn = $('btn-verify-record');
+            if (recordBtn) {
+                const newBtn = recordBtn.cloneNode(true);
+                recordBtn.parentNode.replaceChild(newBtn, recordBtn);
+                newBtn.addEventListener('click', () => this.startRecording());
+            }
+            
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const preview = $('verify-video-preview');
+                if (preview) preview.srcObject = this.stream;
+                if (window.lucide) window.lucide.createIcons();
+            } catch (err) {
+                console.error("Camera access failed:", err);
+                showToast("Camera access required for verification", "error");
+            }
+        },
+
+        async startRecording() {
+            if (!this.stream) {
+                showToast("No camera stream found. Please refresh.", "error");
+                return;
+            }
+            
+            const btn = $('btn-verify-record');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="animate-pulse">RECORDING...</span>';
+            }
+
+            $('verify-countdown-overlay')?.classList.remove('hidden');
+            let timeLeft = 10;
+            const countdownEl = $('verify-countdown');
+            if (countdownEl) countdownEl.textContent = timeLeft;
+            
+            this.chunks = [];
+            this.recorder = new MediaRecorder(this.stream);
+            this.recorder.ondataavailable = (e) => this.chunks.push(e.data);
+            this.recorder.onstop = () => this.uploadVideo();
+            this.recorder.start();
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (countdownEl) countdownEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    this.recorder.stop();
+                    $('verify-countdown-overlay')?.classList.add('hidden');
+                }
+            }, 1000);
+        },
+
+        async uploadVideo() {
+            $('verify-processing-overlay')?.classList.remove('hidden');
+            const blob = new Blob(this.chunks, { type: 'video/webm' });
+            const formData = new FormData();
+            formData.append('video', blob);
+            formData.append('request_id', this.requestId);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/gatekeeper/verify`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    $('verify-status-text').textContent = "Verification Uploaded Successfully";
+                    setTimeout(() => {
+                        $('verification-overlay')?.classList.add('hidden');
+                        this.stopStream();
+                        showToast("Verification submitted. Waiting for AI analysis.", "success");
+                    }, 2000);
+                } else {
+                    throw new Error("Upload failed");
+                }
+            } catch (err) {
+                console.error("Verification upload failed:", err);
+                $('verify-status-text').textContent = "Upload Failed. Try Again.";
+                const btn = $('btn-verify-record');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="rotate-ccw" class="w-4 h-4"></i> Retry Verification';
+                    if (window.lucide) window.lucide.createIcons({ nodes: [btn] });
+                }
+            }
+        },
+
+        stopStream() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+                this.stream = null;
+            }
+        }
+    };
+
     // ── Timer ─────────────────────────────────────────────────────────────────
     function startTimer(initialSeconds) {
         sessionSeconds = initialSeconds;
@@ -1024,7 +1136,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 role: role
             });
 
-            if (result && result.status === "AWAITING_APPROVAL") {
+            if (result && (result.status === "AWAITING_APPROVAL" || result.liveness_status === "PENDING")) {
+                // If Deepfake verification is required
+                if (result.liveness_status === "PENDING") {
+                    window.VerificationManager.init(result.request_id, roomName, name);
+                }
+
                 if (joinLobby) {
                     joinLobby.innerHTML = `
                         <div class="relative mb-10">
@@ -1035,13 +1152,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                         <div class="text-center px-10">
-                            <h3 class="text-xl font-black uppercase tracking-widest mb-3 text-white">الطلب قيد الانتظار</h3>
+                            <h3 class="text-xl font-black uppercase tracking-widest mb-3 text-white">
+                                ${result.liveness_status === 'PENDING' ? 'Identity Verification Required' : 'الطلب قيد الانتظار'}
+                            </h3>
                             <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
-                                ${result.message_en}
+                                ${result.message_en || 'Please wait for identity verification and host approval.'}
                             </p>
                             <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
-                                <span class="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></span>
-                                <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Verifying Identity...</span>
+                                <span class="w-2 h-2 ${result.liveness_status === 'PENDING' ? 'bg-amber-500' : 'bg-cyan-500'} rounded-full animate-ping"></span>
+                                <span class="text-[9px] font-black ${result.liveness_status === 'PENDING' ? 'text-amber-400' : 'text-cyan-400'} uppercase tracking-widest">
+                                    ${result.liveness_status === 'PENDING' ? 'Action Required: Verification' : 'Verifying Identity...'}
+                                </span>
                             </div>
                         </div>
                     `;
@@ -1055,7 +1176,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
                         if (!checkRaw.ok) {
-                            // Retry with backoff if server error
                             pollDelay = Math.min(pollDelay * 1.5, 15000);
                             window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
                             return;
@@ -1063,14 +1183,32 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         const check = await checkRaw.json();
 
-                        if (check.status === "APPROVED") {
+                        // 1. Check for Deepfake Failure
+                        if (check.liveness_status === "FAILED") {
+                            window._pollStatusInterval = null;
+                            showToast("Deepfake detected! Verification failed.", "error");
+                            if (joinLobby) {
+                                joinLobby.innerHTML = `
+                                    <div class="text-center">
+                                        <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
+                                        <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
+                                        <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
+                                    </div>
+                                `;
+                                lucide.createIcons({ nodes: [joinLobby] });
+                            }
+                            return;
+                        }
+
+                        // 2. Check for Approval
+                        if (check.status === "APPROVED" && check.liveness_status !== "PENDING") {
                             window._pollStatusInterval = null;
                             window.joinSession();
                         } else if (check.status === "REJECTED") {
                             window._pollStatusInterval = null;
                             showToast("تم رفض طلب الدخول | Entry rejected", "error");
                             if (joinLobby) {
-                                joinLobby.innerHTML = `<h3 class="text-red-500 font-bold">Entry Rejected</h3>`;
+                                joinLobby.innerHTML = `<h3 class="text-red-500 font-bold uppercase">Entry Rejected</h3>`;
                             }
                         } else {
                             // Still PENDING, exponential backoff
@@ -1170,6 +1308,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <div class="flex-1">
                                         <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
                                         <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                                        
+                                        <!-- Deepfake Verification Badge -->
+                                        <div class="mt-2 flex items-center gap-2">
+                                            <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                                                req.liveness_status === 'PASSED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                                req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                            }">
+                                                Gatekeeper: ${req.liveness_status || 'PENDING'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
