@@ -507,6 +507,62 @@
         </div>
     </div>
 
+    <!-- Deepfake Verification Overlay -->
+    <div id="verification-overlay" class="fixed inset-0 z-[250] bg-obsidian flex flex-col items-center justify-center hidden">
+        <div class="bg-noise"></div>
+        <div class="scanlines"></div>
+        
+        <div class="glass-panel p-10 rounded-[2.5rem] border border-white/10 w-full max-w-2xl relative z-10 text-center flex flex-col">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex flex-col items-start">
+                    <h2 class="text-2xl font-black uppercase tracking-tighter italic">Gatekeeper<span class="text-cyan-400">.</span>Forensics</h2>
+                    <p class="text-[10px] text-cyan-400 font-mono tracking-widest uppercase mt-1">Liveness Verification Required</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-cyan-400"></i>
+                </div>
+            </div>
+
+            <div class="relative rounded-3xl overflow-hidden bg-black/40 border border-white/5 aspect-video mb-8 group">
+                <video id="verify-video-preview" class="w-full h-full object-cover" autoplay playsinline muted></video>
+                <div id="verify-scanner" class="absolute inset-x-0 top-0 h-1 bg-cyan-400/50 shadow-[0_0_15px_#22d3ee] z-20 hidden"></div>
+                
+                <!-- Countdown Overlay -->
+                <div id="verify-countdown-overlay" class="absolute inset-0 bg-obsidian/60 backdrop-blur-sm flex items-center justify-center z-30 hidden">
+                    <span id="verify-countdown" class="text-8xl font-black italic text-cyan-400 tabular-nums">10</span>
+                </div>
+
+                <!-- Processing Overlay -->
+                <div id="verify-processing-overlay" class="absolute inset-0 bg-obsidian/90 backdrop-blur-xl flex flex-col items-center justify-center z-40 hidden">
+                    <div class="relative mb-6">
+                        <div class="w-16 h-16 border-2 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i data-lucide="cpu" class="w-6 h-6 text-cyan-400 animate-pulse"></i>
+                        </div>
+                    </div>
+                    <p id="verify-status-text" class="text-[11px] font-mono text-cyan-400 uppercase tracking-[0.4em] animate-pulse">Analyzing Biometrics...</p>
+                    <div class="w-48 h-1 bg-white/5 rounded-full mt-6 overflow-hidden">
+                        <div id="verify-upload-bar" class="h-full bg-cyan-400 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="verify-instructions" class="mb-8">
+                <p class="text-xs text-white/50 leading-relaxed max-w-sm mx-auto">
+                    Please look directly into the camera and speak clearly. We will record a 10-second sample to verify your identity.
+                </p>
+            </div>
+
+            <div class="flex gap-4">
+                <button id="btn-verify-record" class="flex-1 py-4 bg-cyan-400 text-obsidian text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-cyan-300 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95">
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                    Start Verification
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Session Termination Overlay -->
     <div id="termination-overlay" class="fixed inset-0 z-[300] bg-obsidian/98 backdrop-blur-3xl flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-1000">
         <div class="relative mb-10">

@@ -13,6 +13,7 @@ from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
 from mailer import send_interview_invitation
 import livekit_routes
 import agent_routes
+import gatekeeper_routes
 import os
 from dotenv import load_dotenv
 
@@ -104,6 +105,9 @@ app.include_router(livekit_routes.router)
 
 # --- 5. Neural Agent Endpoints ---
 app.include_router(agent_routes.router)
+
+# --- 6. Gatekeeper Endpoints (Deepfake Verification) ---
+app.include_router(gatekeeper_routes.router)
 
 @app.get("/config")
 async def get_config():

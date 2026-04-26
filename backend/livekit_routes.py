@@ -169,19 +169,40 @@ async def get_livekit_token(req: TokenRequest):
         # --- 3. Admission Control (Lobby System) ---
         if req.role.lower() == "candidate":
             from nodes import _supabase_request
-            existing_reqs = _supabase_request("GET", f"join_requests?room_id=eq.{req.roomName}&participant_name=eq.{req.participantName}&status=eq.APPROVED")
+            # Check for ANY existing request for this participant in this room
+            existing_reqs = _supabase_request("GET", f"join_requests?room_id=eq.{req.roomName}&participant_name=eq.{req.participantName}&order=created_at.desc&limit=1")
             
-            if not existing_reqs:
+            if existing_reqs:
+                req_obj = existing_reqs[0]
+                if req_obj['status'] != 'APPROVED':
+                    return {
+                        "status": "AWAITING_APPROVAL",
+                        "request_id": req_obj['id'],
+                        "liveness_status": req_obj.get('liveness_status', 'PENDING'),
+                        "message_ar": "بانتظار موافقة المحاور للدخول...",
+                        "message_en": "Waiting for HR to approve your entry..."
+                    }
+                # If APPROVED, we proceed to token generation below
+            else:
+                # Create new PENDING request
                 _supabase_request("POST", "join_requests", {
                     "room_id": req.roomName,
                     "participant_name": req.participantName,
                     "status": "PENDING"
                 })
+                # Fetch it back to get the ID
+                new_req = _supabase_request("GET", f"join_requests?room_id=eq.{req.roomName}&participant_name=eq.{req.participantName}&order=created_at.desc&limit=1")
+                req_id = new_req[0]['id'] if new_req else None
+                
                 return {
                     "status": "AWAITING_APPROVAL",
+                    "request_id": req_id,
+                    "liveness_status": "PENDING",
                     "message_ar": "بانتظار موافقة المحاور للدخول...",
                     "message_en": "Waiting for HR to approve your entry..."
                 }
+
+
 
     # --- Generate token ---
     try:
