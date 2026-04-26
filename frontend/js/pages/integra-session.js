@@ -180,11 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             $('verify-processing-overlay')?.classList.remove('hidden');
             const blob = new Blob(this.chunks, { type: 'video/webm' });
             const formData = new FormData();
-            formData.append('video', blob);
-            formData.append('request_id', this.requestId);
+            formData.append('file', blob);
 
             try {
-                const res = await fetch(`${API_BASE}/api/gatekeeper/verify`, {
+                const res = await fetch(`${API_BASE}/api/verify-candidate/${this.requestId}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1295,12 +1294,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         requests.forEach(req => {
                             const reqKey = `${req.participant_name}`;
-                            if (knownRequests.has(reqKey)) return;
-                            knownRequests.add(reqKey);
+                            let card = document.getElementById(`lobby-card-${req.id}`);
+                            
+                            if (card) {
+                                // Update existing card status if changed
+                                const badge = card.querySelector('.liveness-badge');
+                                if (badge) {
+                                    const currentStatus = badge.getAttribute('data-status');
+                                    if (currentStatus !== req.liveness_status) {
+                                        badge.setAttribute('data-status', req.liveness_status || 'PENDING');
+                                        badge.className = `liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                                            req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                            req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                            req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
+                                            'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                        }`;
+                                        badge.innerHTML = `Gatekeeper: ${req.liveness_status || 'PENDING'}`;
+                                        
+                                        // Optionally update button state
+                                        const approveBtn = card.querySelector('.btn-approve');
+                                        if (req.liveness_status !== 'VERIFIED') {
+                                            approveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                                            approveBtn.title = "تحذير: لم يتم التحقق من هوية المرشح بعد";
+                                        } else {
+                                            approveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                                            approveBtn.title = "تم التحقق بنجاح";
+                                        }
+                                    }
+                                }
+                                return;
+                            }
 
-                            const card = document.createElement('div');
-                            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
-                            card.innerHTML = `
+                            const newCard = document.createElement('div');
+                            newCard.id = `lobby-card-${req.id}`;
+                            newCard.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+                            newCard.innerHTML = `
                                 <div class="flex items-start gap-4 mb-4">
                                     <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
                                         <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
@@ -1311,9 +1339,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                         
                                         <!-- Deepfake Verification Badge -->
                                         <div class="mt-2 flex items-center gap-2">
-                                            <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                                                req.liveness_status === 'PASSED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                            <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                                                req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
                                                 req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
                                                 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                             }">
                                                 Gatekeeper: ${req.liveness_status || 'PENDING'}
@@ -1331,22 +1360,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             `;
 
-                            card.querySelector('.btn-approve').onclick = async () => {
+                            lobbyContainer.appendChild(newCard);
+                            if (window.lucide) window.lucide.createIcons({ scope: newCard });
+
+                            newCard.querySelector('.btn-approve').onclick = async () => {
+                                if (req.liveness_status !== 'VERIFIED') {
+                                    if (!confirm("⚠️ تنبيه أمني: هذا المرشح لم يجتز اختبار الـ Deepfake أو لا يزال قيد الفحص. هل تريد السماح له بالدخول على مسؤوليتك؟")) {
+                                        return;
+                                    }
+                                }
                                 await fetch(`${API_BASE}/api/livekit/decide-request`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
                                 });
-                                card.remove();
+                                newCard.remove();
                             };
 
-                            card.querySelector('.btn-deny').onclick = async () => {
+                            newCard.querySelector('.btn-deny').onclick = async () => {
                                 await fetch(`${API_BASE}/api/livekit/decide-request`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
                                 });
-                                card.remove();
+                                newCard.remove();
                                 knownRequests.delete(reqKey);
                             };
 

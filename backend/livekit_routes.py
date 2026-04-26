@@ -284,7 +284,11 @@ async def check_request_status(room_id: str, participant_name: str):
     from nodes import _supabase_request
     res = _supabase_request("GET", f"join_requests?room_id=eq.{room_id}&participant_name=eq.{participant_name}&order=created_at.desc")
     if res:
-        return {"status": res[0]['status']}
+        return {
+            "id": res[0]['id'],
+            "status": res[0]['status'],
+            "liveness_status": res[0].get('liveness_status', 'PENDING')
+        }
     return {"status": "NOT_FOUND"}
 
 
