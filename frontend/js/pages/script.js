@@ -101,7 +101,7 @@ class FramePlayer {
         for (let i = 1; i <= this.totalFrames; i++) {
             const img = new Image();
             // Using the extracted frames from the frames/ folder
-            img.src = `./frames/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
+            img.src = `../../assets/frames/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
             img.onload = () => {
                 loadedCount++;
                 if (loadedCount === this.totalFrames) {
