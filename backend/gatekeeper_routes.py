@@ -24,8 +24,7 @@ def process_video_and_update_db(request_id: str, video_path: str):
         
         if "error" in results:
             _supabase_request("PATCH", f"join_requests?id=eq.{request_id}", {
-                "liveness_status": "FAILED",
-                "verification_task_completed": True
+                "liveness_status": "FAILED"
             })
             return
 
@@ -43,8 +42,7 @@ def process_video_and_update_db(request_id: str, video_path: str):
         update_data = {
             "liveness_status": db_status,
             "deepfake_score": float(score),
-            "forensic_report_url": report_b64,
-            "verification_task_completed": True
+            "forensic_report_url": report_b64
         }
         
         print(f"✅ Gatekeeper: Analysis complete. Result: {verdict} ({score:.2f})")
@@ -53,8 +51,7 @@ def process_video_and_update_db(request_id: str, video_path: str):
     except Exception as e:
         print(f"❌ Gatekeeper Error: {str(e)}")
         _supabase_request("PATCH", f"join_requests?id=eq.{request_id}", {
-            "liveness_status": "ERROR",
-            "verification_task_completed": True
+            "liveness_status": "ERROR"
         })
     finally:
         # Cleanup: Delete the temp video file

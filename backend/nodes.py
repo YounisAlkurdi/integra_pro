@@ -2,6 +2,7 @@ import uuid
 import json
 import urllib.request
 import urllib.parse
+import urllib.error
 from typing import List, Optional
 from pydantic import BaseModel
 from utils import get_env_safe
@@ -42,6 +43,10 @@ def _supabase_request(method: str, path: str, body=None):
         with urllib.request.urlopen(req) as resp:
             content = resp.read()
             return json.loads(content) if content else []
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"Neural Buffer HTTP Error {e.code}: {error_body}")
+        return []
     except Exception as e:
         print(f"Neural Buffer Error: {e}")
         return []
