@@ -186,16 +186,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // 5. Transcript Logs
         const transcriptContainer = document.getElementById('transcript-container');
+        const candidateName = node.candidate_name;
+
         if (chatLogs && chatLogs.length > 0) {
             transcriptContainer.innerHTML = chatLogs.map(log => {
-                const isHR = log.sender.toLowerCase().includes('hr') || log.sender.toLowerCase().includes('admin');
+                // Heuristic: LiveKit identities (HR) often have # or explicit tags
+                const s = log.sender?.toLowerCase() || '';
+                const isHR = s.includes('#') || s.includes('hr') || s.includes('admin');
+                const isCandidate = !isHR;
+
                 return `
                     <div class="flex flex-col ${isHR ? 'items-end' : 'items-start'} gap-2">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[8px] font-mono uppercase tracking-widest text-white/30">${log.sender}</span>
+                        <div class="flex items-center gap-2 mb-1 ${isHR ? 'flex-row-reverse' : ''}">
+                            <span class="text-[8px] font-mono uppercase tracking-widest ${isHR ? 'text-cyan-400/60' : 'text-white/30'}">${log.sender}</span>
                             <span class="text-[8px] font-mono text-white/10 italic">${new Date(log.created_at).toLocaleTimeString()}</span>
                         </div>
-                        <div class="px-5 py-3 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[80%] ${isHR ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 rounded-tr-none' : 'bg-white/5 border border-white/10 text-white/70 rounded-tl-none'}">
+                        <div class="px-5 py-3 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[80%] ${isHR 
+                            ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 rounded-tr-none ml-auto' 
+                            : 'bg-white/5 border border-white/10 text-white/70 rounded-tl-none mr-auto'}">
                             ${log.message}
                         </div>
                     </div>
