@@ -168,20 +168,72 @@
                                 </div>
                             </div>
 
-                            <!-- Recommendations -->
-                            <div class="space-y-8">
-                                <div class="glass-panel p-10 rounded-[2.5rem] border border-white/5">
-                                    <h3 class="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mb-8">AI Directives</h3>
-                                    <ul id="recommendations-list" class="space-y-6">
-                                        <!-- Populated via JS -->
-                                    </ul>
-                                </div>
-
-                                <div class="glass-panel p-10 rounded-[2.5rem] border border-red-500/10 bg-red-500/[0.01]">
-                                    <h3 class="text-[10px] font-mono text-red-500/50 uppercase tracking-[0.4em] mb-6">Threat Log</h3>
-                                    <div id="alerts-container" class="space-y-4">
-                                        <!-- Populated via JS -->
+                            <!-- Forensic & Video Evidence -->
+                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5 bg-cyan-400/[0.01]">
+                                <div class="flex items-center gap-4 mb-12">
+                                    <div class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center">
+                                        <i data-lucide="video" class="text-cyan-400 w-5 h-5"></i>
                                     </div>
+                                    <h3 class="text-xl font-black uppercase italic tracking-tighter">Verification Evidence</h3>
+                                </div>
+                                
+                                <div id="verification-evidence-container" class="space-y-8">
+                                    <!-- Video Preview -->
+                                    <div class="aspect-video rounded-[2rem] bg-obsidian border border-white/5 overflow-hidden relative group">
+                                        <video id="verification-video" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" controls></video>
+                                        <div id="video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-obsidian/80">
+                                            <i data-lucide="video-off" class="w-12 h-12 text-white/10 mb-4"></i>
+                                            <p class="text-[10px] font-mono text-white/20 uppercase tracking-widest">No visual record found</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Deepfake Score -->
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                            <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Deepfake Index</p>
+                                            <div class="flex items-baseline gap-2">
+                                                <span id="forensic-score" class="text-3xl font-black tracking-tighter">--</span>
+                                                <span class="text-[10px] font-mono text-white/20">/100</span>
+                                            </div>
+                                        </div>
+                                        <div class="p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                            <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Neural Status</p>
+                                            <span id="forensic-status" class="text-xs font-black uppercase tracking-widest text-white/40 italic">STABLE</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Forensic Brief -->
+                                    <div class="p-8 bg-cyan-400/5 border border-cyan-400/10 rounded-3xl">
+                                        <h4 class="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <i data-lucide="scroll-text" class="w-3 h-3"></i> AI Forensic Brief
+                                        </h4>
+                                    <div id="forensic-brief" class="text-[11px] font-mono text-white/50 leading-relaxed uppercase tracking-tight">
+                                        Analysis of biometric signals and neural patterns pending selection.
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conversation Transcript -->
+                        <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5">
+                            <div class="flex items-center justify-between mb-12">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                                        <i data-lucide="message-square" class="text-cyan-400 w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="text-xl font-black uppercase italic tracking-tighter">Neural Transcript <span class="text-white/20">(TTS Logs)</span></h3>
+                                </div>
+                                <div class="flex gap-2">
+                                    <div class="px-4 py-2 bg-white/5 rounded-lg text-[9px] font-mono uppercase tracking-widest text-white/40">Encrypted</div>
+                                </div>
+                            </div>
+
+                            <div id="transcript-container" class="space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar pr-4">
+                                <!-- Messages will be injected here -->
+                                <div class="p-10 text-center opacity-20">
+                                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-4"></i>
+                                    <p class="text-[10px] font-mono uppercase tracking-widest">No communications logged in this session</p>
                                 </div>
                             </div>
                         </div>

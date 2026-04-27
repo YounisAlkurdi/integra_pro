@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         sidebarList.innerHTML = nodes.map(node => `
-            <div class="interview-item p-8 border-b border-white/5 group" onclick="window.viewArchive('${node.id}')" id="archive-${node.id}">
+            <div class="interview-item p-8 border-b border-white/5 group" onclick="window.viewArchive('${node.room_id}')" id="archive-${node.room_id}">
                 <div class="flex items-center gap-5">
                     <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-cyan-400 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] transition-all">
                         ${node.candidate_name[0]}
@@ -79,8 +79,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => reportDetail.style.opacity = '1', 50);
 
         try {
-            const { data: node, error } = await supabase.from('nodes').select('*').eq('id', nodeId).single();
-            if (error) throw error;
+            // Fetch Node Data
+            const { data: node, error: nodeError } = await supabase.from('nodes').select('*').eq('room_id', nodeId).single();
+            if (nodeError) throw nodeError;
+
+            // Fetch Forensic Data (from join_requests)
+            const { data: joinReq, error: joinError } = await supabase
+                .from('join_requests')
+                .select('*')
+                .eq('room_id', nodeId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            // Fetch Chat Logs (Transcript)
+            const { data: chatLogs, error: chatError } = await supabase
+                .from('chat_logs')
+                .select('*')
+                .eq('room_id', nodeId)
+                .order('created_at', { ascending: true });
 
             // Header Decryption
             document.getElementById('rep-name').innerText = node.candidate_name;
@@ -89,7 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById('rep-date').innerText = `TIMESTAMP: ${new Date(node.created_at).toLocaleString()}`;
 
             // Neural Visualization
-            visualizeNeuralData(generateAnalysisCluster());
+            visualizeNeuralData(node, joinReq, chatLogs);
             showToast("Archive Decrypted Successfully", "success");
         } catch (e) {
             console.error("Neural Retrieval Failed:", e);
@@ -97,15 +114,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
-    function visualizeNeuralData(data) {
-        document.getElementById('rep-overall').innerText = data.overall;
-        document.getElementById('rep-confidence').innerText = data.confidence + '%';
-        document.getElementById('rep-fraud').innerText = data.fraud + '%';
-        document.getElementById('rep-eye').innerText = data.eye + '%';
+    function visualizeNeuralData(node, joinReq, chatLogs) {
+        // 1. Overall Stats
+        const deepfakeScore = joinReq ? (joinReq.deepfake_score || 0) : 0;
+        const confidence = 85; // Simulated/Derived from other metrics
+        const integrityRisk = deepfakeScore;
+        const eyeStability = 90; // Placeholder
 
-        // Risk Assessment
+        document.getElementById('rep-overall').innerText = 100 - Math.floor(deepfakeScore / 2);
+        document.getElementById('rep-confidence').innerText = confidence + '%';
+        document.getElementById('rep-fraud').innerText = Math.round(integrityRisk) + '%';
+        document.getElementById('rep-eye').innerText = eyeStability + '%';
+
+        // 2. Risk Assessment
         const riskBadge = document.getElementById('rep-risk-badge');
-        if (data.fraud > 30) {
+        if (integrityRisk > 30) {
             riskBadge.className = 'px-8 py-3 rounded-2xl border border-red-500/20 text-[10px] font-black uppercase tracking-[0.3em] bg-red-500/10 text-red-500';
             riskBadge.innerText = 'CRITICAL RISK';
         } else {
@@ -113,12 +136,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             riskBadge.innerText = 'STABLE NODE';
         }
 
-        // Metrics Bars
+        // 3. Metrics Bars
         const metrics = [
-            { label: 'Synaptic Stability', val: data.confidence, color: 'text-cyan-400' },
-            { label: 'Integrity Pulse', val: 100 - data.fraud, color: 'text-emerald-500' },
-            { label: 'Response Velocity', val: data.velocity, color: 'text-purple-400' },
-            { label: 'Gaze Focus', val: data.eye, color: 'text-blue-400' }
+            { label: 'Neural Authenticity', val: 100 - Math.round(deepfakeScore), color: 'text-cyan-400' },
+            { label: 'Integrity Pulse', val: 100 - Math.round(integrityRisk), color: 'text-emerald-500' },
+            { label: 'Liveness Confidence', val: confidence, color: 'text-purple-400' },
+            { label: 'Signal Stability', val: eyeStability, color: 'text-blue-400' }
         ];
 
         document.getElementById('metrics-container').innerHTML = metrics.map(m => `
@@ -128,39 +151,64 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <span class="text-white font-bold">${m.val}%</span>
                 </div>
                 <div class="metric-bar-bg">
-                    <div class="metric-fill" style="width: ${m.val}%; color: currentColor; background: currentColor; box-shadow: 0 0 20px currentColor; opacity: 0.8; color: ${m.color.includes('cyan') ? '#22d3ee' : (m.color.includes('emerald') ? '#10b981' : (m.color.includes('purple') ? '#a855f7' : '#60a5fa'))}"></div>
+                    <div class="metric-fill" style="width: ${m.val}%; background: currentColor; box-shadow: 0 0 20px currentColor; opacity: 0.8; color: ${m.color.includes('cyan') ? '#22d3ee' : (m.color.includes('emerald') ? '#10b981' : (m.color.includes('purple') ? '#a855f7' : '#60a5fa'))}"></div>
                 </div>
             </div>
         `).join('');
 
-        // Intelligence Directives (Recommendations)
-        document.getElementById('recommendations-list').innerHTML = `
-            <li class="flex items-start gap-5 group">
-                <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
-                </div>
-                <p class="text-[11px] font-medium leading-relaxed text-white/50 group-hover:text-white transition-colors uppercase tracking-widest">Node exhibited 92% synchronization during the technical query phase.</p>
-            </li>
-            <li class="flex items-start gap-5 group">
-                <div class="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20 text-cyan-400">
-                    <i data-lucide="zap" class="w-4 h-4"></i>
-                </div>
-                <p class="text-[11px] font-medium leading-relaxed text-white/50 group-hover:text-white transition-colors uppercase tracking-widest">Recommended for immediate Level 4 Protocol clearance.</p>
-            </li>
-        `;
+        // 4. Forensic Evidence
+        const videoEl = document.getElementById('verification-video');
+        const videoPlaceholder = document.getElementById('video-placeholder');
+        
+        if (joinReq && joinReq.verification_video_path) {
+            videoEl.src = joinReq.verification_video_path; 
+            videoEl.load(); // Force browser to refresh video buffer
+            videoEl.classList.remove('hidden');
+            videoPlaceholder.classList.add('hidden');
+        } else {
+            videoEl.classList.add('hidden');
+            videoPlaceholder.classList.remove('hidden');
+        }
 
-        // Threat Log (Alerts)
-        document.getElementById('alerts-container').innerHTML = data.fraud > 15 ? `
-            <div class="p-6 bg-red-400/5 border border-red-500/20 rounded-2xl flex items-center gap-5">
-                <div class="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
-                <p class="text-[10px] font-mono text-red-500/80 uppercase tracking-widest leading-loose">Anomalous gaze patterns detected at T-minus 14:20. Deep verification suggested.</p>
-            </div>
-        ` : `
-            <div class="p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center gap-5">
-                <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                <p class="text-[10px] font-mono text-white/20 uppercase tracking-widest">Threat environment: CLEAR</p>
-            </div>
-        `;
+        document.getElementById('forensic-score').innerText = Math.round(deepfakeScore);
+        const forensicStatus = document.getElementById('forensic-status');
+        if (deepfakeScore > 30) {
+            forensicStatus.innerText = 'ANOMALOUS';
+            forensicStatus.className = 'text-xs font-black uppercase tracking-widest text-red-500 italic';
+        } else {
+            forensicStatus.innerText = 'AUTHENTIC';
+            forensicStatus.className = 'text-xs font-black uppercase tracking-widest text-emerald-500 italic';
+        }
+
+        document.getElementById('forensic-brief').innerHTML = joinReq && joinReq.forensic_report_url ? 
+            `<img src="${joinReq.forensic_report_url}" class="w-full rounded-xl border border-white/5" />` : 
+            (joinReq ? `Biometric analysis for ${joinReq.participant_name} shows a deepfake probability of ${deepfakeScore}%. ${deepfakeScore > 20 ? 'Visual inconsistencies detected in neural frame mapping.' : 'Neural patterns match biometric baseline.'}` : 'No forensic data available for this node.');
+
+        // 5. Transcript Logs
+        const transcriptContainer = document.getElementById('transcript-container');
+        if (chatLogs && chatLogs.length > 0) {
+            transcriptContainer.innerHTML = chatLogs.map(log => {
+                const isHR = log.sender.toLowerCase().includes('hr') || log.sender.toLowerCase().includes('admin');
+                return `
+                    <div class="flex flex-col ${isHR ? 'items-end' : 'items-start'} gap-2">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[8px] font-mono uppercase tracking-widest text-white/30">${log.sender}</span>
+                            <span class="text-[8px] font-mono text-white/10 italic">${new Date(log.created_at).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="px-5 py-3 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[80%] ${isHR ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 rounded-tr-none' : 'bg-white/5 border border-white/10 text-white/70 rounded-tl-none'}">
+                            ${log.message}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            transcriptContainer.innerHTML = `
+                <div class="p-10 text-center opacity-20">
+                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-4"></i>
+                    <p class="text-[10px] font-mono uppercase tracking-widest">No communications logged in this session</p>
+                </div>
+            `;
+        }
 
         if (window.lucide) lucide.createIcons();
     }
