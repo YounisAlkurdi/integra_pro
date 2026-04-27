@@ -919,30 +919,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function saveLogToServer(sender, message) {
-        const roomName = window.LiveKitSession?.getState?.()?.roomName;
-        if (!roomName || !message) return;
+        // Use currentRoomId from URL params (line 30) — reliable, doesn't depend on LiveKitSession state
+        const roomId = currentRoomId || window.LiveKitSession?.getState?.()?.roomName;
+        if (!roomId || !message?.trim()) return;
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-            
-            // Centralized API Base from settings
-            const apiBase = window.INTEGRA_SETTINGS?.API_BASE || 'http://127.0.0.1:8000';
+            const apiBase = window.APP_CONFIG?.backendUrl || 'http://127.0.0.1:8000';
 
-            await fetch(`${apiBase}/api/logs`, {
+            const resp = await fetch(`${apiBase}/api/logs`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : ''
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
                 body: JSON.stringify({
-                    node_id: roomName,
-                    sender: sender,
+                    node_id: roomId,
+                    sender:  sender,
                     message: message
                 })
             });
+
+            if (!resp.ok) {
+                const errText = await resp.text();
+                console.warn('[Log] Backend rejected log:', resp.status, errText);
+            }
         } catch (err) {
-            console.warn('[Log] Failed to save transcript to server:', err);
+            console.warn('[Log] Failed to save transcript:', err);
         }
     }
 
