@@ -100,15 +100,19 @@ class FramePlayer {
         let loadedCount = 0;
         for (let i = 1; i <= this.totalFrames; i++) {
             const img = new Image();
-            // Using the extracted frames from the frames/ folder
             img.src = `../../assets/frames/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
             img.onload = () => {
                 loadedCount++;
-                if (loadedCount === this.totalFrames) {
+                
+                // Optimized: Show first frame as soon as it's ready
+                if (i === 1) {
                     this.isLoaded = true;
-                    this.onResize(); // Set canvas size
-                    this.syncTarget();
+                    this.onResize();
                     this.render();
+                }
+
+                if (loadedCount === this.totalFrames) {
+                    this.syncTarget();
                 }
             };
             this.frames.push(img);

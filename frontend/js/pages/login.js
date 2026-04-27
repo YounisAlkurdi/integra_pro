@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                     options: {
-                        redirectTo: window.location.origin + '/dashboard.html',
+                        redirectTo: window.location.origin + '/frontend/pages/dashboard.html',
                         queryParams: {
                             prompt: 'select_account',
                             access_type: 'offline'
