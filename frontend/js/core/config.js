@@ -27,6 +27,6 @@ window.APP_CONFIG = {
 
     // Forensic NLP Engine (Research-Grade)
     nlpUrl: window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
-            ? 'http://127.0.0.1:8001' 
+            ? 'http://127.0.0.1:8003' 
             : 'https://integra-nlp.vercel.app', 
 };
