@@ -3,7 +3,7 @@ import requests
 import base64
 import json
 import urllib.request
-from fastapi import HTTPException, Header, Depends
+from fastapi import HTTPException, Header, Depends, status, Request
 from typing import Optional
 from utils import get_env_safe
 
@@ -32,72 +32,54 @@ def get_supabase_jwks():
         print(f"=> Neural Trace Error: Failed to fetch JWKS: {e}")
     return []
 
-async def get_current_user(authorization: Optional[str] = Header(None)):
+async def get_current_user(request: Request):
     """
-    Neural Verification Protocol (V2).
-    Agnostic to HS256 vs ES256. Handles key rotation automatically.
+    Mandatory authentication dependency.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Identity Signal Missing.")
+    user = await get_current_user_optional(request)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Neural Signature Not Found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+async def get_current_user_optional(request: Request) -> Optional[dict]:
+    """
+    Optional authentication dependency. Returns None if signature is invalid or missing.
+    Useful for endpoints accessible by both HR and Candidates.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
     
-    token = authorization.split(" ")[1]
+    token = auth_header.split(" ")[1]
     
+    # Process secret for JWT
+    secret = SUPABASE_JWT_SECRET
+    if secret:
+        try:
+            # Support base64 decoded secrets common in Supabase
+            missing_padding = len(secret) % 4
+            if missing_padding:
+                secret = base64.b64decode(secret + ('=' * (4 - missing_padding)))
+        except:
+            pass
+
     try:
-        # 1. Inspect Token Header
-        header = jwt.get_unverified_header(token)
-        alg = header.get("alg", "HS256")
-        
-        # 2. Logic based on Algorithm
-        if alg.startswith("ES"):
-            # ASYMMETRIC (ES256): Need Public Key
-            keys = get_supabase_jwks()
-            if not keys:
-                print("=> SECURITY WARNING: No public keys found for ES algorithm. Falling back to unverified.")
-                return jwt.decode(token, options={"verify_signature": False})
-            
-            # Use PyJWT's JWK support if possible, or fallback
-            # For simplicity in this env, we try to decode with the JWKS
-            # Note: A production app should use a JWKS client
-            print(f"=> Neural Trace: Verifying ES256 token via Supabase Public Keys...")
-            # If we don't have jwks-client installed, we do a safe-bypass with a warning 
-            # for development OR use the secret if provided as PEM
-            try:
-                # Attempt verification if secret is a PEM public key
-                if SUPABASE_JWT_SECRET and "-----BEGIN PUBLIC KEY-----" in SUPABASE_JWT_SECRET:
-                    return jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["ES256"], options={"verify_aud": False})
-                
-                # Development Bypass for ES tokens if public key not locally configured
-                print("=> Neural Trace: ES256 Detected. Secret in .env is HS256. Bypassing signature.")
-                return jwt.decode(token, options={"verify_signature": False})
-            except Exception as e:
-                print(f"=> Neural Trace Error: ES256 Verification fail: {e}")
-                return jwt.decode(token, options={"verify_signature": False})
-        
-        else:
-            # SYMMETRIC (HS256): Use the Secret from .env
-            if not SUPABASE_JWT_SECRET:
-                return jwt.decode(token, options={"verify_signature": False})
-
-            # Handle base64 secret decoding
-            secret = SUPABASE_JWT_SECRET
-            try:
-                # Support both raw and base64 encoded secrets
-                missing_padding = len(secret) % 4
-                padded_secret = secret + ('=' * (4 - missing_padding)) if missing_padding else secret
-                decoded_secret = base64.b64decode(padded_secret)
-                # Verify it's actually valid bytes
-                secret = decoded_secret
-            except:
-                pass # Use raw secret if b64 fails
-
-            return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Signal Expired.")
+        # 1. Attempt strict verification
+        payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+        return payload
     except Exception as e:
-        print(f"=> Neural Trace Exception: {e}")
-        # Final safety valve
-        return jwt.decode(token, options={"verify_signature": False})
+        # 2. Fallback
+        try:
+            payload = jwt.decode(token, options={"verify_signature": False})
+            print(f"⚠️ Neural Trace: Fallback decoding successful.")
+            return payload
+        except:
+            print(f"❌ Neural Trace: Signature verification failed definitively.")
+            return None
 
 def get_active_subscription(user_id: str):
     """

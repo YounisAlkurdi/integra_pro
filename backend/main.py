@@ -6,7 +6,8 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from utils import get_env_safe
-from auth import get_current_user, get_user_profile_data, get_active_subscription
+from typing import Optional
+from auth import get_current_user, get_user_profile_data, get_active_subscription, get_current_user_optional
 from payments import PaymentRequest, execute_payment, handle_stripe_webhook
 from nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats
 from logs import ChatLogEntry, save_chat_log, get_node_chat_logs
@@ -90,9 +91,10 @@ async def sys_stats(user: dict = Depends(get_current_user)):
 
 # --- 4. Chat Logging Endpoints ---
 @app.post("/api/logs")
-async def add_chat_log(log: ChatLogEntry, user: dict = Depends(get_current_user)):
-    """Secure Transcript Recording."""
-    return save_chat_log(log, user_id=user["sub"])
+async def add_chat_log(log: ChatLogEntry, user: Optional[dict] = Depends(get_current_user_optional)):
+    """Transcript Recording (Allowed for candidates in active sessions)."""
+    user_id = user["sub"] if user else None
+    return save_chat_log(log, user_id=user_id)
 
 @app.get("/api/logs/{node_id}")
 async def fetch_logs(node_id: str, user: dict = Depends(get_current_user)):

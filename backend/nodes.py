@@ -3,6 +3,7 @@ import json
 import urllib.request
 import urllib.parse
 import urllib.error
+import mimetypes
 from typing import List, Optional
 from pydantic import BaseModel
 from utils import get_env_safe
@@ -50,6 +51,74 @@ def _supabase_request(method: str, path: str, body=None):
     except Exception as e:
         print(f"Neural Buffer Error: {e}")
         return []
+
+def ensure_bucket_exists(bucket_name: str):
+    """
+    Tries to create a bucket if it doesn't exist.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return
+    url = f"{SUPABASE_URL}/storage/v1/bucket"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+    body = {
+        "id": bucket_name,
+        "name": bucket_name,
+        "public": True
+    }
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            pass
+    except:
+        pass # Already exists
+
+def upload_to_supabase_storage(bucket: str, path: str, file_path: str):
+    """
+    Uploads a local file to Supabase Storage and returns the public URL.
+    """
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return None
+
+    # Ensure bucket exists first
+    ensure_bucket_exists(bucket)
+
+    # 1. Read File
+    try:
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    except Exception as e:
+        print(f"Storage Upload Failed (Read): {e}")
+        return None
+
+    # 2. Prepare Request
+    url = f"{SUPABASE_URL}/storage/v1/object/{bucket}/{path}"
+    content_type, _ = mimetypes.guess_type(file_path)
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": content_type or "application/octet-stream",
+        "x-upsert": "true"
+    }
+
+    req = urllib.request.Request(url, data=file_data, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            # Successfully uploaded
+            # Construct public URL (Assumes bucket is public)
+            public_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}"
+            return public_url
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"Storage Upload HTTP Error {e.code}: {error_body}")
+        # If it fails, maybe it already exists or bucket missing
+        return f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}"
+    except Exception as e:
+        print(f"Storage Upload Failed: {e}")
+        return None
 
 def create_neural_node(node: NodeProtocol, user_id: str):
     """Initializes a permanent control node."""

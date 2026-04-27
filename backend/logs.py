@@ -36,15 +36,28 @@ def _supabase_request(method: str, path: str, body=None):
         print(f"Supabase Log Request Failed: {e}")
         return []
 
-def save_chat_log(log: ChatLogEntry, user_id: str):
+def save_chat_log(log: ChatLogEntry, user_id: Optional[str] = None):
     """
-    Saves a single transcript segment to the database.
+    Saves a single transcript segment. 
+    If user_id is missing (candidate logging), we derive it from the room owner.
     """
+    actual_user_id = user_id
+    
+    if not actual_user_id:
+        # Candidate is logging. Find the owner of this room.
+        node_info = _supabase_request("GET", f"nodes?room_id=eq.{log.node_id}&select=user_id")
+        if node_info and len(node_info) > 0:
+            actual_user_id = node_info[0].get("user_id")
+    
+    if not actual_user_id:
+        print(f"❌ Log Error: No owner found for room {log.node_id}. Log discarded.")
+        return []
+
     body = {
-        "node_id": log.node_id,
+        "room_id": log.node_id, 
         "sender": log.sender,
         "message": log.message,
-        "user_id": user_id
+        "user_id": actual_user_id
     }
     return _supabase_request("POST", "chat_logs", body)
 
@@ -52,5 +65,5 @@ def get_node_chat_logs(node_id: str, user_id: str):
     """
     Retrieves all transcript segments for a particular interview.
     """
-    path = f"chat_logs?node_id=eq.{node_id}&user_id=eq.{user_id}&order=timestamp.asc"
+    path = f"chat_logs?room_id=eq.{node_id}&user_id=eq.{user_id}&order=created_at.asc"
     return _supabase_request("GET", path)

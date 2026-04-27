@@ -4,7 +4,7 @@ import uuid
 import shutil
 import tempfile
 from engine.deepfake_Video.processor import FullDeepfakeDetector
-from nodes import _supabase_request
+from nodes import _supabase_request, upload_to_supabase_storage
 
 router = APIRouter(tags=["Gatekeeper"])
 
@@ -19,30 +19,37 @@ def process_video_and_update_db(request_id: str, video_path: str):
     try:
         print(f"🔍 Gatekeeper: Analyzing video for request {request_id}...")
         
-        # 1. Run Analysis
+        # 1. Upload Video to Storage first so it's persisted for the report
+        video_filename = os.path.basename(video_path)
+        storage_path = f"{request_id}/{video_filename}"
+        video_url = upload_to_supabase_storage("verification_videos", storage_path, video_path)
+        
+        # 2. Run Analysis
         results = detector.analyze(video_path)
         
         if "error" in results:
             _supabase_request("PATCH", f"join_requests?id=eq.{request_id}", {
-                "liveness_status": "FAILED"
+                "liveness_status": "FAILED",
+                "verification_video_path": video_url
             })
             return
 
-        # 2. Extract results
+        # 3. Extract results
         verdict = results.get("verdict", "UNCERTAIN")
         score = results.get("final_score", 0.0)
         report_b64 = results.get("report_image", "") # This is the base64 plot
 
-        # 3. Determine Database Status
+        # 4. Determine Database Status
         # We use 'VERIFIED' only if REAL, otherwise 'FAILED' or 'UNCERTAIN'
         db_status = "VERIFIED" if verdict == "REAL" else "FAILED"
         if verdict == "UNCERTAIN": db_status = "UNCERTAIN"
 
-        # 4. Update Supabase
+        # 5. Update Supabase
         update_data = {
             "liveness_status": db_status,
             "deepfake_score": float(score),
-            "forensic_report_url": report_b64
+            "forensic_report_url": f"data:image/png;base64,{report_b64}",
+            "verification_video_path": video_url # Persist the video URL for reports
         }
         
         print(f"✅ Gatekeeper: Analysis complete. Result: {verdict} ({score:.2f})")
@@ -54,7 +61,7 @@ def process_video_and_update_db(request_id: str, video_path: str):
             "liveness_status": "ERROR"
         })
     finally:
-        # Cleanup: Delete the temp video file
+        # Cleanup: Delete the local temp video file (but it's safe in cloud now)
         if os.path.exists(video_path):
             os.remove(video_path)
 

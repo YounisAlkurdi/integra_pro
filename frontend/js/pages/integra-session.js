@@ -923,12 +923,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!roomName || !message) return;
 
         try {
-            const token = localStorage.getItem('supabase_token');
-            await fetch('http://localhost:8000/api/logs', {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            
+            // Centralized API Base from settings
+            const apiBase = window.INTEGRA_SETTINGS?.API_BASE || 'http://127.0.0.1:8000';
+
+            await fetch(`${apiBase}/api/logs`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': token ? `Bearer ${token}` : ''
                 },
                 body: JSON.stringify({
                     node_id: roomName,
