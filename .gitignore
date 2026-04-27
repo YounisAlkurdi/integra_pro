@@ -7,9 +7,11 @@ __pycache__/
 vnlp
 env/
 venv/
+vtest
 cvenv
 ENV/
 cvenv
+
 
 # OS files
 .DS_Store
