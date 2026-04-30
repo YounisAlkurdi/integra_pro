@@ -44,26 +44,49 @@
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
 
-    <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 bg-obsidian/40 backdrop-blur-2xl">
-        <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
-            <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target flex items-center gap-2">
-                <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-400 to-violet-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]"></div>
-                INTEGRA
-            </a>
-            
-            <nav class="hidden md:flex gap-12 text-xs font-medium text-white/50">
-                <a href="index.html#features" class="hover:text-white transition-all hover-target">Features</a>
-                <a href="index.html#platform" class="hover:text-white transition-all hover-target">Platform</a>
-                <a href="pricing.html" class="text-white hover-target">Pricing</a>
-            </nav>
+    <!-- Vertical Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
+        <!-- Logo Node -->
+        <div class="mb-12">
+            <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                <span class="text-obsidian font-black text-xl">I</span>
+            </div>
+        </div>
 
-            <a href="login.html" class="text-xs font-semibold border border-white/10 px-6 py-2.5 rounded-full hover:bg-white hover:text-black hover:border-white transition-all hover-target hidden sm:block">
-                Authenticate
+        <!-- Navigation Nodes -->
+        <nav class="flex-1 flex flex-col gap-8">
+            <a href="dashboard.html" class="sidebar-link hover-target" title="Console">
+                <i data-lucide="terminal" class="w-5 h-5"></i>
+            </a>
+            <a href="reports.html" class="sidebar-link hover-target" title="Archives">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </a>
+            <a href="appointments.html" class="sidebar-link hover-target" title="Appointments">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+            </a>
+            <a href="billing.html" class="sidebar-link hover-target" title="Billing">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </a>
+            <a href="pricing.html" class="sidebar-link active hover-target" title="Security labs">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </a>
+            <a href="llm-config.html" class="sidebar-link hover-target" title="العقل التحليلي — LLM Config">
+                <i data-lucide="brain" class="w-5 h-5"></i>
+            </a>
+        </nav>
+
+        <!-- System Actions -->
+        <div class="flex flex-col gap-6 items-center">
+            <a href="profile.html" class="sidebar-link hover-target" id="user-avatar" title="الملف الشخصي">
+                <i data-lucide="user" class="w-5 h-5"></i>
+            </a>
+            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="تسجيل الخروج">
+                <i data-lucide="power" class="w-5 h-5"></i>
             </a>
         </div>
-    </header>
+    </aside>
 
-    <main class="pt-40 pb-32 relative z-10">
+    <main class="ml-20 pt-16 pb-32 relative z-10">
         <div class="max-w-7xl mx-auto px-6">
             
             <!-- Hero Section -->
