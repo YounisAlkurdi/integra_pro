@@ -194,88 +194,27 @@ body {
 }
 
 /* ===================================== */
-/* 6. RESIDENT EVIL 7 "BIOHAZARD" HORROR-TECH ESTHETIC */
+/* 6. PREMIUM TECH AESTHETIC ENHANCEMENTS */
 /* ===================================== */
 
-/* VHS Scanlines Overlay */
-.scanlines {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 6;
-    background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0),
-        rgba(255, 255, 255, 0) 50%,
-        rgba(0, 0, 0, 0.2) 50%,
-        rgba(0, 0, 0, 0.2)
-    );
-    background-size: 100% 4px; /* Tiny horizontal stripes */
-    opacity: 0.15;
+/* Elegant Floating Glows */
+@keyframes floatGlow {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+    50% { transform: translateY(-20px) scale(1.05); opacity: 0.8; }
 }
 
-/* Cybernetic/VHS RGB Glitch Effect */
-.glitch {
-    position: relative;
-    display: inline-block;
+.ambient-glow {
+    animation: floatGlow 10s ease-in-out infinite;
 }
 
-.glitch::before,
-.glitch::after {
-    content: attr(data-text);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.8;
-}
-
-.glitch::before {
-    left: 2px;
-    text-shadow: -2px 0 red;
-    clip: rect(24px, 550px, 90px, 0);
-    animation: glitch-anim-2 3s infinite linear alternate-reverse;
-}
-
-.glitch::after {
-    left: -2px;
-    text-shadow: -2px 0 var(--accent);
-    clip: rect(85px, 550px, 140px, 0);
-    animation: glitch-anim 2.5s infinite linear alternate-reverse;
-}
-
-@keyframes glitch-anim {
-    0% { clip: rect(4px, 9999px, 83px, 0); transform: skew(0.5deg); }
-    5% { clip: rect(48px, 9999px, 12px, 0); transform: skew(0.1deg); }
-    10% { clip: rect(100px, 9999px, 98px, 0); }
-    15% { clip: rect(11px, 9999px, 55px, 0); }
-    20% { clip: rect(81px, 9999px, 4px, 0); transform: skew(-0.5deg); }
-    25% { clip: rect(59px, 9999px, 79px, 0); }
-    30% { clip: rect(2px, 9999px, 10px, 0); }
-    100% { clip: rect(2px, 9999px, 10px, 0); }
-}
-
-@keyframes glitch-anim-2 {
-    0% { clip: rect(65px, 9999px, 100px, 0); }
-    5% { clip: rect(52px, 9999px, 74px, 0); }
-    10% { clip: rect(79px, 9999px, 85px, 0); transform: translateX(2px); }
-    15% { clip: rect(75px, 9999px, 5px, 0); }
-    20% { clip: rect(60px, 9999px, 19px, 0); }
-    100% { clip: rect(60px, 9999px, 19px, 0); transform: translateX(0); }
-}
-
-/* Pulsing Red 'REC' Indicator */
+/* Pulsing Indicator */
 .rec-indicator {
-    animation: pulse-red 1.5s infinite;
+    animation: pulse-soft 2s infinite;
 }
 
-@keyframes pulse-red {
-    0%, 100% { opacity: 1; color: #ef4444; }
-    50% { opacity: 0.3; color: #7f1d1d; }
+@keyframes pulse-soft {
+    0%, 100% { opacity: 1; color: var(--accent); }
+    50% { opacity: 0.5; color: #8b5cf6; }
 }
 
 /* --- Frame/Video/Canvas Specific Engine Styles --- */
@@ -303,9 +242,8 @@ body {
     max-width: 80rem; 
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    clip-path: inset(0% round 2rem);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    background: #000;
+    clip-path: inset(0% round 1.5rem);
+    background: transparent;
     contain: layout style paint;
     transform: translateZ(0);
 }
