@@ -7,14 +7,36 @@
     
     <!-- Tailwind & Google Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#020617', 
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"Space Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/reports.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-obsidian text-white relative min-h-screen">
     
-    <div class="bg-noise"></div>
-    <div class="grid-lines fixed inset-0 opacity-10"></div>
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-400/20 blur-[120px] rounded-full mix-blend-screen animate-pulse-slow"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-violet-400/20 blur-[150px] rounded-full mix-blend-screen animate-pulse-slow" style="animation-delay: 2s;"></div>
+    </div>
 
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
@@ -45,16 +67,16 @@
             <a href="pricing.html" class="sidebar-link hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
+            <a href="llm-config.html" class="sidebar-link hover-target" title="العقل التحليلي — LLM Config">
+                <i data-lucide="brain" class="w-5 h-5"></i>
+            </a>
         </nav>
 
         <!-- System Actions -->
         <div class="flex flex-col gap-6 items-center">
-            <a href="#" class="sidebar-link hover-target" title="Settings">
-                <i data-lucide="settings" class="w-5 h-5 text-white/40"></i>
+            <a href="profile.html" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform hover-target overflow-hidden" id="user-avatar" title="الملف الشخصي">
+                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">YA</div>
             </a>
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform overflow-hidden" id="user-avatar">
-                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold uppercase">YA</div>
-            </div>
             <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="تسجيل الخروج">
                 <i data-lucide="power" class="w-5 h-5"></i>
             </a>
@@ -112,7 +134,7 @@
 
                     <div id="report-detail" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                         <!-- Summary Header Card -->
-                        <div class="glass-panel p-10 rounded-[3rem] border border-white/5 relative overflow-hidden group">
+                        <div class="glass-panel p-10 rounded-[3rem] border border-white/5 relative overflow-hidden group hover:border-cyan-400/20 transition-all duration-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] hover:shadow-[0_0_60px_rgba(34,211,238,0.1)]">
                             <div class="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <i data-lucide="cpu" class="w-40 h-40"></i>
                             </div>
@@ -156,7 +178,7 @@
 
                         <div class="grid lg:grid-cols-2 gap-8">
                             <!-- Neural Metrics -->
-                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5">
+                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5 hover:border-cyan-400/20 transition-all duration-700">
                                 <div class="flex items-center gap-4 mb-12">
                                     <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
                                         <i data-lucide="activity" class="text-cyan-400 w-5 h-5"></i>
@@ -169,7 +191,7 @@
                             </div>
 
                             <!-- Forensic & Video Evidence -->
-                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5 bg-cyan-400/[0.01]">
+                            <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5 bg-cyan-400/[0.01] hover:border-cyan-400/20 transition-all duration-700">
                                 <div class="flex items-center gap-4 mb-12">
                                     <div class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center">
                                         <i data-lucide="video" class="text-cyan-400 w-5 h-5"></i>
@@ -216,7 +238,7 @@
                         </div>
 
                         <!-- Conversation Transcript -->
-                        <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5">
+                        <div class="glass-panel p-12 rounded-[3.5rem] border border-white/5 hover:border-cyan-400/20 transition-all duration-700">
                             <div class="flex items-center justify-between mb-12">
                                 <div class="flex items-center gap-4">
                                     <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
