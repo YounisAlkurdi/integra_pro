@@ -48,8 +48,42 @@
     <div class="scanlines"></div>
     <div class="grid-lines fixed inset-0 opacity-10"></div>
 
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-[60] glass-panel border-t border-white/5 backdrop-blur-2xl bg-obsidian/80 px-6 py-4 flex items-center justify-between overflow-x-auto gap-4 custom-scrollbar">
+        <a href="dashboard.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Console">
+            <i data-lucide="terminal" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Console</span>
+        </a>
+        <a href="reports.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Archives">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Archives</span>
+        </a>
+        <a href="appointments.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white" title="Appointments">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Appts</span>
+        </a>
+        <a href="billing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Billing">
+            <i data-lucide="credit-card" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Billing</span>
+        </a>
+        <a href="pricing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Security labs">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Labs</span>
+        </a>
+        <a href="llm-config.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Neural Hub">
+            <i data-lucide="brain" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Config</span>
+        </a>
+        <a href="profile.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="User Profile">
+            <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] overflow-hidden">
+                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[6px] font-bold">YA</div>
+            </div>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Profile</span>
+        </a>
+    </nav>
+
     <!-- Vertical Sidebar (Consistent with Dashboard) -->
-    <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
+    <aside class="hidden md:flex fixed left-0 top-0 h-full w-20 flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
         <div class="mb-12">
             <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
                 <span class="text-obsidian font-black text-xl">I</span>
@@ -78,39 +112,36 @@
             <a href="profile.html" class="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] cursor-pointer hover:scale-110 transition-transform hover-target overflow-hidden" id="user-avatar-sidebar" title="User Profile">
                 <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[10px] font-bold">YA</div>
             </a>
-            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Terminate Session">
-                <i data-lucide="power" class="w-5 h-5"></i>
-            </a>
         </div>
     </aside>
 
-    <header class="fixed top-0 left-0 w-full z-50 border-b border-white/5 backdrop-blur-xl bg-obsidian/30 ml-20 w-[calc(100%-5rem)]">
-        <div class="max-w-[95%] mx-auto px-10 h-24 flex items-center justify-between">
-            <div class="flex items-center gap-8">
-                <div>
-                    <h1 class="text-2xl font-black uppercase tracking-tighter italic leading-none">Temporal <span class="text-cyan-400">Protocols</span></h1>
-                    <p class="text-[9px] font-mono text-white/20 uppercase tracking-[0.4em] mt-2">Node Scheduling & Timeline Audit</p>
+    <header class="fixed top-0 left-0 w-full z-50 border-b border-white/5 backdrop-blur-xl bg-obsidian/30 md:ml-20 md:w-[calc(100%-5rem)]">
+        <div class="max-w-[95%] mx-auto px-4 md:px-10 py-4 md:py-0 md:h-24 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 lg:gap-0">
+            <div class="flex flex-wrap items-center justify-between w-full lg:w-auto gap-4 md:gap-8">
+                <div class="min-w-fit">
+                    <h1 class="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-none">Temporal <span class="text-cyan-400">Protocols</span></h1>
+                    <p class="text-[8px] md:text-[9px] font-mono text-white/20 uppercase tracking-[0.2em] md:tracking-[0.4em] mt-2">Node Scheduling & Timeline Audit</p>
                 </div>
-                <div class="h-10 w-px bg-white/5"></div>
-                <div class="flex flex-col">
+                <div class="h-10 w-px bg-white/5 hidden md:block"></div>
+                <div class="flex flex-col text-right lg:text-left">
                     <span class="text-[8px] font-mono text-cyan-400 uppercase tracking-widest leading-none mb-1">System Time</span>
-                    <div id="live-clock" class="text-lg font-mono text-white/80 tabular-nums">00:00:00</div>
+                    <div id="live-clock" class="text-sm md:text-lg font-mono text-white/80 tabular-nums">00:00:00</div>
                 </div>
             </div>
             
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/5" id="view-toggles">
-                    <button onclick="window.engine.setView('monthly')" id="btn-monthly" class="view-btn px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/30 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all duration-300">Monthly</button>
-                    <button onclick="window.engine.setView('weekly')" id="btn-weekly" class="view-btn px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-cyan-400 text-obsidian shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all">Weekly</button>
-                    <button onclick="window.engine.setView('agenda')" id="btn-agenda" class="view-btn px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/30 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all duration-300">Agenda</button>
+            <div class="flex flex-col sm:flex-row items-center justify-between w-full lg:w-auto gap-3 md:gap-6 overflow-x-auto custom-scrollbar pb-2 sm:pb-0">
+                <div class="flex items-center gap-1 sm:gap-2 bg-white/5 rounded-xl p-1 border border-white/5 w-full sm:w-auto justify-between sm:justify-center" id="view-toggles">
+                    <button onclick="window.engine.setView('monthly')" id="btn-monthly" class="view-btn flex-1 sm:flex-none px-2 sm:px-5 py-2 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-white/30 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all duration-300">Monthly</button>
+                    <button onclick="window.engine.setView('weekly')" id="btn-weekly" class="view-btn flex-1 sm:flex-none px-2 sm:px-5 py-2 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest bg-cyan-400 text-obsidian shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all">Weekly</button>
+                    <button onclick="window.engine.setView('agenda')" id="btn-agenda" class="view-btn flex-1 sm:flex-none px-2 sm:px-5 py-2 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-white/30 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all duration-300">Agenda</button>
                 </div>
-                <div class="h-8 w-px bg-white/10 mx-2"></div>
-                <div class="flex items-center gap-3">
-                    <button onclick="prevWeek()" class="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <div class="h-8 w-px bg-white/10 hidden sm:block"></div>
+                <div class="flex items-center justify-between sm:justify-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <button onclick="prevWeek()" class="p-2 sm:p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                         <i data-lucide="chevron-left" class="w-4 h-4 text-white/50 hover:text-cyan-400"></i>
                     </button>
-                    <div id="current-period" class="text-xs font-black uppercase tracking-widest px-4 min-w-[160px] text-center text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">October 2024</div>
-                    <button onclick="nextWeek()" class="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                    <div id="current-period" class="text-[10px] sm:text-xs font-black uppercase tracking-widest px-1 sm:px-4 flex-1 sm:flex-none sm:min-w-[160px] text-center text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">October 2024</div>
+                    <button onclick="nextWeek()" class="p-2 sm:p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                         <i data-lucide="chevron-right" class="w-4 h-4 text-white/50 hover:text-cyan-400"></i>
                     </button>
                 </div>
@@ -118,17 +149,17 @@
         </div>
     </header>
 
-    <main class="ml-20 pt-32 pb-10 relative z-10 px-10 w-[calc(100%-5rem)] h-screen flex flex-col">
-        <div class="flex-1 flex gap-10 overflow-hidden">
+    <main class="md:ml-20 pt-44 sm:pt-40 md:pt-32 pb-24 md:pb-10 relative z-10 px-4 md:px-10 w-full md:w-[calc(100%-5rem)] h-screen flex flex-col">
+        <div class="flex-1 flex flex-col lg:flex-row gap-6 md:gap-10 overflow-y-auto lg:overflow-hidden pb-10 lg:pb-0 custom-scrollbar">
             
             <!-- Calendar Grid -->
-            <div class="flex-[3] flex flex-col h-full overflow-hidden">
-                <div class="glass-panel flex-1 rounded-[2.5rem] border border-white/5 overflow-x-auto overflow-y-hidden flex flex-col mb-4 hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)] custom-scrollbar" id="calendar-container">
+            <div class="flex-[3] flex flex-col min-h-[500px] lg:min-h-0 lg:h-full overflow-hidden">
+                <div class="glass-panel flex-1 rounded-[1.5rem] lg:rounded-[2.5rem] border border-white/5 overflow-x-auto overflow-y-hidden flex flex-col mb-4 hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)] custom-scrollbar" id="calendar-container">
                     
                     <div class="min-w-max flex flex-col h-full">
                         <!-- Day Headers -->
                         <div class="grid border-b border-white/5 bg-white/[0.01]" id="calendar-header" style="grid-template-columns: 100px repeat(7, minmax(120px, 1fr));">
-                            <div class="p-6 border-r border-white/5 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-white/20 sticky left-0 bg-obsidian z-20">Protocol</div>
+                            <div class="p-2 md:p-6 border-r border-white/5 flex items-center justify-center font-mono text-[8px] md:text-[9px] uppercase tracking-[0.1em] md:tracking-widest text-white/20 sticky left-0 bg-obsidian z-20 text-center">Protocol</div>
                             <!-- Days will be injected here -->
                         </div>
                         
@@ -142,8 +173,8 @@
                     </div>
                 </div>
                 
-                <div class="flex items-center justify-between px-8 py-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div class="flex items-center gap-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-8 py-4 bg-white/[0.02] border border-white/5 rounded-2xl gap-4">
+                    <div class="flex flex-wrap items-center gap-4 sm:gap-6">
                         <div class="flex items-center gap-2">
                             <div class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
                             <span class="text-[9px] font-mono uppercase tracking-widest text-white/40">Active Stream</span>
@@ -164,8 +195,8 @@
             </div>
 
             <!-- Sidebar Intel -->
-            <div class="flex-1 flex flex-col gap-6 max-w-[400px]">
-                <div class="glass-panel rounded-[2.5rem] border border-white/5 flex flex-col overflow-hidden p-8 hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)]">
+            <div class="flex-1 flex flex-col gap-6 w-full lg:max-w-[400px]">
+                <div class="glass-panel rounded-[1.5rem] lg:rounded-[2.5rem] border border-white/5 flex flex-col overflow-hidden p-6 lg:p-8 hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)] h-[400px] lg:h-auto">
                     <div class="flex items-center gap-4 mb-8">
                         <div class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400 border border-cyan-400/20">
                             <i data-lucide="zap" class="w-5 h-5"></i>
@@ -189,7 +220,7 @@
                     </div>
                 </div>
 
-                <div class="glass-panel flex-1 rounded-[2.5rem] border border-white/5 p-8 flex flex-col hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)]">
+                <div class="glass-panel flex-1 rounded-[1.5rem] lg:rounded-[2.5rem] border border-white/5 p-6 lg:p-8 flex flex-col hover:border-cyan-400/20 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.05)] min-h-[250px] lg:min-h-0">
                     <div class="flex items-center justify-between mb-8">
                         <span class="text-[10px] font-black uppercase tracking-widest text-white/30">Temporal Stability</span>
                         <span class="text-[10px] font-mono text-cyan-400">99.9%</span>
@@ -208,7 +239,7 @@
     </main>
 
     <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-10 right-10 flex flex-col gap-3 z-[100]"></div>
+    <div id="toast-container" class="fixed bottom-24 right-4 md:bottom-10 md:right-10 flex flex-col gap-3 z-[100] pointer-events-none opacity-0 transition-opacity duration-300"></div>
 
     <!-- Core Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
