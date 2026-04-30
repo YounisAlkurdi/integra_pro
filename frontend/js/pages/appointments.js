@@ -85,6 +85,36 @@ class TemporalEngine {
     }
 
     // --- 3. Rendering Logic ---
+    setView(mode) {
+        if (this.viewMode === mode) return;
+        this.viewMode = mode;
+        
+        // Update Buttons UI
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            if (btn.id === `btn-${mode}`) {
+                btn.className = `view-btn px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-cyan-400 text-obsidian shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all`;
+            } else {
+                btn.className = `view-btn px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/30 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all duration-300`;
+            }
+        });
+
+        // Add a visual scanning effect to the calendar
+        const calendar = document.getElementById('calendar-container');
+        if(calendar) {
+            calendar.style.opacity = '0.5';
+            calendar.style.filter = 'blur(4px)';
+        }
+        
+        setTimeout(() => {
+            this.render();
+            if(calendar) {
+                calendar.style.opacity = '1';
+                calendar.style.filter = 'none';
+                calendar.style.transition = 'all 0.4s ease-out';
+            }
+        }, 200);
+    }
+
     render() {
         this.renderHeader();
         this.renderGrid();
@@ -100,13 +130,26 @@ class TemporalEngine {
         const options = { month: 'long', year: 'numeric' };
         periodEl.textContent = this.currentDate.toLocaleDateString('en-US', options);
 
+        let daysToRender = 7;
+        let startDay = this.getStartOfWeek(this.currentDate);
+
+        if (this.viewMode === 'agenda') {
+            daysToRender = 1;
+            startDay = this.currentDate;
+        } else if (this.viewMode === 'monthly') {
+            daysToRender = 30;
+            startDay = this.currentDate; // Start from today and show next 30 days
+        }
+
+        // Update grid styling
+        headerContainer.style.gridTemplateColumns = `100px repeat(${daysToRender}, minmax(120px, 1fr))`;
+
         // Render Day Columns
-        const startOfWeek = this.getStartOfWeek(this.currentDate);
-        headerContainer.innerHTML = `<div class="p-6 border-r border-white/5 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-white/20">Protocol</div>`;
+        headerContainer.innerHTML = `<div class="p-6 border-r border-white/5 flex items-center justify-center font-mono text-[9px] uppercase tracking-widest text-white/20 sticky left-0 bg-obsidian z-20">Protocol</div>`;
         
-        for (let i = 0; i < 7; i++) {
-            const day = new Date(startOfWeek);
-            day.setDate(startOfWeek.getDate() + i);
+        for (let i = 0; i < daysToRender; i++) {
+            const day = new Date(startDay);
+            day.setDate(startDay.getDate() + i);
             
             const isToday = day.toDateString() === new Date().toDateString();
             
@@ -127,22 +170,32 @@ class TemporalEngine {
         body.innerHTML = '';
         body.appendChild(nowLine);
 
-        // Time slots (8:00 to 22:00)
-        for (let hour = 8; hour <= 22; hour++) {
+        let daysToRender = 7;
+        let startDay = this.getStartOfWeek(this.currentDate);
+        if (this.viewMode === 'agenda') {
+            daysToRender = 1;
+            startDay = this.currentDate;
+        } else if (this.viewMode === 'monthly') {
+            daysToRender = 30;
+            startDay = this.currentDate;
+        }
+
+        // Time slots (00:00 to 23:00)
+        for (let hour = 0; hour < 24; hour++) {
             const row = document.createElement('div');
-            row.className = 'grid grid-cols-8 border-b border-white/5 group';
+            row.className = 'grid border-b border-white/5 group';
+            row.style.gridTemplateColumns = `100px repeat(${daysToRender}, minmax(120px, 1fr))`;
             
             // Time label
             const timeLabel = document.createElement('div');
-            timeLabel.className = 'h-24 border-r border-white/5 flex items-start justify-center pt-4 font-mono text-[10px] text-white/10 group-hover:text-cyan-400 transition-colors tabular-nums';
+            timeLabel.className = 'h-24 border-r border-white/5 flex items-start justify-center pt-4 font-mono text-[10px] text-white/10 group-hover:text-cyan-400 transition-colors tabular-nums sticky left-0 bg-obsidian z-10';
             timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
             row.appendChild(timeLabel);
 
             // Day cells
-            const startOfWeek = this.getStartOfWeek(this.currentDate);
-            for (let i = 0; i < 7; i++) {
-                const day = new Date(startOfWeek);
-                day.setDate(startOfWeek.getDate() + i);
+            for (let i = 0; i < daysToRender; i++) {
+                const day = new Date(startDay);
+                day.setDate(startDay.getDate() + i);
                 
                 const cell = document.createElement('div');
                 cell.className = 'h-24 border-r border-white/5 relative p-1 group/cell hover:bg-white/[0.01] transition-all';
@@ -172,7 +225,7 @@ class TemporalEngine {
         const topPercent = (minutes / 60) * 100;
         
         // Z-index trick: items further down in the hour have higher base z-index so they aren't covered completely
-        div.className = 'absolute left-1 right-1 rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] hover:shadow-2xl hover:z-50 glass-panel overflow-hidden';
+        div.className = 'absolute left-1 right-1 rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:z-50 glass-panel overflow-hidden';
         div.style.zIndex = 10 + Math.floor(minutes/10);
         
         // Accurate visual timeline shift
@@ -236,7 +289,7 @@ class TemporalEngine {
             const isActive = n.status === 'active';
 
             return `
-                <div class="p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-cyan-400/20 transition-all cursor-pointer group" onclick="window.location.href='integra-session.html?room=${n.room_id}&role=hr'">
+                <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] cursor-pointer group" onclick="window.location.href='integra-session.html?room=${n.room_id}&role=hr'">
                     <div class="flex items-start justify-between mb-3">
                         <span class="text-xl font-mono font-black text-white/20 group-hover:text-cyan-400 transition-colors tabular-nums">${time}</span>
                         <div class="flex items-center gap-2">
@@ -260,17 +313,26 @@ class TemporalEngine {
         const line = document.getElementById('now-line');
         const body = document.getElementById('calendar-body');
         const now = new Date();
-        const startOfWeek = this.getStartOfWeek(this.currentDate);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 7);
+        let daysToRender = 7;
+        let startDay = this.getStartOfWeek(this.currentDate);
+        if (this.viewMode === 'agenda') {
+            daysToRender = 1;
+            startDay = this.currentDate;
+        } else if (this.viewMode === 'monthly') {
+            daysToRender = 30;
+            startDay = this.currentDate;
+        }
+        
+        const endDay = new Date(startDay);
+        endDay.setDate(startDay.getDate() + daysToRender);
 
-        if (now >= startOfWeek && now < endOfWeek) {
+        if (now >= startDay && now < endDay) {
             const hour = now.getHours();
             const minutes = now.getMinutes();
             
-            if (hour >= 8 && hour <= 22) {
+            if (hour >= 0 && hour < 24) {
                 const hourHeight = 96; // 6rem / h-24
-                const top = (hour - 8 + minutes / 60) * hourHeight;
+                const top = (hour + minutes / 60) * hourHeight;
                 line.style.top = top + 'px';
                 line.classList.remove('hidden');
                 
