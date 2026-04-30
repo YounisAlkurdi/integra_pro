@@ -33,28 +33,31 @@
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-obsidian text-white relative min-h-screen">
+<body class="bg-obsidian text-white relative min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200">
     
-    <div class="bg-noise"></div>
-    <div class="scanlines"></div>
-    <div class="grid-lines fixed inset-0 opacity-20"></div>
+    <!-- Premium Ambient Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-900/20 blur-[120px] rounded-full mix-blend-screen floatGlow"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-900/20 blur-[120px] rounded-full mix-blend-screen floatGlow" style="animation-delay: -3s;"></div>
+    </div>
 
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
 
-    <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 backdrop-blur-xl bg-obsidian/30">
+    <header class="fixed top-0 left-0 w-full z-50 glass-panel border-b border-white/5 bg-obsidian/40 backdrop-blur-2xl">
         <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
-            <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target">
-                INTEGRA<span class="text-cyan-400">.</span>
+            <a href="index.html" class="text-2xl font-bold tracking-tighter hover-target flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-400 to-violet-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]"></div>
+                INTEGRA
             </a>
             
-            <nav class="hidden md:flex gap-12 text-[10px] uppercase tracking-[0.2em] font-semibold text-white/50">
+            <nav class="hidden md:flex gap-12 text-xs font-medium text-white/50">
                 <a href="index.html#features" class="hover:text-white transition-all hover-target">Features</a>
                 <a href="index.html#platform" class="hover:text-white transition-all hover-target">Platform</a>
-                <a href="pricing.html" class="text-white tracking-[0.25em] hover-target">Pricing</a>
+                <a href="pricing.html" class="text-white hover-target">Pricing</a>
             </nav>
 
-            <a href="login.html" class="text-[10px] uppercase tracking-[0.2em] font-bold border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all hover-target hidden sm:block">
+            <a href="login.html" class="text-xs font-semibold border border-white/10 px-6 py-2.5 rounded-full hover:bg-white hover:text-black hover:border-white transition-all hover-target hidden sm:block">
                 Authenticate
             </a>
         </div>
@@ -65,93 +68,97 @@
             
             <!-- Hero Section -->
             <div class="text-center mb-24 reveal active">
-                <p class="text-cyan-400 text-[10px] font-mono tracking-[0.5em] uppercase mb-6 opacity-70">/ SECURE INVESTMENT NODES</p>
-                <h1 class="text-6xl md:text-8xl font-black tracking-tighter uppercase italic mb-12">
-                    Strategic <span class="text-outline">Tiers.</span>
+                <p class="text-cyan-400 text-xs font-medium tracking-widest uppercase mb-6 flex items-center justify-center gap-3">
+                    <span class="w-8 h-px bg-cyan-400/50"></span>
+                    SECURE INVESTMENT NODES
+                    <span class="w-8 h-px bg-cyan-400/50"></span>
+                </p>
+                <h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-12">
+                    Strategic <span class="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">Tiers.</span>
                 </h1>
                 
                 <!-- Billing Toggle -->
-                <div class="flex items-center justify-center gap-8 text-[10px] uppercase font-bold tracking-[0.3em] hover-target">
-                    <span id="label-monthly" class="text-white">Monthly</span>
-                    <button id="billing-toggle" class="w-16 h-8 rounded-full bg-slate-800 relative border border-slate-700 transition-all duration-500" onclick="toggleBilling()">
-                        <div class="w-6 h-6 bg-white rounded-full absolute top-1 left-1 shadow-md transition-all duration-500" id="toggle-knob"></div>
+                <div class="flex items-center justify-center gap-6 text-sm font-semibold hover-target">
+                    <span id="label-monthly" class="text-white transition-colors duration-300">Monthly</span>
+                    <button id="billing-toggle" class="w-14 h-7 rounded-full bg-white/10 relative border border-white/10 transition-all duration-500 hover:border-white/30" onclick="toggleBilling()">
+                        <div class="w-5 h-5 bg-white rounded-full absolute top-[3px] left-[3px] shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all duration-500" id="toggle-knob"></div>
                     </button>
-                    <span id="label-yearly" class="text-slate-500">Yearly</span>
+                    <span id="label-yearly" class="text-white/40 transition-colors duration-300">Yearly <span class="ml-2 text-[10px] uppercase tracking-wider bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">Save 20%</span></span>
                 </div>
             </div>
 
             <!-- Pricing Grid -->
-            <div id="pricing-grid" class="grid lg:grid-cols-3 gap-px bg-white/5 border border-white/5 overflow-hidden rounded-3xl reveal active">
+            <div id="pricing-grid" class="grid lg:grid-cols-3 gap-8 relative z-10 reveal active">
                 
                 <!-- Starter -->
-                <div class="bg-obsidian/80 p-12 hover:bg-white/[0.02] transition-all duration-500 group relative overflow-hidden border-x border-white/5">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-white/10 group-hover:bg-cyan-400/30 transition-colors"></div>
-                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-white/50 group-hover:text-white transition-colors">System Core</h3>
-                    <p class="text-white/30 text-sm font-light mb-16 h-10">Advanced evaluation for specialized nodes.</p>
+                <div class="glass-panel p-10 hover:bg-white/[0.04] transition-all duration-500 group relative overflow-hidden rounded-3xl border border-white/5 flex flex-col">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:via-cyan-400/50 transition-all duration-500"></div>
+                    <h3 class="text-2xl font-bold mb-4 tracking-tight text-white/70 group-hover:text-white transition-colors">System Core</h3>
+                    <p class="text-white/40 text-sm font-light mb-12 h-10">Advanced evaluation for specialized nodes.</p>
                     
-                    <div class="mb-12 h-24 flex items-baseline">
-                        <span class="text-3xl font-light text-white/20">$</span>
-                        <span class="text-7xl font-black tracking-tighter price-val" data-monthly="99" data-yearly="89">99</span>
-                        <span class="text-white/20 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
+                    <div class="mb-10 h-24 flex items-baseline">
+                        <span class="text-3xl font-light text-white/30">$</span>
+                        <span class="text-7xl font-black tracking-tighter text-white price-val" data-monthly="99" data-yearly="89">99</span>
+                        <span class="text-white/30 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
                     </div>
 
-                    <ul class="space-y-6 mb-16 text-sm text-white/50 font-light">
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div> 15 Neural Sessions / mo</li>
+                    <ul class="space-y-5 mb-12 text-sm text-white/60 font-light flex-grow">
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-500/50 rounded-full"></div> 15 Neural Sessions / mo</li>
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> 20 Min Sync Limit</li>
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> 4 Node Capacity</li>
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/10 rounded-full"></div> Standard Analytics</li>
                     </ul>
 
-                    <button class="w-full py-5 border border-white/10 text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:text-black hover:border-white hover-target" onclick="selectPlan('starter')">
+                    <button class="w-full py-4 border border-white/10 text-[11px] uppercase tracking-widest font-semibold transition-all rounded-full hover:bg-white/10 hover:border-white/30 hover-target mt-auto" onclick="selectPlan('starter')">
                         Identify Node
                     </button>
                 </div>
 
                 <!-- Professional -->
-                <div class="bg-obsidian/90 p-12 relative lg:scale-105 z-20 border border-white/5 shadow-[0_0_100px_rgba(34,211,238,0.05)] group">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-cyan-400"></div>
-                    <div class="absolute top-8 right-8 bg-cyan-400 text-obsidian text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-tighter shadow-[0_0_20px_rgba(34,211,238,0.4)]">High Priority</div>
+                <div class="glass-panel p-10 relative lg:scale-105 z-20 border border-cyan-500/30 shadow-[0_0_80px_rgba(34,211,238,0.1)] group rounded-3xl flex flex-col bg-slate-900/60 backdrop-blur-2xl">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-violet-400"></div>
+                    <div class="absolute top-8 right-8 bg-gradient-to-r from-cyan-400/10 to-violet-400/10 border border-cyan-400/20 text-cyan-300 text-[10px] font-semibold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-[0_0_20px_rgba(34,211,238,0.1)] backdrop-blur-md">Premium</div>
                     
-                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-cyan-400">Neural Nexus</h3>
-                    <p class="text-white/40 text-sm font-light mb-16 h-10">Advanced metrics for intelligence centers.</p>
+                    <h3 class="text-2xl font-bold mb-4 tracking-tight bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">Neural Nexus</h3>
+                    <p class="text-white/50 text-sm font-light mb-12 h-10">Advanced metrics for intelligence centers.</p>
                     
-                    <div class="mb-12 h-24 flex items-baseline">
-                        <span class="text-3xl font-light text-white/20">$</span>
+                    <div class="mb-10 h-24 flex items-baseline">
+                        <span class="text-3xl font-light text-cyan-400/50">$</span>
                         <span class="text-7xl font-black tracking-tighter text-white price-val" data-monthly="299" data-yearly="249">299</span>
-                        <span class="text-cyan-400 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
+                        <span class="text-cyan-400/50 font-mono text-xs uppercase tracking-widest ml-3">/mo</span>
                     </div>
 
-                    <ul class="space-y-6 mb-16 text-sm text-white/80 font-light">
+                    <ul class="space-y-5 mb-12 text-sm text-white/80 font-light flex-grow">
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div> 40 Neural Sessions / mo</li>
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> 60 Min Sync Limit</li>
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> 8 Node Capacity</li>
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Neural Recording Included</li>
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div> Priority Response Handshake</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400/80 rounded-full"></div> 60 Min Sync Limit</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400/80 rounded-full"></div> 8 Node Capacity</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-cyan-400/80 rounded-full"></div> Neural Recording Included</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-violet-400/80 rounded-full shadow-[0_0_10px_rgba(167,139,250,0.5)]"></div> Priority Response Handshake</li>
                     </ul>
 
-                    <button class="w-full py-5 bg-cyan-400 text-obsidian text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover-target" onclick="selectPlan('professional')">
+                    <button class="w-full py-4 bg-white text-obsidian text-[11px] uppercase tracking-widest font-bold transition-all rounded-full hover:bg-cyan-50 shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] hover-target mt-auto" onclick="selectPlan('professional')">
                         Upgrade to Pro
                     </button>
                 </div>
 
                 <!-- Enterprise -->
-                <div class="bg-obsidian/80 p-12 hover:bg-white/[0.02] transition-all duration-500 group relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-white/10 group-hover:bg-white/40 transition-colors"></div>
-                    <h3 class="text-2xl font-bold mb-4 uppercase tracking-tighter text-white/50 group-hover:text-white transition-colors">Enterprise</h3>
-                    <p class="text-white/30 text-sm font-light mb-16 h-10">Custom deployments for high-security scaling.</p>
+                <div class="glass-panel p-10 hover:bg-white/[0.04] transition-all duration-500 group relative overflow-hidden rounded-3xl border border-white/5 flex flex-col">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:via-violet-400/50 transition-all duration-500"></div>
+                    <h3 class="text-2xl font-bold mb-4 tracking-tight text-white/70 group-hover:text-white transition-colors">Enterprise</h3>
+                    <p class="text-white/40 text-sm font-light mb-12 h-10">Custom deployments for high-security scaling.</p>
                     
-                    <div class="mb-12 h-24 flex items-center">
+                    <div class="mb-10 h-24 flex items-center">
                         <span class="text-5xl font-black tracking-tighter text-white">Custom</span>
                     </div>
 
-                    <ul class="space-y-6 mb-16 text-sm text-white/50 font-light">
+                    <ul class="space-y-5 mb-12 text-sm text-white/60 font-light flex-grow">
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> On-premise deployment</li>
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> Custom AI model training</li>
                         <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> SLA guarantees</li>
-                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-white/20 rounded-full"></div> Dedicated Security Engineer</li>
+                        <li class="flex items-center gap-4"><div class="w-1.5 h-1.5 bg-violet-500/50 rounded-full"></div> Dedicated Security Engineer</li>
                     </ul>
 
-                    <button class="w-full py-5 border border-white/10 text-[10px] uppercase tracking-[0.3em] font-black transition-all rounded-xl hover:bg-white hover:text-black hover:border-white hover-target" onclick="selectPlan('enterprise')">
+                    <button class="w-full py-4 border border-white/10 text-[11px] uppercase tracking-widest font-semibold transition-all rounded-full hover:bg-white/10 hover:border-white/30 hover-target mt-auto" onclick="selectPlan('enterprise')">
                         Contact Sales
                     </button>
                     
