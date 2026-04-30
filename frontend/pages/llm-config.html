@@ -22,7 +22,7 @@
     <div class="grid-lines fixed inset-0 opacity-10 pointer-events-none"></div>
 
     <!-- Vertical Sidebar -->
-    <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
+    <aside class="fixed left-0 top-0 h-full w-20 hidden md:flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
         <!-- Logo Node -->
         <div class="mb-12">
             <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
@@ -63,7 +63,7 @@
         </div>
     </aside>
 
-    <header class="fixed top-0 left-0 w-full z-50 border-b border-white/5 backdrop-blur-xl bg-obsidian/30 ml-20 w-[calc(100%-5rem)]">
+    <header class="fixed top-0 left-0 w-full z-50 border-b border-white/5 backdrop-blur-xl bg-obsidian/30 md:ml-20 md:w-[calc(100%-5rem)]">
         <div class="max-w-[95%] mx-auto px-6 h-20 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <span class="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em]">Neural Protocol</span>
@@ -82,7 +82,7 @@
         </div>
     </header>
 
-    <main class="ml-20 pt-32 px-8 w-[calc(100%-5rem)] relative z-10">
+    <main class="relative z-10 w-full md:ml-20 md:w-[calc(100%-5rem)] px-6 md:px-8 pb-32 md:pb-24 pt-24 md:pt-32">
         <div class="max-w-4xl mx-auto">
             
             <!-- Page Header -->
@@ -277,8 +277,44 @@
         </div>
     </main>
 
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 glass-panel border-t border-white/5 backdrop-blur-2xl bg-obsidian/80">
+        <div class="flex justify-around items-center h-20 px-2 pb-2">
+            <a href="dashboard.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="terminal" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Console</span>
+            </a>
+            <a href="reports.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Archives</span>
+            </a>
+            <a href="appointments.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Schedule</span>
+            </a>
+            <a href="billing.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Billing</span>
+            </a>
+            <a href="pricing.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Labs</span>
+            </a>
+            <a href="llm-config.html" class="flex flex-col items-center gap-1.5 p-2 text-cyan-400 transition-colors relative">
+                <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-cyan-400/50 blur-[2px] rounded-full"></div>
+                <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"></div>
+                <i data-lucide="brain" class="w-5 h-5 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider font-bold">Config</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center gap-1.5 p-2 text-white/40 hover:text-cyan-400 transition-colors">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="text-[8px] font-mono uppercase tracking-wider">Profile</span>
+            </a>
+        </div>
+    </nav>
+
     <!-- Global Toast -->
-    <div id="toast" class="fixed bottom-10 left-10 z-[100] transform translate-y-20 opacity-0 transition-all duration-500">
+    <div id="toast" class="fixed bottom-32 md:bottom-10 left-1/2 -translate-x-1/2 md:left-10 md:translate-x-0 z-[100] transform translate-y-20 opacity-0 transition-all duration-500">
         <div class="bg-obsidian border border-cyan-400/30 px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.2)] flex items-center gap-4">
             <i data-lucide="check-circle" class="text-cyan-400 w-5 h-5"></i>
             <p class="text-[10px] text-white font-mono uppercase tracking-widest">Neural parameters synchronized successfully</p>

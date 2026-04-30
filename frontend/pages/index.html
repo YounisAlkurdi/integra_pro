@@ -86,7 +86,7 @@
             </nav>
 
             <a href="login.html"
-                class="text-[10px] uppercase tracking-[0.2em] font-bold border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all hover-target hidden sm:block">
+                class="text-[9px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] font-bold border border-white/20 px-4 sm:px-8 py-2 sm:py-3 rounded-full hover:bg-white hover:text-black transition-all hover-target block">
                 Authenticate
             </a>
         </div>
@@ -128,7 +128,7 @@
                     <p class="text-cyan-400 text-xs font-mono tracking-[0.3em] uppercase mb-6 flex items-center gap-3">
                         <span class="w-8 h-[1px] bg-cyan-400"></span> 01. CAPABILITIES
                     </p>
-                    <h2 class="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight max-w-4xl">
+                    <h2 class="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight max-w-4xl">
                         MULTI-LAYERED <br><span class="bg-clip-text text-transparent bg-premium-gradient">VERIFICATION.</span>
                     </h2>
                 </div>
@@ -139,10 +139,10 @@
         <section id="video-section" class="scroll-container relative z-10">
             <div class="sticky-wrapper">
                 <div class="flex flex-col md:flex-row gap-16 w-full max-w-7xl px-8 items-center">
-                    <div class="md:w-3/5 relative group">
+                    <div class="w-full md:w-3/5 relative group">
                         <div class="absolute -inset-1 bg-premium-gradient rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                        <div class="integra-video-frame shadow-2xl relative rounded-3xl overflow-hidden border border-white/10 bg-black/50 backdrop-blur-xl">
-                            <canvas id="integra-canvas"></canvas>
+                        <div class="integra-video-frame shadow-2xl relative rounded-3xl overflow-hidden border border-white/10 bg-black/50 backdrop-blur-xl aspect-video md:aspect-auto w-full">
+                            <canvas id="integra-canvas" class="w-full h-full object-cover"></canvas>
                         </div>
                     </div>
                     <div class="md:w-2/5 flex flex-col justify-center">
@@ -186,12 +186,11 @@
                 <!-- Visual Detection Container (Text Left, Image Right) -->
                 <div
                     class="grid md:grid-cols-2 bg-white/[0.02] border border-white/10 backdrop-blur-xl overflow-hidden rounded-3xl reveal mb-6 group hover:border-white/20 transition-colors duration-500 shadow-2xl">
-                    <!-- Column 1: Visual Detection Content (Left) -->
                     <div
-                        class="p-16 flex flex-col justify-center bg-transparent group-hover:bg-white/[0.01] transition-colors order-2 md:order-1 relative">
+                        class="p-8 sm:p-12 md:p-16 flex flex-col justify-center bg-transparent group-hover:bg-white/[0.01] transition-colors order-2 md:order-1 relative">
                         <div class="absolute -left-[20%] top-[20%] w-[60%] h-[60%] bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none"></div>
                         <div
-                            class="w-14 h-14 rounded-2xl bg-white/[0.03] border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-10 shadow-[0_0_30px_rgba(6,182,212,0.15)] relative z-10">
+                            class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/[0.03] border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-8 sm:mb-10 shadow-[0_0_30px_rgba(6,182,212,0.15)] relative z-10">
                             <i data-lucide="eye" class="w-6 h-6"></i>
                         </div>
                         <h3 class="text-4xl font-bold mb-6 tracking-tighter text-white relative z-10">Visual Detection</h3>
@@ -200,13 +199,13 @@
                             invisible to the human eye.
                         </p>
 
-                        <div class="mt-12 flex gap-4 relative z-10">
+                        <div class="mt-8 sm:mt-12 flex flex-wrap gap-3 sm:gap-4 relative z-10">
                             <div
-                                class="px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full text-[10px] uppercase tracking-[0.2em] text-white/50 font-mono">
+                                class="px-3 sm:px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-white/50 font-mono text-center">
                                 GAN_ANALYSIS
                             </div>
                             <div
-                                class="px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-[10px] uppercase tracking-[0.2em] text-cyan-400 font-mono shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                                class="px-3 sm:px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-cyan-400 font-mono shadow-[0_0_15px_rgba(34,211,238,0.2)] text-center">
                                 FRAME_SAMPLING_120HZ
                             </div>
                         </div>
@@ -229,10 +228,10 @@
                     class="grid md:grid-cols-1 bg-white/[0.02] backdrop-blur-xl border border-white/10 overflow-hidden rounded-3xl reveal group hover:border-white/20 transition-all duration-500 shadow-2xl relative">
                     <div class="absolute right-[10%] top-[10%] w-[30%] h-[80%] bg-violet-500/10 blur-[80px] rounded-full pointer-events-none"></div>
                     <div
-                        class="p-16 bg-transparent flex flex-col md:flex-row items-center justify-between gap-12 group-hover:bg-white/[0.01] transition-all relative z-10">
-                        <div class="flex flex-col md:flex-row items-center gap-10 text-center md:text-left">
+                        class="p-8 sm:p-12 md:p-16 bg-transparent flex flex-col md:flex-row items-center justify-between gap-10 sm:gap-12 group-hover:bg-white/[0.01] transition-all relative z-10">
+                        <div class="flex flex-col md:flex-row items-center gap-6 sm:gap-10 text-center md:text-left">
                             <div
-                                class="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/10 text-white flex items-center justify-center group-hover:border-violet-500/50 group-hover:text-violet-400 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.2)] transition-all duration-500">
+                                class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/[0.03] border border-white/10 text-white flex items-center justify-center group-hover:border-violet-500/50 group-hover:text-violet-400 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.2)] transition-all duration-500">
                                 <i data-lucide="fingerprint" class="w-8 h-8"></i>
                             </div>
                             <div>
@@ -245,7 +244,7 @@
                             </div>
                         </div>
                         <button
-                            class="px-8 py-4 bg-white text-black rounded-full text-xs font-bold uppercase tracking-[0.2em] hover:bg-transparent hover:text-white hover:border-white border border-transparent transition-all whitespace-nowrap shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none">
+                            class="px-6 py-3 sm:px-8 sm:py-4 bg-white text-black rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] hover:bg-transparent hover:text-white hover:border-white border border-transparent transition-all whitespace-nowrap shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none w-full sm:w-auto mt-4 md:mt-0">
                             Learn Biometrics
                         </button>
                     </div>
@@ -262,15 +261,15 @@
                     <p class="text-violet-400 text-xs font-mono tracking-[0.3em] uppercase mb-6 flex items-center gap-3">
                         <span class="w-8 h-[1px] bg-violet-400"></span> 02. PLATFORM
                     </p>
-                    <h2 class="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight max-w-3xl">
+                    <h2 class="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight max-w-3xl">
                         COMMAND & <br><span class="bg-clip-text text-transparent bg-premium-gradient">CONTROL.</span>
                     </h2>
                 </div>
                 <!-- Mini-Dashboard UI -->
                 <div class="p-2 glass-panel rounded-xl border border-white/10 reveal shadow-2xl">
                     <div class="bg-[#030712] rounded-lg overflow-hidden flex flex-col lg:flex-row">
-                        <div class="lg:w-2/3 p-10 border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col">
-                            <div class="flex justify-between items-center border-b border-white/5 pb-6 mb-8">
+                        <div class="lg:w-2/3 p-6 sm:p-10 border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-6 mb-8 gap-4 sm:gap-0">
                                 <div class="font-mono text-[10px] text-white/30 uppercase tracking-[0.2em]">Global
                                     Integrity Score</div>
                                 <div class="text-4xl font-bold text-cyan-400 tracking-tighter animate-pulse">99.8%</div>
@@ -300,19 +299,19 @@
         <!-- ======================= -->
         <section id="pricing" class="py-32 relative z-10">
             <div class="max-w-[95%] mx-auto px-6">
-                <div class="text-center mb-24">
-                    <h2 class="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight mb-12">SCALABLE
+                <div class="text-center mb-16 sm:mb-24">
+                    <h2 class="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight mb-8 sm:mb-12">SCALABLE
                         <span class="bg-clip-text text-transparent bg-premium-gradient">SECURITY.</span></h2>
                     <div
-                        class="flex items-center justify-center gap-6 text-[10px] uppercase font-bold tracking-[0.2em] hover-target bg-white/[0.03] w-max mx-auto p-2 rounded-full border border-white/10 backdrop-blur-md">
-                        <span id="label-monthly" class="text-white px-4 py-2 rounded-full bg-white/10">Monthly</span>
+                        class="flex items-center justify-center gap-3 sm:gap-6 text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.1em] sm:tracking-[0.2em] hover-target bg-white/[0.03] w-max mx-auto p-2 rounded-full border border-white/10 backdrop-blur-md">
+                        <span id="label-monthly" class="text-white px-3 sm:px-4 py-2 rounded-full bg-white/10">Monthly</span>
                         <button id="billing-toggle"
-                            class="w-14 h-7 rounded-full bg-black/50 relative border border-white/10 transition-colors"
+                            class="w-12 sm:w-14 h-6 sm:h-7 rounded-full bg-black/50 relative border border-white/10 transition-colors"
                             onclick="toggleBilling()">
-                            <div class="w-5 h-5 bg-white rounded-full absolute top-[3px] left-[3px] shadow-md transition-all duration-300"
+                            <div class="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full absolute top-[3px] left-[3px] shadow-md transition-all duration-300"
                                 id="toggle-knob"></div>
                         </button>
-                        <span id="label-yearly" class="text-white/50 px-4 py-2">Yearly</span>
+                        <span id="label-yearly" class="text-white/50 px-3 sm:px-4 py-2">Yearly</span>
                     </div>
                 </div>
                 <div class="grid lg:grid-cols-3 gap-6">
