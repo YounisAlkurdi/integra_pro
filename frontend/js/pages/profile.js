@@ -25,6 +25,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (nameEl) nameEl.textContent = metadata.full_name || 'Anonymous Subject';
         if (emailEl) emailEl.textContent = user.email;
         if (idEl) idEl.textContent = user.id;
+        const headerId = document.getElementById('header-id');
+        if (headerId) headerId.textContent = user.id.substring(0, 8).toUpperCase();
         if (providerEl) providerEl.textContent = `${user.app_metadata.provider} Security Protocol`;
 
         if (avatarEl && metadata.avatar_url) {
