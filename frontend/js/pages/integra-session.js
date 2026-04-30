@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let localRole     = urlParams.get('role') || 'candidate';
     let localName     = urlParams.get('name') || '';
     let currentRoomId = urlParams.get('room');
+    let aiAgentActive = urlParams.get('ai_agent') === 'true';
 
     const participantFeeds = new Map();
     let candidateVideo    = null;
@@ -50,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     initSpatialGrid();
+
+    // ── AI Agent UI Init ──────────────────────────────────────────────────────
+    if (aiAgentActive) {
+        const agentDashboard = $('ai-agent-dashboard');
+        if (agentDashboard) agentDashboard.classList.remove('hidden');
+        // Audio bars now stay visible in the bottom container regardless
+    }
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
     const localVideo         = $('local-video');
@@ -950,6 +958,100 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ── AI Agent Logic ────────────────────────────────────────────────────────
+    let isAgentThinking = false;
+
+    async function callAiAgent(speakerRole, text) {
+        if (!aiAgentActive || isAgentThinking) return;
+        
+        // Primary analysis for HR/Admin users only
+        if (localRole !== 'hr' && localRole !== 'admin') return;
+
+        isAgentThinking = true;
+        const statusText = $('agent-status-text');
+        if (statusText) statusText.textContent = "Neural Analysis...";
+
+        try {
+            // Get session token (Supabase global in integra-session.html)
+            const { data: { session } } = await window.supabase.auth.getSession();
+            const token = session?.access_token;
+
+            // Load LLM Config from Storage
+            let llmConfig = {};
+            try {
+                llmConfig = JSON.parse(localStorage.getItem("INTEGRA_LLM_CONFIG") || "{}");
+            } catch (e) {}
+
+            // Context-aware Prompting
+            const speakerLabel = speakerRole === 'hr' ? 'HR (Interviewer)' : 'Candidate';
+            const prompt = `[INTERVIEW TRANSCRIPT]\nSpeaker: ${speakerLabel}\nText: "${text}"\n\nTask: Analyze this input. If it's a candidate's answer, highlight a strength or potential red flag. If it's an HR question, suggest a follow-up or provide context. Return exactly 2-3 short, professional bullet points for the dashboard.`;
+
+            const response = await fetch(`${API_BASE}/api/agent/chat`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    config: {
+                        ...llmConfig,
+                        systemPrompt: `[FAST_SYNC_PROTOCOL]
+- ROLE: Real-time Neural Copilot.
+- STYLE: Extremely short, telegraphic insights.
+- FORMAT: 2-3 points. Max 5 words per point.
+- NO REASONING: Go directly to insights.
+- NO SKIP: Even for small talk, give a meta-comment (e.g., "Building rapport", "Candidate relaxed").
+- SPEED: Respond in < 500ms.`
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.response) {
+                // Remove any technical markers the LLM might still include
+                let cleanRes = data.response.replace(/Thought:|Final Answer:|Action:|Action Input:/gi, "").trim();
+                updateAgentSuggestions(cleanRes);
+            }
+        } catch (err) {
+            console.error("[Agent] Link Failed:", err);
+        } finally {
+            isAgentThinking = false;
+            if (statusText) statusText.textContent = "Active & Monitoring";
+        }
+    }
+
+    function updateAgentSuggestions(response) {
+        const container = $('agent-suggestions');
+        if (!container) return;
+
+        const suggestions = response.split('\n')
+            .filter(line => line.trim())
+            .map(line => line.replace(/^[*-]\s*/, '').trim());
+
+        // Neural Pulse Update
+        const statusText = $('agent-status-text');
+        if (statusText) {
+            statusText.innerHTML = `<span class="flex items-center gap-2"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span></span> Analysis Synced</span>`;
+        }
+
+        container.innerHTML = '';
+        container.className = "flex flex-col gap-2 p-1 overflow-y-auto max-h-[160px]"; 
+
+        suggestions.forEach((s, i) => {
+            const el = document.createElement('div');
+            el.className = "glass-panel px-4 py-2.5 rounded-xl border border-white/5 animate-slide-up shadow-sm hover:bg-white/10 transition-colors";
+            el.style.animationDelay = `${i * 100}ms`;
+            el.innerHTML = `
+                <div class="flex items-start gap-2.5">
+                    <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(34,211,238,0.4)]"></div>
+                    <span class="text-[11px] text-gray-200 font-medium leading-relaxed">${s}</span>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
     window.addEventListener('stt:final', (e) => {
         const state  = window.LiveKitSession?.getState?.();
         const myRole = state?.localRole || localRole;
@@ -958,9 +1060,12 @@ document.addEventListener('DOMContentLoaded', () => {
         appendTranscription(myRole, e.detail.text, true);
         saveLogToServer(myName, e.detail.text);
 
+        // 🔍 Agent Analysis for HR speech
+        if (aiAgentActive && (myRole === 'hr' || myRole === 'admin')) {
+            callAiAgent('hr', e.detail.text);
+        }
+
         // 🔍 Only analyze if I am the candidate (for self-monitoring) 
-        // OR if I am HR testing the system. 
-        // But the primary analysis happens in the lk:transcription event for remote candidates.
         if (myRole === 'candidate') {
             analyzeLexical(e.detail.text);
         }
@@ -980,7 +1085,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 🔍 HR/Admin analyzes remote candidate transcriptions
             const myRole = window.LiveKitSession?.getState?.()?.localRole || localRole;
+            
             if (role === 'candidate' && (myRole === 'hr' || myRole === 'admin')) {
+                // Agent Analysis
+                if (aiAgentActive) {
+                    callAiAgent('candidate', text);
+                }
+                // Standard Lexical analysis
                 analyzeLexical(text);
             }
         }

@@ -411,7 +411,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         hrName = `${hrName} #${randomSuffix}`;
 
-        const params = new URLSearchParams({ room: rid, role: 'hr', name: hrName });
+        const isAIAgentActive = document.getElementById('ai-agent-toggle')?.checked || false;
+        const params = new URLSearchParams({ 
+            room: rid, 
+            role: 'hr', 
+            name: hrName,
+            ai_agent: isAIAgentActive ? 'true' : 'false'
+        });
         window.location.href = `integra-session.html?${params.toString()}`;
     };
 
