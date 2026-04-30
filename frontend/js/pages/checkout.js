@@ -1,4 +1,4 @@
-let stripe, elements, card;
+let stripe, elements, cardNumber, cardExpiry, cardCvc;
 let currentPlan = null;
 let billingMode = new URLSearchParams(window.location.search).get('mode') || 'monthly';
 let planId = new URLSearchParams(window.location.search).get('plan') || 'starter';
@@ -59,27 +59,31 @@ async function initializeStripe() {
     }
 
     elements = stripe.elements();
-    card = elements.create('card', {
-        style: {
-            base: {
-                color: '#ffffff',
-                fontFamily: '"Space Mono", monospace',
-                fontSize: '14px',
-                '::placeholder': { color: 'rgba(255, 255, 255, 0.1)' },
-                iconColor: '#22d3ee'
-            },
-            invalid: { color: '#ef4444' }
-        }
-    });
+    const styleObj = {
+        base: {
+            color: '#ffffff',
+            fontFamily: '"Space Mono", monospace',
+            fontSize: '14px',
+            '::placeholder': { color: 'rgba(255, 255, 255, 0.1)' },
+            iconColor: '#22d3ee'
+        },
+        invalid: { color: '#ef4444' }
+    };
 
-    const mountContainer = document.getElementById('card-element');
-    card.mount('#card-element');
+    cardNumber = elements.create('cardNumber', { style: styleObj, showIcon: true });
+    cardExpiry = elements.create('cardExpiry', { style: styleObj });
+    cardCvc = elements.create('cardCvc', { style: styleObj });
+
+    cardNumber.mount('#card-number-element');
+    cardExpiry.mount('#card-expiry-element');
+    cardCvc.mount('#card-cvc-element');
     
-    card.on('ready', () => {
-        const placeholder = document.getElementById('card-element-placeholder');
+    cardNumber.on('ready', () => {
+        const placeholder = document.querySelector('.placeholder-loading');
         if (placeholder) placeholder.remove();
-        mountContainer.classList.add('border-cyan-400/30');
     });
+    
+    setupCardAnimations();
     loadPlanData();
 }
 
@@ -122,18 +126,22 @@ selectBilling(billingMode);
 const cardInner = document.getElementById('card-inner');
 const cardContainer = document.querySelector('.card-container');
 
+let isFlipped = false;
+
 if (cardContainer && cardInner) {
     cardContainer.addEventListener('mousemove', (e) => {
         const rect = cardContainer.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width - 0.5;
         const y = (e.clientY - rect.top) / rect.height - 0.5;
         cardInner.style.transition = 'transform 0.1s linear';
-        cardInner.style.transform = `rotateX(${-y * 25}deg) rotateY(${x * 25}deg)`;
+        
+        const baseY = isFlipped ? 180 : 0;
+        cardInner.style.transform = `rotateX(${-y * 25}deg) rotateY(${baseY + (x * 25)}deg)`;
     });
 
     cardContainer.addEventListener('mouseleave', () => {
         cardInner.style.transition = 'transform 0.6s ease';
-        cardInner.style.transform = 'rotateY(0deg) rotateX(0deg)';
+        cardInner.style.transform = isFlipped ? 'rotateY(180deg) rotateX(0deg)' : 'rotateY(0deg) rotateX(0deg)';
     });
 }
 
@@ -159,7 +167,7 @@ if (form) {
 
         const { paymentMethod, error } = await stripe.createPaymentMethod({
             type: 'card',
-            card: card,
+            card: cardNumber,
             billing_details: { name: holderInput.value }
         });
 
@@ -225,3 +233,90 @@ async function processPayment(paymentMethodId) {
 
 // Start Verification
 verifyIdentity();
+
+// --- Neural Animation Logic ---
+function setupCardAnimations() {
+    const numberDisplay = document.getElementById('card-number-display');
+    const expiryDisplay = document.getElementById('card-expiry-display');
+    const cvcDisplay = document.getElementById('card-cvc-display');
+    const cardInner = document.getElementById('card-inner');
+
+    let scrambleInterval;
+    const generateScramble = () => {
+        let first4 = Math.floor(1000 + Math.random() * 9000);
+        let last4 = Math.floor(1000 + Math.random() * 9000);
+        return `${first4} **** **** ${last4}`;
+    };
+
+    cardNumber.on('change', (event) => {
+        if (event.empty) {
+            clearInterval(scrambleInterval);
+            numberDisplay.textContent = '0000 0000 0000 0000';
+            numberDisplay.classList.remove('text-cyan-400');
+        } else if (event.complete) {
+            clearInterval(scrambleInterval);
+            // Simulate that it locked onto the encrypted state
+            const fakeFirst = Math.floor(1000 + Math.random() * 9000);
+            const fakeLast = Math.floor(1000 + Math.random() * 9000);
+            numberDisplay.textContent = `${fakeFirst} **** **** ${fakeLast}`;
+            numberDisplay.classList.add('text-cyan-400');
+            numberDisplay.classList.add('shadow-[0_0_10px_rgba(34,211,238,0.5)]');
+            setTimeout(() => {
+                numberDisplay.classList.remove('shadow-[0_0_10px_rgba(34,211,238,0.5)]');
+            }, 300);
+        } else {
+            // Typing...
+            numberDisplay.classList.remove('text-cyan-400');
+            clearInterval(scrambleInterval);
+            scrambleInterval = setInterval(() => {
+                numberDisplay.textContent = generateScramble();
+            }, 50);
+        }
+    });
+
+    const flipToBack = () => {
+        isFlipped = true;
+        if (cardInner) {
+            cardInner.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            cardInner.style.transform = 'rotateY(180deg) rotateX(0deg)';
+        }
+    };
+
+    const flipToFront = () => {
+        isFlipped = false;
+        if (cardInner) {
+            cardInner.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            cardInner.style.transform = 'rotateY(0deg) rotateX(0deg)';
+        }
+    };
+
+    cardExpiry.on('focus', flipToBack);
+    cardExpiry.on('blur', flipToFront);
+    cardCvc.on('focus', flipToBack);
+    cardCvc.on('blur', flipToFront);
+
+    cardExpiry.on('change', (e) => {
+        if (e.empty) {
+            expiryDisplay.textContent = 'MM/YY';
+        } else if (e.complete) {
+            expiryDisplay.textContent = '**/**';
+            expiryDisplay.classList.add('text-cyan-400');
+        } else {
+            expiryDisplay.classList.remove('text-cyan-400');
+            expiryDisplay.textContent = Math.random() > 0.5 ? 'M*/Y*' : '*M/*Y';
+        }
+    });
+
+    cardCvc.on('change', (e) => {
+        if (e.empty) {
+            cvcDisplay.textContent = '•••';
+        } else if (e.complete) {
+            cvcDisplay.textContent = '***';
+            cvcDisplay.classList.add('text-cyan-400');
+        } else {
+            cvcDisplay.classList.remove('text-cyan-400');
+            cvcDisplay.textContent = Math.random() > 0.5 ? '*•*' : '•*•';
+        }
+    });
+}
+

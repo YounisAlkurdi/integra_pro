@@ -9,8 +9,17 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { obsidian: '#020617', cyan: { 400: '#22d3ee' } },
-                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'], mono: ['"Space Mono"', 'monospace'] }
+                    colors: { 
+                        obsidian: '#020617', 
+                        cyan: { 
+                            400: '#22d3ee',
+                            500: '#06b6d4'
+                        } 
+                    },
+                    fontFamily: { 
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'], 
+                        mono: ['"Space Mono"', 'monospace'] 
+                    }
                 }
             }
         }
@@ -20,118 +29,168 @@
     <link rel="stylesheet" href="../css/checkout-card.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-obsidian text-white relative min-h-screen flex items-center justify-center overflow-auto">
-    <div class="bg-noise pointer-events-none"></div>
-    <div class="scanlines pointer-events-none"></div>
-    <div class="grid-lines fixed inset-0 opacity-20 pointer-events-none"></div>
+<body class="bg-obsidian text-white relative min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    
+    <!-- Premium Ambient Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-900/20 blur-[120px] rounded-full mix-blend-screen floatGlow"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-900/20 blur-[120px] rounded-full mix-blend-screen floatGlow" style="animation-delay: -3s;"></div>
+    </div>
 
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
 
-    <a href="index.html" class="absolute top-10 left-10 text-[10px] uppercase font-mono tracking-[0.4em] text-white/40 hover:text-cyan-400 transition-all z-50 flex items-center gap-2">
+    <a href="index.html" class="absolute top-8 left-8 text-[10px] uppercase font-mono tracking-[0.4em] text-white/40 hover:text-cyan-400 transition-all z-50 flex items-center gap-2 hover-target">
         <i data-lucide="arrow-left" class="w-4 h-4 text-cyan-400"></i> ABORT / RETURN
     </a>
 
-    <div class="container max-w-6xl mx-auto p-6 lg:p-12 z-10 relative flex flex-col lg:grid lg:grid-cols-2 gap-16">
-        <!-- Visual Proxy -->
-        <div class="flex flex-col items-center lg:items-start pt-10">
-            <div class="mb-12">
-                <p class="text-cyan-400 text-[10px] font-mono tracking-[0.5em] uppercase mb-4 opacity-70">/ SECURE ENCRYPTION NODE</p>
-                <h2 class="text-5xl font-black tracking-tighter uppercase glitch" data-text="NEURAL CARD">NEURAL CARD</h2>
-            </div>
+    <main class="flex-grow py-10 relative z-10 flex items-center justify-center">
+        <div class="container max-w-6xl mx-auto p-6 z-10 relative flex flex-col lg:grid lg:grid-cols-2 gap-16 items-center">
+            <!-- Visual Proxy -->
+            <div class="flex flex-col items-center lg:items-start reveal active">
+                <div class="mb-12">
+                    <p class="text-cyan-400 text-xs font-medium tracking-widest uppercase mb-4 flex items-center gap-3">
+                        <span class="w-8 h-px bg-cyan-400/50"></span>
+                        SECURE ENCRYPTION NODE
+                    </p>
+                    <h2 class="text-5xl md:text-6xl font-black tracking-tighter uppercase mb-4">
+                        Neural <span class="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">Card.</span>
+                    </h2>
+                    <p class="text-white/40 text-sm font-light max-w-md">Initialize a secure, quantum-encrypted handshake to establish your permanent core node.</p>
+                </div>
 
-            <div class="card-container lg:scale-[1.1] origin-left">
-                <div class="card-inner" id="card-inner">
-                    <div class="card-front overflow-hidden p-8 backdrop-blur-3xl border border-white/10">
-                        <div class="card-texture"></div>
-                        <div class="card-flare"></div>
-                        <div class="flex flex-col h-full justify-between relative z-10">
-                            <div class="flex justify-between items-start">
-                                <span class="font-mono text-[11px] font-bold tracking-tighter uppercase">Integra<span class="text-cyan-400">Core</span></span>
-                                <span class="text-[8px] font-mono opacity-20 uppercase tracking-widest">Gen-IV Link</span>
-                            </div>
-                            <div class="flex flex-col gap-3">
-                                <div class="card-chip w-10 h-8"></div>
-                                <div id="card-number-display" class="text-lg font-mono tracking-[0.25em]">0000 0000 0000 0000</div>
-                            </div>
-                            <div class="flex justify-between items-end border-t border-white/5 pt-4">
-                                <p id="card-holder-display" class="text-[12px] font-bold tracking-[0.3em] font-mono uppercase text-white/90">JANE DOE</p>
-                                <div class="flex -space-x-3 opacity-60">
-                                    <div class="w-6 h-6 rounded-full bg-cyan-400/20 border border-cyan-400/30"></div>
-                                    <div class="w-6 h-6 rounded-full bg-white/10 border border-white/20"></div>
+                <div class="card-container lg:scale-[1.1] origin-left group">
+                    <div class="card-inner" id="card-inner">
+                        <div class="card-front overflow-hidden p-8 border border-cyan-500/30 shadow-[0_0_80px_rgba(34,211,238,0.1)] rounded-3xl flex flex-col bg-slate-900/60 backdrop-blur-2xl">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-violet-400"></div>
+                            <div class="card-flare"></div>
+                            <div class="flex flex-col h-full justify-between relative z-10">
+                                <div class="flex justify-between items-start">
+                                    <span class="font-sans font-bold tracking-tight text-lg">INTEGRA</span>
+                                    <div class="flex space-x-1">
+                                        <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+                                        <div class="w-2 h-2 rounded-full bg-violet-400"></div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-3 mt-6">
+                                    <div class="card-chip w-12 h-9 rounded-md border border-white/20 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md"></div>
+                                    <div id="card-number-display" class="text-xl font-mono tracking-[0.2em] text-white/90 drop-shadow-md">0000 0000 0000 0000</div>
+                                </div>
+                                <div class="flex justify-between items-end border-t border-white/10 pt-4 mt-6">
+                                    <p id="card-holder-display" class="text-xs font-medium tracking-[0.2em] uppercase text-white/70">JANE DOE</p>
+                                    <div class="flex -space-x-3 opacity-80">
+                                        <div class="w-8 h-8 rounded-full bg-cyan-400/30 mix-blend-screen"></div>
+                                        <div class="w-8 h-8 rounded-full bg-violet-400/30 mix-blend-screen"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="card-back p-8 backdrop-blur-3xl border border-white/10">
-                        <div class="w-full h-10 bg-black/90 -mx-8 mt-4"></div>
-                        <div class="flex justify-between items-center mt-12 bg-white/[0.03] p-4 rounded border border-white/5">
-                            <span id="card-expiry-display" class="text-xs font-mono text-cyan-400">MM/YY</span>
-                            <span id="card-cvc-display" class="text-sm font-mono tracking-widest">•••</span>
+                        <div class="card-back p-8 border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.5)] rounded-3xl flex flex-col bg-slate-900/90 backdrop-blur-2xl">
+                            <div class="w-full h-12 bg-black -mx-8 mt-4"></div>
+                            <div class="flex justify-between items-center mt-12 bg-white/[0.05] p-3 rounded-lg border border-white/5">
+                                <span id="card-expiry-display" class="text-xs font-mono text-white/50">MM/YY</span>
+                                <span id="card-cvc-display" class="text-sm font-mono tracking-widest bg-white/10 px-3 py-1 rounded">•••</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Payment Interface -->
-        <div class="glass-panel p-10 rounded-3xl border border-white/10 bg-white/[0.01]">
-            <div class="mb-12">
-                <label class="block text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mb-6">Service Cycle</label>
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Monthly -->
-                    <div id="billing-monthly" class="billing-card p-6 rounded-2xl border-2 border-white/5 bg-white/[0.01] cursor-pointer hover:border-white/20 transition-all group active-billing" onclick="selectBilling('monthly')">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="radio-button w-5 h-5 rounded-full border-2 border-white/20 flex items-center justify-center group-[.active-billing]:border-cyan-400">
-                                <div class="radio-inner w-2.5 h-2.5 rounded-full bg-cyan-400 opacity-0 group-[.active-billing]:opacity-100 transition-opacity"></div>
+            <!-- Payment Interface -->
+            <div class="glass-panel p-10 rounded-3xl border border-white/5 bg-white/[0.02] backdrop-blur-xl relative z-10 reveal active delay-100 w-full max-w-lg mx-auto">
+                <div class="mb-10">
+                    <label class="block text-xs font-medium text-white/50 uppercase tracking-widest mb-6">Service Cycle</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Monthly -->
+                        <div id="billing-monthly" class="billing-card p-6 rounded-2xl border border-white/10 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] transition-all duration-300 group active-billing hover-target" onclick="selectBilling('monthly')">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="radio-button w-5 h-5 rounded-full border border-white/30 flex items-center justify-center group-[.active-billing]:border-cyan-400 transition-colors">
+                                    <div class="radio-inner w-2.5 h-2.5 rounded-full bg-cyan-400 opacity-0 group-[.active-billing]:opacity-100 transition-opacity shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>
+                                </div>
                             </div>
+                            <h4 class="text-base font-semibold text-white/90 mb-1">Monthly</h4>
+                            <p class="text-xs text-white/50 font-light" id="monthly-price-display">$0.00 / mo</p>
                         </div>
-                        <h4 class="text-lg font-bold text-white mb-1">Monthly</h4>
-                        <p class="text-[10px] font-mono text-white/40 uppercase tracking-widest" id="monthly-price-display">$0.00 / mo</p>
-                    </div>
 
-                    <!-- Yearly -->
-                    <div id="billing-yearly" class="billing-card p-6 rounded-2xl border-2 border-white/5 bg-white/[0.01] cursor-pointer hover:border-white/20 transition-all group relative" onclick="selectBilling('yearly')">
-                        <div class="absolute top-4 right-4 text-[8px] font-bold bg-cyan-400 text-obsidian px-2 py-0.5 rounded uppercase tracking-tighter">Save 20%</div>
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="radio-button w-5 h-5 rounded-full border-2 border-white/20 flex items-center justify-center group-[.active-billing]:border-cyan-400">
-                                <div class="radio-inner w-2.5 h-2.5 rounded-full bg-cyan-400 opacity-0 group-[.active-billing]:opacity-100 transition-opacity"></div>
+                        <!-- Yearly -->
+                        <div id="billing-yearly" class="billing-card p-6 rounded-2xl border border-white/10 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] transition-all duration-300 group relative hover-target" onclick="selectBilling('yearly')">
+                            <div class="absolute top-4 right-4 bg-gradient-to-r from-cyan-400/10 to-violet-400/10 border border-cyan-400/20 text-cyan-300 text-[9px] font-semibold px-2 py-1 rounded uppercase tracking-widest">Save 20%</div>
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="radio-button w-5 h-5 rounded-full border border-white/30 flex items-center justify-center group-[.active-billing]:border-cyan-400 transition-colors">
+                                    <div class="radio-inner w-2.5 h-2.5 rounded-full bg-cyan-400 opacity-0 group-[.active-billing]:opacity-100 transition-opacity shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>
+                                </div>
                             </div>
+                            <h4 class="text-base font-semibold text-white/90 mb-1">Yearly</h4>
+                            <p class="text-xs text-white/50 font-light" id="yearly-price-display">$0.00 / yr</p>
                         </div>
-                        <h4 class="text-lg font-bold text-white mb-1">Yearly</h4>
-                        <p class="text-[10px] font-mono text-white/40 uppercase tracking-widest" id="yearly-price-display">$0.00 / yr</p>
                     </div>
                 </div>
+
+                <form id="payment-form" class="space-y-6">
+                    <div class="group">
+                        <label class="block text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Operator Profile</label>
+                        <input type="text" id="card-holder-name" class="w-full bg-obsidian/50 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all placeholder:text-white/20" placeholder="Jane Doe" required>
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Neural Card Number</label>
+                        <div class="w-full bg-obsidian/50 border border-white/10 rounded-xl p-4 transition-all min-h-[52px] focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/50 relative">
+                            <div class="placeholder-loading absolute top-4 left-4 text-sm text-white/20 animate-pulse mt-0.5 pointer-events-none">Initializing Secure Channel...</div>
+                            <div id="card-number-element"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="group">
+                            <label class="block text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Expiry</label>
+                            <div class="w-full bg-obsidian/50 border border-white/10 rounded-xl p-4 transition-all min-h-[52px] focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/50">
+                                <div id="card-expiry-element"></div>
+                            </div>
+                        </div>
+                        <div class="group">
+                            <label class="block text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Security Code (CVC)</label>
+                            <div class="w-full bg-obsidian/50 border border-white/10 rounded-xl p-4 transition-all min-h-[52px] focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/50">
+                                <div id="card-cvc-element"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="card-errors" class="mt-1 text-[10px] font-mono text-red-400 uppercase tracking-widest" role="alert"></div>
+
+                    <div class="pt-4">
+                        <button id="submit-button" type="submit" class="w-full py-4 bg-white text-obsidian text-[11px] uppercase tracking-widest font-bold transition-all rounded-full hover:bg-cyan-50 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] hover-target relative overflow-hidden group">
+                            <span class="relative z-10 flex items-center justify-center gap-2">
+                                Confirm Secure Transaction
+                                <i data-lucide="shield-check" class="w-4 h-4 text-obsidian"></i>
+                            </span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                        </button>
+                        <p class="text-[9px] font-mono text-center text-white/30 uppercase tracking-widest mt-6 flex items-center justify-center gap-2">
+                            <i data-lucide="lock" class="w-3 h-3"></i> RSA-4096 / Secure Link Active
+                        </p>
+                    </div>
+                </form>
             </div>
-
-            <form id="payment-form" class="space-y-8">
-                <div class="group">
-                    <label class="block text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mb-4">Operator Profile</label>
-                    <input type="text" id="card-holder-name" class="w-full bg-white/[0.03] border border-white/10 rounded-lg p-5 text-sm text-white focus:border-cyan-400 outline-none transition-all" placeholder="JANE DOE" required>
-                </div>
-
-                <div class="group">
-                    <label class="block text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mb-4">Neural Payment Node</label>
-                    <div id="card-element" class="w-full bg-white/[0.03] border border-white/10 rounded-lg p-5 transition-all min-h-[50px]">
-                        <div id="card-element-placeholder" class="text-[10px] font-mono text-white/10 animate-pulse">Initializing Secure Channel...</div>
-                    </div>
-                    <div id="card-errors" class="mt-4 text-[10px] font-mono text-red-500 uppercase tracking-widest" role="alert"></div>
-                </div>
-
-                <div class="pt-6">
-                    <button id="submit-button" type="submit" class="w-full py-6 bg-cyan-400 text-obsidian text-xs uppercase tracking-[0.5em] font-black hover:bg-white transition-all rounded-xl relative overflow-hidden group shadow-[0_0_40px_rgba(34,211,238,0.2)]">
-                        <span class="relative z-10">Confirm Secure Transaction</span>
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                    </button>
-                    <p class="text-[8px] font-mono text-center text-white/10 uppercase tracking-widest mt-6">RSA-4096 / SECURE LINK ACTIVE</p>
-                </div>
-            </form>
         </div>
-    </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-obsidian border-t border-white/5 py-12 relative z-10 mt-auto">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p class="text-xs font-mono text-white/30 uppercase tracking-widest">&copy; 2026 Integra Security Systems</p>
+            <div class="flex gap-8">
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Privacy</a>
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Terms</a>
+                <a href="#" class="text-xs font-mono text-white/30 hover:text-cyan-400 transition-colors hover-target">Contact</a>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/core/settings.js"></script>
     <script src="../js/pages/checkout.js"></script>
     <script src="../js/pages/script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
