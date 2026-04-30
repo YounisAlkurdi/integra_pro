@@ -83,27 +83,36 @@
     </aside>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="md:hidden fixed bottom-0 left-0 w-full h-16 glass-panel border-t border-white/5 backdrop-blur-2xl bg-obsidian/80 z-[60] flex items-center overflow-x-auto no-scrollbar px-4 gap-6">
-        <a href="dashboard.html" class="p-2 flex-shrink-0 text-cyan-400">
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-[60] glass-panel border-t border-white/5 backdrop-blur-2xl bg-obsidian/80 px-6 py-4 flex items-center justify-between overflow-x-auto gap-4 custom-scrollbar">
+        <a href="dashboard.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white" title="Console">
             <i data-lucide="terminal" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Console</span>
         </a>
-        <a href="reports.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
+        <a href="reports.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Archives">
             <i data-lucide="layers" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Archives</span>
         </a>
-        <a href="appointments.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
+        <a href="appointments.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Appointments">
             <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Appts</span>
         </a>
-        <a href="billing.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
+        <a href="billing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Billing">
             <i data-lucide="credit-card" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Billing</span>
         </a>
-        <a href="pricing.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
+        <a href="pricing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Security labs">
             <i data-lucide="shield-check" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Labs</span>
         </a>
-        <a href="llm-config.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
+        <a href="llm-config.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Neural Hub">
             <i data-lucide="brain" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Config</span>
         </a>
-        <a href="profile.html" class="p-2 flex-shrink-0 text-white/40 hover:text-white transition-colors">
-            <i data-lucide="user" class="w-5 h-5"></i>
+        <a href="profile.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="User Profile">
+            <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] overflow-hidden">
+                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[6px] font-bold">YA</div>
+            </div>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Profile</span>
         </a>
     </nav>
 
