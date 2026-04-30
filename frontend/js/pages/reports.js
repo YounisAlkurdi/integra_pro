@@ -239,8 +239,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         indicator.className = `w-2 h-2 rounded-full ${type === 'success' ? 'bg-cyan-400' : 'bg-red-500'}`;
         text.innerText = msg;
         
-        toast.classList.remove('translate-y-20');
-        setTimeout(() => toast.classList.add('translate-y-20'), 4000);
+        toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+        setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none'), 4000);
     }
 
     // Setup
