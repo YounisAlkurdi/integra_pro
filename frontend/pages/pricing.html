@@ -45,7 +45,7 @@
     <div class="custom-cursor hidden md:block" id="cursor"></div>
 
     <!-- Vertical Sidebar -->
-    <aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
+    <aside class="hidden md:flex fixed left-0 top-0 h-full w-20 flex-col items-center py-8 z-[60] glass-panel border-r border-white/5 backdrop-blur-2xl bg-obsidian/40">
         <!-- Logo Node -->
         <div class="mb-12">
             <div class="w-10 h-10 rounded-xl bg-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
@@ -70,23 +70,57 @@
             <a href="pricing.html" class="sidebar-link active hover-target" title="Security labs">
                 <i data-lucide="shield-check" class="w-5 h-5"></i>
             </a>
-            <a href="llm-config.html" class="sidebar-link hover-target" title="العقل التحليلي — LLM Config">
+            <a href="llm-config.html" class="sidebar-link hover-target" title="Neural Hub">
                 <i data-lucide="brain" class="w-5 h-5"></i>
             </a>
         </nav>
 
         <!-- System Actions -->
         <div class="flex flex-col gap-6 items-center">
-            <a href="profile.html" class="sidebar-link hover-target" id="user-avatar" title="الملف الشخصي">
+            <a href="profile.html" class="sidebar-link hover-target" id="user-avatar" title="User Profile">
                 <i data-lucide="user" class="w-5 h-5"></i>
             </a>
-            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="تسجيل الخروج">
+            <a href="javascript:void(0)" onclick="logoutHR()" class="sidebar-link hover-target text-red-500/50 hover:text-red-500" title="Sign Out">
                 <i data-lucide="power" class="w-5 h-5"></i>
             </a>
         </div>
     </aside>
 
-    <main class="ml-20 pt-16 pb-32 relative z-10">
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-[60] glass-panel border-t border-white/5 backdrop-blur-2xl bg-obsidian/80 px-6 py-4 flex items-center justify-between overflow-x-auto gap-4 custom-scrollbar">
+        <a href="dashboard.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Console">
+            <i data-lucide="terminal" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Console</span>
+        </a>
+        <a href="reports.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Archives">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Archives</span>
+        </a>
+        <a href="appointments.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Appointments">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Appts</span>
+        </a>
+        <a href="billing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Billing">
+            <i data-lucide="credit-card" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Billing</span>
+        </a>
+        <a href="pricing.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white" title="Security labs">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Labs</span>
+        </a>
+        <a href="llm-config.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="Neural Hub">
+            <i data-lucide="brain" class="w-5 h-5"></i>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Config</span>
+        </a>
+        <a href="profile.html" class="flex-shrink-0 flex flex-col items-center gap-1 hover-target text-white/50 hover:text-white" title="User Profile">
+            <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1px] overflow-hidden">
+                <div class="w-full h-full rounded-full bg-obsidian flex items-center justify-center text-[6px] font-bold">YA</div>
+            </div>
+            <span class="text-[8px] font-mono uppercase tracking-widest opacity-50">Profile</span>
+        </a>
+    </nav>
+
+    <main class="md:ml-20 pt-16 pb-32 relative z-10 w-full md:w-[calc(100%-5rem)]">
         <div class="max-w-7xl mx-auto px-6">
             
             <!-- Hero Section -->

@@ -59,18 +59,18 @@
     </a>
 
     <!-- Auth Container -->
-    <div class="glass-panel w-full max-w-lg rounded-3xl p-10 mx-4 relative border border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.05)] z-10 transition-all duration-500 hover:shadow-[0_0_100px_rgba(139,92,246,0.1)] bg-white/[0.02] backdrop-blur-xl">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-10 mx-4 relative border border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.05)] z-10 transition-all duration-500 hover:shadow-[0_0_100px_rgba(139,92,246,0.1)] bg-white/[0.02] backdrop-blur-xl">
         
         <!-- Step 1: Identity Entry -->
         <div id="step-1" class="transition-all duration-500">
-            <div class="mb-10 text-center">
-                <p class="text-white/40 text-[10px] font-mono tracking-[0.3em] uppercase mb-4">[ SECURE NODE ACCESS ]</p>
-                <h2 class="text-4xl font-bold tracking-tighter uppercase"><span class="bg-clip-text text-transparent bg-premium-gradient">ACCESS NODE</span></h2>
+            <div class="mb-8 sm:mb-10 text-center">
+                <p class="text-white/40 text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-4">[ SECURE NODE ACCESS ]</p>
+                <h2 class="text-3xl sm:text-4xl font-bold tracking-tighter uppercase"><span class="bg-clip-text text-transparent bg-premium-gradient">ACCESS NODE</span></h2>
             </div>
             
             <!-- Social Auth -->
             <div class="space-y-4 mb-8">
-                <button id="google-btn" type="button" class="group w-full py-4 bg-white/[0.03] border border-white/10 hover:border-white/40 hover:bg-white/[0.06] transition-all duration-300 rounded-full flex justify-center items-center gap-3 text-xs uppercase tracking-[0.2em] font-bold text-white hover-target shadow-[0_0_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                <button id="google-btn" type="button" class="group w-full py-3 sm:py-4 bg-white/[0.03] border border-white/10 hover:border-white/40 hover:bg-white/[0.06] transition-all duration-300 rounded-full flex justify-center items-center gap-3 text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] font-bold text-white hover-target shadow-[0_0_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                     <svg class="w-4 h-4" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -83,23 +83,23 @@
 
             <div class="relative flex items-center py-4 mb-8">
                 <div class="flex-grow border-t border-white/5"></div>
-                <span class="flex-shrink-0 mx-6 text-white/20 text-[10px] font-mono uppercase tracking-[0.4em]">OR</span>
+                <span class="flex-shrink-0 mx-4 sm:mx-6 text-white/20 text-[10px] font-mono uppercase tracking-[0.2em] sm:tracking-[0.4em]">OR</span>
                 <div class="flex-grow border-t border-white/5"></div>
             </div>
             
             <!-- Email Auth -->
             <form id="email-form">
-                <div class="space-y-6">
+                <div class="space-y-4 sm:space-y-6">
                     <div>
-                        <input type="email" id="user-email" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-full p-5 px-8 text-sm text-white focus:border-cyan-400 focus:bg-white/[0.05] outline-none transition-all duration-300 placeholder:text-white/20" placeholder="Enter your email" required>
+                        <input type="email" id="user-email" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-full py-4 px-6 sm:p-5 sm:px-8 text-sm text-white focus:border-cyan-400 focus:bg-white/[0.05] outline-none transition-all duration-300 placeholder:text-white/20" placeholder="Enter your email" required>
                     </div>
-                    <button type="submit" class="w-full py-5 bg-white text-black text-xs uppercase tracking-[0.2em] font-black hover:bg-transparent hover:text-white border border-transparent hover:border-white transition-all duration-500 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none">
+                    <button type="submit" class="w-full py-4 sm:py-5 bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] font-black hover:bg-transparent hover:text-white border border-transparent hover:border-white transition-all duration-500 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none">
                         Continue with email
                     </button>
                 </div>
             </form>
 
-            <p class="mt-10 text-center text-[10px] text-white/30 font-mono tracking-widest leading-relaxed">
+            <p class="mt-8 sm:mt-10 text-center text-[9px] sm:text-[10px] text-white/30 font-mono tracking-wider sm:tracking-widest leading-relaxed">
                 By continuing, you acknowledge Integra's <br>
                 <a href="#" class="text-white/60 hover:text-cyan-400 underline underline-offset-4 transition-colors">Privacy Policy</a> and <a href="#" class="text-white/60 hover:text-cyan-400 underline underline-offset-4 transition-colors">Terms of Service</a>.
             </p>
@@ -107,24 +107,24 @@
 
         <!-- Step 2: Verification Code -->
         <div id="step-2" class="hidden opacity-0 scale-105 transition-all duration-500">
-            <div class="mb-10 text-center">
-                <p class="text-violet-400 text-[10px] font-mono tracking-[0.3em] uppercase mb-4">[ SECURE CHANNEL ESTABLISHED ]</p>
+            <div class="mb-8 sm:mb-10 text-center">
+                <p class="text-violet-400 text-[10px] font-mono tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-4">[ SECURE CHANNEL ESTABLISHED ]</p>
                 <h2 class="text-2xl font-bold tracking-tight text-white mb-3">Verification Required</h2>
-                <p class="text-sm text-white/60 leading-relaxed max-w-sm mx-auto">
+                <p class="text-xs sm:text-sm text-white/60 leading-relaxed max-w-sm mx-auto">
                     Enter the code generated from the link sent to <br>
-                    <span id="display-email" class="text-cyan-400 font-mono tracking-widest mt-2 block">user@example.com</span>
+                    <span id="display-email" class="text-cyan-400 font-mono tracking-widest mt-2 block break-all">user@example.com</span>
                 </p>
             </div>
 
             <form id="otp-form">
-                <div class="space-y-6">
+                <div class="space-y-4 sm:space-y-6">
                     <div class="relative">
-                        <input id="otp-input" type="text" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-full p-5 text-lg text-white text-center tracking-[1em] font-mono focus:border-violet-400 focus:bg-white/[0.05] outline-none transition-all duration-300" placeholder="••••••" maxlength="6" required>
-                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none opacity-40">
-                            <i data-lucide="shield-check" class="w-5 h-5 text-violet-400"></i>
+                        <input id="otp-input" type="text" class="input-field w-full bg-white/[0.02] border border-white/10 rounded-full py-4 sm:p-5 text-base sm:text-lg text-white text-center tracking-[0.5em] sm:tracking-[1em] font-mono focus:border-violet-400 focus:bg-white/[0.05] outline-none transition-all duration-300" placeholder="••••••" maxlength="6" required>
+                        <div class="absolute inset-y-0 left-4 sm:left-6 flex items-center pointer-events-none opacity-40">
+                            <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5 text-violet-400"></i>
                         </div>
                     </div>
-                    <button type="submit" class="w-full py-5 bg-white text-black text-xs uppercase tracking-[0.2em] font-black hover:bg-transparent hover:text-white border border-transparent hover:border-white transition-all duration-500 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none">
+                    <button type="submit" class="w-full py-4 sm:py-5 bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.1em] sm:tracking-[0.2em] font-black hover:bg-transparent hover:text-white border border-transparent hover:border-white transition-all duration-500 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-none">
                         Verify Email Address
                     </button>
                 </div>
