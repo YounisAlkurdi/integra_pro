@@ -35,9 +35,11 @@
 </head>
 <body class="bg-obsidian text-white relative min-h-screen">
     
-    <div class="bg-noise"></div>
-    <div class="scanlines"></div>
-    <div class="grid-lines fixed inset-0 opacity-10"></div>
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-400/20 blur-[120px] rounded-full mix-blend-screen animate-pulse-slow"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-violet-400/20 blur-[150px] rounded-full mix-blend-screen animate-pulse-slow" style="animation-delay: 2s;"></div>
+    </div>
 
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
@@ -151,11 +153,11 @@
                         <form id="createInterviewForm" class="space-y-6">
                             <div class="space-y-2">
                                 <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Candidate Name</label>
-                                <input type="text" id="candidateName" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="IDENTIFY_SUBJECT" required>
+                                <input type="text" id="candidateName" class="w-full bg-obsidian/60 shadow-inner border border-white/10 rounded-xl p-4 text-sm focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all placeholder:text-white/20" placeholder="IDENTIFY_SUBJECT" required>
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Assigned Role</label>
-                                <input type="text" id="position" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="LEVEL_4_ENGINEER" required>
+                                <input type="text" id="position" class="w-full bg-obsidian/60 shadow-inner border border-white/10 rounded-xl p-4 text-sm focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all placeholder:text-white/20" placeholder="LEVEL_4_ENGINEER" required>
                             </div>
                             
                             <!-- Scheduled Protocol Module -->
@@ -172,18 +174,38 @@
                                 <div id="schedule-container" class="space-y-4 pt-4 hidden animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div class="space-y-2">
                                         <label class="text-[9px] font-mono text-cyan-400/50 uppercase tracking-[0.3em]">Delivery Address (Email)</label>
-                                        <input type="email" id="candidateEmail" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-sm focus:border-cyan-400 outline-none transition-all placeholder:text-white/10" placeholder="SECURE_ADDRESS@NODE.NET">
+                                        <input type="email" id="candidateEmail" class="w-full bg-obsidian/60 shadow-inner border border-white/10 rounded-xl p-4 text-sm focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all placeholder:text-white/20" placeholder="SECURE_ADDRESS@NODE.NET">
                                     </div>
                                     <div class="space-y-2">
                                         <label class="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">Scheduled Protocol Time</label>
-                                        <input type="datetime-local" id="scheduledAt" class="w-full bg-white/[0.02] border border-white/5 rounded-xl p-4 text-xs font-mono text-white/60 focus:border-cyan-400 outline-none transition-all custom-datetime-input">
+                                        <input type="datetime-local" id="scheduledAt" class="w-full bg-obsidian/60 shadow-inner border border-white/10 rounded-xl p-4 text-xs font-mono text-white/60 focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/50 outline-none transition-all custom-datetime-input">
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- AI HR Protocol Switch -->
+                            <div class="glass-panel p-6 rounded-2xl border border-cyan-400/10 bg-cyan-400/5 flex items-center justify-between group hover:border-cyan-400/30 transition-all duration-300">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400 group-hover:bg-cyan-400 group-hover:text-obsidian transition-all">
+                                        <i data-lucide="bot" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">AI HR Agent Protocol</label>
+                                        <p class="text-[8px] font-mono text-cyan-400/40 uppercase tracking-widest mt-0.5">Autonomous Evaluation Node</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer hover-target">
+                                    <input type="checkbox" id="ai-agent-toggle" class="sr-only peer">
+                                    <div class="w-10 h-5 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/20 after:border-white/10 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-400/20 peer-checked:after:bg-cyan-400"></div>
+                                </label>
+                            </div>
 
-                            <button type="submit" class="w-full py-5 bg-cyan-400 text-obsidian text-[10px] uppercase tracking-[0.4em] font-black rounded-2xl hover:bg-white hover:shadow-[0_0_40px_rgba(34,211,238,0.2)] transition-all mt-8 hover-target" id="btn-create">
-                                <span id="create-btn-text">Establish Secure Link</span>
+
+                            <button type="submit" class="w-full py-5 bg-white text-obsidian text-[10px] uppercase tracking-[0.4em] font-black rounded-2xl hover:bg-cyan-50 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] transition-all mt-8 hover-target group" id="btn-create">
+                                <span id="create-btn-text" class="flex items-center justify-center gap-3">
+                                    Establish Secure Link
+                                    <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                                </span>
                             </button>
                         </form>
 
@@ -230,21 +252,22 @@
     <!-- Professional Confirmation Modal -->
     <div id="confirm-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-6">
         <div class="absolute inset-0 bg-obsidian/90 backdrop-blur-2xl"></div>
-        <div class="relative w-full max-w-md glass-panel border border-white/5 rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+        <div class="relative w-full max-w-md glass-panel backdrop-blur-3xl bg-obsidian/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <div class="h-1 w-full bg-gradient-to-r from-red-500/0 via-red-500 to-red-500/0"></div>
             
             <div class="p-10 text-center">
-                <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-8 mx-auto border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                    <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-8 mx-auto border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-red-500/10 to-transparent"></div>
+                    <i data-lucide="alert-triangle" class="w-8 h-8 relative z-10"></i>
                 </div>
                 
-                <h3 class="text-xl font-black uppercase tracking-tighter italic mb-4">Terminate Secure Node?</h3>
+                <h3 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-4">Terminate Secure Node?</h3>
                 <p class="text-[11px] text-white/40 leading-relaxed mb-10 font-mono uppercase tracking-widest">
-                    This action will disconnect <span class="text-white">all participants</span> and sever the neural link. The session data will be archived and the room purged from servers.
+                    This action will disconnect <span class="text-white/80">all participants</span> and sever the neural link. The session data will be archived and the room purged from servers.
                 </p>
                 
                 <div class="flex flex-col gap-3">
-                    <button id="confirm-proceed" class="w-full py-4 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-600 shadow-[0_0_40px_rgba(239,68,68,0.2)] transition-all hover-target">Confirm Purge</button>
+                    <button id="confirm-proceed" class="w-full py-4 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-600 shadow-[0_0_30px_rgba(239,68,68,0.3)] transition-all hover-target">Confirm Purge</button>
                     <button id="confirm-cancel" class="w-full py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all hover-target">Abort Protocol</button>
                 </div>
             </div>
@@ -257,41 +280,44 @@
     </div>
 
     <!-- AI Agent Chat Widget -->
-    <!-- Chat Button -->
-    <button id="ai-chat-btn" class="fixed bottom-10 right-10 z-[80] w-14 h-14 bg-cyan-400 rounded-full shadow-[0_0_40px_rgba(34,211,238,0.4)] hover:shadow-[0_0_60px_rgba(34,211,238,0.6)] flex items-center justify-center transition-all hover:scale-110 hover-target animate-bounce" title="المساعد الذكي">
-        <i data-lucide="bot" class="text-obsidian w-6 h-6"></i>
+    <button id="ai-chat-btn" class="fixed bottom-10 right-10 z-[80] w-14 h-14 bg-white rounded-full shadow-[0_0_40px_rgba(34,211,238,0.3)] hover:shadow-[0_0_60px_rgba(34,211,238,0.5)] flex items-center justify-center transition-all duration-300 hover:scale-110 hover-target group animate-bounce" title="المساعد الذكي">
+        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-400/20 to-violet-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <i data-lucide="bot" class="text-obsidian w-6 h-6 relative z-10"></i>
     </button>
 
-    <!-- Chat Window -->
-    <div id="ai-chat-window" class="fixed bottom-28 right-10 w-96 max-w-[calc(100vw-5rem)] h-[500px] max-h-[70vh] glass-panel border border-white/10 rounded-3xl shadow-2xl z-[80] flex flex-col hidden opacity-0 translate-y-10 transition-all duration-300" dir="rtl">
+    <div id="ai-chat-window" class="fixed bottom-28 right-10 w-96 max-w-[calc(100vw-5rem)] h-[500px] max-h-[70vh] glass-panel border border-white/10 rounded-3xl shadow-2xl z-[80] flex flex-col hidden opacity-0 translate-y-10 transition-all duration-300 backdrop-blur-3xl bg-obsidian/70" dir="rtl">
         <!-- Chat Header -->
-        <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+        <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-white/[0.05] to-transparent">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-cyan-400/20 border border-cyan-400/50 flex flex-col items-center justify-center">
-                    <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                <div class="relative w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-violet-400 opacity-20"></div>
+                    <i data-lucide="cpu" class="w-5 h-5 text-cyan-400 relative z-10"></i>
                 </div>
                 <div>
-                    <h3 class="text-sm font-black italic tracking-tighter text-white">Integra System Agent</h3>
-                    <p class="text-[8px] font-mono uppercase tracking-[0.2em] text-cyan-400">MCP/LangChain Linked</p>
+                    <h3 class="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">Integra Agent</h3>
+                    <p class="text-[9px] font-mono uppercase tracking-widest text-cyan-400/80 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                        System Online
+                    </p>
                 </div>
             </div>
-            <button id="ai-chat-close" class="text-white/40 hover:text-white transition-colors hover-target">
-                <i data-lucide="x" class="w-5 h-5"></i>
+            <button id="ai-chat-close" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-all hover-target">
+                <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
 
         <!-- Chat Messages -->
         <div id="ai-chat-messages" class="flex-1 p-5 overflow-y-auto space-y-4 custom-scrollbar flex flex-col">
-            <div class="p-4 rounded-2xl bg-white/[0.05] border border-white/10 text-white/70 text-[11px] font-mono leading-relaxed self-start max-w-[85%] rounded-tl-none">
+            <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/5 text-white/80 text-xs font-mono leading-relaxed self-start max-w-[85%] rounded-tr-sm shadow-lg shadow-black/20 backdrop-blur-md">
                 أهلاً بك. أنا المساعد الذكي لنظام Integra. أستطيع قراءة لوحة التحكم، وإجراء التحليلات باستخدام أدوات MCP المتاحة. كيف يمكنني مساعدتك؟
             </div>
         </div>
 
         <!-- Chat Input -->
-        <div class="p-4 border-t border-white/10 bg-black/40 rounded-b-3xl">
-            <div class="relative flex items-center">
-                <input autocomplete="off" type="text" id="ai-chat-input" placeholder="اطلب تقريراً أو اسأل عن إعدادات النظام..." class="w-full bg-transparent border-none text-white text-[11px] font-mono placeholder:text-white/20 outline-none pr-3 pl-12 h-10">
-                <button id="ai-chat-send" class="absolute left-2 w-8 h-8 rounded-full bg-cyan-400 flex flex-col items-center justify-center text-obsidian hover:bg-white transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] hover-target">
+        <div class="p-4 border-t border-white/5 bg-obsidian/40 rounded-b-3xl">
+            <div class="relative flex items-center group">
+                <input autocomplete="off" type="text" id="ai-chat-input" placeholder="اطلب تقريراً أو اسأل عن إعدادات النظام..." class="w-full bg-white/[0.03] border border-white/10 rounded-full text-white text-xs font-mono placeholder:text-white/30 outline-none pr-4 pl-12 h-12 focus:border-cyan-400/50 focus:bg-white/[0.05] transition-all shadow-inner">
+                <button id="ai-chat-send" class="absolute left-1.5 w-9 h-9 rounded-full bg-cyan-400 flex items-center justify-center text-obsidian hover:bg-white transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] hover-target">
                     <i data-lucide="send" class="w-4 h-4 -ml-0.5 mt-0.5"></i>
                 </button>
             </div>
