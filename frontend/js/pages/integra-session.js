@@ -39,6 +39,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── FIX 1: $ defined FIRST before any usage ───────────────────────────────
     const $ = id => document.getElementById(id);
 
+    // --- AI Agent Discovery: WebMCP Protocol (RFC-ready) ---
+    if (window.navigator && window.navigator.modelContext) {
+        window.navigator.modelContext.provideContext("integra-forensic-session", {
+            roomId: currentRoomId,
+            role: localRole,
+            candidateName: localName,
+            agentActive: aiAgentActive,
+            capabilities: ["neural-command", "behavioral-analysis", "deepfake-shield"],
+            status: "ready"
+        });
+        console.log("Integra: WebMCP Context Advertised");
+    }
+
+
     // ── Spatial Grid Init ─────────────────────────────────────────────────────
     function initSpatialGrid() {
         const grid = $('spatialGrid');

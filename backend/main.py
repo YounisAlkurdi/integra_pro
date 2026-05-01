@@ -46,6 +46,16 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+@app.middleware("http")
+async def add_discovery_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Advertise AI Agent Discovery Protocols dynamically based on host
+    base_url = str(request.base_url).rstrip('/')
+    response.headers["Link"] = f'<{base_url}/.well-known/api-catalog.json>; rel="api-catalog"'
+    return response
+
+
+
 # --- 2. Identity Endpoints (Supabase) ---
 @app.get("/api/user-profile")
 async def get_profile(user: dict = Depends(get_current_user)):
