@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /backend/logs/
+Disallow: /api/private/
+
+# Agent Discovery (RFC 9309)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /backend/integra_mcp.py
+
+# Discovery Protocols
+Sitemap: https://tist-integra.vercel.app/sitemap.xml
+Link: <https://tist-integra.vercel.app/.well-known/api-catalog.json>; rel="api-catalog"
+Link: <https://tist-integra.vercel.app/.well-known/ai-plugin.json>; rel="ai-plugin"
+

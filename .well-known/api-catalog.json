@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "name": "Integra Neural Command",
+  "description": "Forensic Analysis & Neural Behavioral Monitoring System",
+  "auth": {
+    "type": "bearer",
+    "description": "Supabase JWT Authentication"
+  },
+  "endpoints": {
+    "mcp": {
+      "type": "mcp-server",
+      "uri": "https://integra.tist.io/backend/integra_mcp.py",
+      "protocol": "stdio-over-websocket"
+    },
+    "chat": {
+      "type": "rest",
+      "uri": "https://integra.tist.io/api/agent/chat",
+      "method": "POST"
+    },
+    "nodes": {
+      "type": "rest",
+      "uri": "https://integra.tist.io/api/nodes",
+      "method": "GET"
+    }
+  }
+}

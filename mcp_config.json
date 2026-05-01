@@ -1,13 +1,14 @@
 {
   "mcpServers": {
     "integra-control": {
-      "command": "python",
+      "command": "c:/tist_integra/vtest/Scripts/python.exe",
       "args": [
-        "c:/tist_integra/integra_mcp.py"
+        "c:/tist_integra/backend/integra_mcp.py"
       ],
       "env": {
-        "PYTHONPATH": "c:/tist_integra"
+        "PYTHONPATH": "c:/tist_integra/backend"
       }
     }
   }
 }
+

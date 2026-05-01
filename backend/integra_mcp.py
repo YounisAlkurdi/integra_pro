@@ -29,7 +29,32 @@ def sanitize_uid(uid: str) -> str:
         except: pass
     return uid
 
+# --- 0. Metadata: Platform Intelligence ---
+
+@mcp.tool()
+def get_platform_manifest() -> str:
+    """
+    Returns the Integra Platform Manifest. 
+    Provides high-level context about the platform's purpose, forensic capabilities, and architectural limits.
+    Use this to introduce the system to the user or to understand the platform's core boundaries.
+    """
+    return json.dumps({
+        "platform": "Integra Forensic Behavioral Engine",
+        "version": "4.0.0",
+        "tagline": "Beyond Presence — Neural Investigative Intelligence",
+        "core_features": [
+            "Real-time Neural Node Management",
+            "Deepfake Verification (Gatekeeper)",
+            "Behavioral Analysis & Iris Tracking",
+            "Secure Invitation Protocol",
+            "Matrix External Integration (Stripe, Slack, etc.)"
+        ],
+        "compliance": "GDPR-Forensic-Ready",
+        "status": "OPERATIONAL"
+    }, indent=2)
+
 # --- 1. Operations: Node Management ---
+
 
 @mcp.tool()
 def list_active_streams(user_id: str) -> str:
