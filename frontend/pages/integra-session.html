@@ -64,14 +64,14 @@
     <script src="../js/core/config.js"></script>
     <script src="../js/core/settings.js"></script>
 </head>
-<body class="bg-obsidian text-white overflow-hidden h-screen flex flex-col font-sans">
+<body class="bg-obsidian text-white overflow-y-auto lg:overflow-hidden min-h-screen h-full lg:h-screen flex flex-col font-sans">
     
     <div class="bg-noise"></div>
     <div class="scanlines"></div>
     <div class="grid-lines fixed inset-0 opacity-5"></div>
 
     <!-- Top Header -->
-    <header class="h-20 flex items-center justify-between px-10 glass-panel border-b border-white/5 relative z-50">
+    <header class="h-20 flex items-center justify-between px-4 lg:px-10 glass-panel border-b border-white/5 relative z-50">
         <div class="flex items-center gap-8">
             <div class="flex items-center gap-3">
                 <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_15px_#22d3ee]"></div>
@@ -80,27 +80,28 @@
             <div class="h-6 w-px bg-white/10"></div>
             <div class="flex flex-col">
                 <h1 class="text-base font-black uppercase tracking-tighter italic leading-none">integra<span class="text-cyan-400">.</span>forensics</h1>
-                <span class="text-[9px] font-mono text-white/20 uppercase tracking-widest mt-1">SOTA Hybrid Engine v4.0.2</span>
+                <span class="text-[9px] font-mono text-white/20 uppercase tracking-widest mt-1 hidden md:block">SOTA Hybrid Engine v4.0.2</span>
             </div>
         </div>
 
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-4 lg:gap-6">
             <div class="flex flex-col items-end">
-                <span class="text-[9px] font-mono text-white/30 uppercase tracking-widest">Turn Duration</span>
-                <div class="text-xl font-mono text-white/80 tabular-nums" id="timer">00:30</div>
+                <span class="text-[9px] font-mono text-white/30 uppercase tracking-widest hidden md:block">Turn Duration</span>
+                <span class="text-[9px] font-mono text-white/30 uppercase tracking-widest md:hidden">Time</span>
+                <div class="text-lg lg:text-xl font-mono text-white/80 tabular-nums" id="timer">00:30</div>
             </div>
             <div class="h-8 w-px bg-white/10"></div>
-            <button id="btn-copy-invite" onclick="copyInviteLink()" class="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 hover:text-obsidian transition-all control-btn font-black">
+            <button id="btn-copy-invite" onclick="copyInviteLink()" class="px-3 lg:px-6 py-2 lg:py-2.5 rounded-xl bg-white/5 border border-white/10 text-[9px] lg:text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 hover:text-obsidian transition-all control-btn font-black whitespace-nowrap">
                 Copy Invite
             </button>
         </div>
     </header>
 
     <!-- Main Workspace -->
-    <main class="flex-1 flex overflow-hidden p-8 gap-8 relative z-10">
+    <main class="flex-1 flex flex-col lg:flex-row p-4 lg:p-8 gap-4 lg:gap-8 relative z-10 w-full overflow-x-hidden">
         
         <!-- Video Grid Section -->
-        <div class="flex-1 flex flex-col gap-6">
+        <div class="flex-1 flex flex-col gap-4 lg:gap-6 min-h-[500px] lg:min-h-0">
             <div class="video-container flex-1 relative group">
                 <div class="scanner-line"></div>
 
@@ -186,7 +187,7 @@
             </div>
 
             <!-- Bottom Controls -->
-            <div class="h-24 glass-panel rounded-3xl border border-white/5 flex items-center justify-between px-10">
+            <div class="h-auto lg:h-24 py-4 lg:py-0 glass-panel rounded-3xl border border-white/5 flex flex-wrap items-center justify-between px-4 lg:px-10 gap-4">
                 <div class="flex items-center gap-3">
                     <button id="btn-toggle-mic" title="Toggle Microphone"
                             class="control-btn w-13 h-13 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/60 hover:bg-cyan-400/10 hover:border-cyan-400/30 hover:text-cyan-400 transition-all">
@@ -220,7 +221,7 @@
         </div>
 
         <!-- Sidebar / Intelligence Section -->
-        <div class="w-[440px] flex flex-col gap-6">
+        <div class="w-full lg:w-[440px] flex flex-col gap-4 lg:gap-6">
             <div class="flex-1 flex flex-col overflow-hidden glass-panel rounded-[2.5rem] border border-white/5 relative">
                 
                 <!-- Sidebar Header Tabs -->
@@ -236,7 +237,7 @@
                 </div>
 
                 <!-- Tab Content: STT (Transcription Feed) -->
-                <div id="stt-tab" class="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar block">
+                <div id="stt-tab" class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 lg:space-y-10 custom-scrollbar block min-h-[300px]">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-[11px] font-mono text-white/40 uppercase tracking-[0.4em] font-black">Live Transcription</h3>
                         <div class="flex items-center gap-2 px-3 py-1 bg-cyan-400/10 border border-cyan-400/20 rounded-md">
@@ -280,7 +281,7 @@
                 </div>
 
                 <!-- Tab Content: Intel (Analytics Engine) -->
-                <div id="intel-tab" class="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar hidden animate-slide-up">
+                <div id="intel-tab" class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 custom-scrollbar hidden animate-slide-up min-h-[400px]">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="text-[11px] font-mono text-white/40 uppercase tracking-[0.4em] font-black">Forensic Engine</h3>
                         <div class="flex items-center gap-2">
@@ -474,7 +475,7 @@
             </div>
 
             <!-- Unified Intelligence Bar (User's Final Layout) -->
-            <div id="ai-agent-container" class="h-28 glass-panel rounded-[2rem] border border-white/5 flex items-center px-10 gap-10 overflow-hidden relative group">
+            <div id="ai-agent-container" class="h-auto lg:h-28 py-6 lg:py-0 glass-panel rounded-[2rem] border border-white/5 flex flex-col lg:flex-row items-center px-6 lg:px-10 gap-6 lg:gap-10 overflow-hidden relative group">
                 <!-- Left: Node Status -->
                 <div id="ai-agent-dashboard" class="flex items-center gap-4 min-w-[180px]">
                     <div class="relative">
@@ -517,7 +518,7 @@
         <div class="bg-noise"></div>
         <div class="scanlines"></div>
         
-        <div class="glass-panel p-10 rounded-2xl border border-white/10 w-full max-w-md relative z-10 text-center">
+        <div class="glass-panel p-6 md:p-10 rounded-2xl border border-white/10 w-[90%] max-w-md relative z-10 text-center">
             <h2 class="text-2xl font-bold tracking-tighter mb-2">Join Session</h2>
             <p class="text-[10px] text-cyan-400 font-mono tracking-widest uppercase mb-8">Secure Room — LiveKit Encrypted</p>
             
@@ -542,7 +543,7 @@
         <div class="bg-noise"></div>
         <div class="scanlines"></div>
         
-        <div class="glass-panel p-10 rounded-[2.5rem] border border-white/10 w-full max-w-2xl relative z-10 text-center flex flex-col">
+        <div class="glass-panel p-6 md:p-10 rounded-[2.5rem] border border-white/10 w-[90%] max-w-2xl relative z-10 text-center flex flex-col">
             <div class="flex items-center justify-between mb-8">
                 <div class="flex flex-col items-start">
                     <h2 class="text-2xl font-black uppercase tracking-tighter italic">Gatekeeper<span class="text-cyan-400">.</span>Forensics</h2>
