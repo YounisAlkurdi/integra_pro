@@ -20,9 +20,22 @@
   ],
   "routes": [
     {
+      "src": "/robots.txt",
+      "dest": "/robots.txt"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "/sitemap.xml"
+    },
+    {
+      "src": "/.well-known/(.*)",
+      "dest": "/.well-known/$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "backend/main.py"
     },
+
     {
       "src": "/create-payment-intent",
       "dest": "backend/main.py"
