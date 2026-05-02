@@ -1,24 +1,19 @@
 {
   "framework": null,
-  "buildCommand": "echo 'Static Site'",
-  "outputDirectory": ".",
+  "outputDirectory": "frontend",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/data/(.*)", "destination": "/data/$1" },
-    { "source": "/css/(.*)", "destination": "/frontend/css/$1" },
-    { "source": "/js/(.*)", "destination": "/frontend/js/$1" },
-    { "source": "/", "destination": "/frontend/pages/index.html" },
-    { "source": "/index", "destination": "/frontend/pages/index.html" },
-    { "source": "/login", "destination": "/frontend/pages/login.html" },
-    { "source": "/dashboard", "destination": "/frontend/pages/dashboard.html" },
-    { "source": "/appointments", "destination": "/frontend/pages/appointments.html" },
-    { "source": "/billing", "destination": "/frontend/pages/billing.html" },
-    { "source": "/checkout", "destination": "/frontend/pages/checkout.html" },
-    { "source": "/integra-session", "destination": "/frontend/pages/integra-session.html" },
-    { "source": "/llm-config", "destination": "/frontend/pages/llm-config.html" },
-    { "source": "/pricing", "destination": "/frontend/pages/pricing.html" },
-    { "source": "/profile", "destination": "/frontend/pages/profile.html" },
-    { "source": "/reports", "destination": "/frontend/pages/reports.html" }
+    { "source": "/", "destination": "/pages/index.html" },
+    { "source": "/index", "destination": "/pages/index.html" },
+    { "source": "/login", "destination": "/pages/login.html" },
+    { "source": "/dashboard", "destination": "/pages/dashboard.html" },
+    { "source": "/appointments", "destination": "/pages/appointments.html" },
+    { "source": "/billing", "destination": "/pages/billing.html" },
+    { "source": "/checkout", "destination": "/pages/checkout.html" },
+    { "source": "/integra-session", "destination": "/pages/integra-session.html" },
+    { "source": "/llm-config", "destination": "/pages/llm-config.html" },
+    { "source": "/pricing", "destination": "/pages/pricing.html" },
+    { "source": "/profile", "destination": "/pages/profile.html" },
+    { "source": "/reports", "destination": "/pages/reports.html" }
   ]
 }

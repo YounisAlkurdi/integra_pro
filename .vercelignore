@@ -13,7 +13,6 @@ requirements.txt
 *.py
 *.md
 !AWS_DEPLOYMENT_GUIDE.md
-index.html
 
 # Python cache
 __pycache__/
