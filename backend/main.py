@@ -1,6 +1,10 @@
-# Fix for Vercel: add backend/ directory to Python path so all local modules are found
+# Fix: add both backend/ and the project root to Python path
 import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python" # Fix for Protobuf compatibility
+current_dir = os.path.dirname(__file__)
+root_dir = os.path.dirname(current_dir)
+sys.path.insert(0, current_dir)
+sys.path.insert(0, root_dir)
 
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +19,8 @@ from mailer import send_interview_invitation
 import livekit_routes
 import agent_routes
 import gatekeeper_routes
+import behavioral_routes
+import nlp_routes
 import os
 from dotenv import load_dotenv
 
@@ -120,6 +126,12 @@ app.include_router(agent_routes.router)
 
 # --- 6. Gatekeeper Endpoints (Deepfake Verification) ---
 app.include_router(gatekeeper_routes.router)
+
+# --- 7. Behavioral Analysis (Gaze/WebSocket) ---
+app.include_router(behavioral_routes.router)
+
+# --- 8. NLP Forensic Engine ---
+app.include_router(nlp_routes.router)
 
 @app.get("/config")
 async def get_config():
