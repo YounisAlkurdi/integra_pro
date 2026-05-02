@@ -1,112 +1,29 @@
 {
-  "version": 2,
-  "name": "integra-frontend",
-  "builds": [
+  "cleanUrls": true,
+  "rewrites": [
     {
-      "src": "frontend/**",
-      "use": "@vercel/static"
+      "source": "/assets/:match*",
+      "destination": "/assets/:match*"
     },
     {
-      "src": "assets/**",
-      "use": "@vercel/static"
+      "source": "/data/:match*",
+      "destination": "/data/:match*"
     },
     {
-      "src": "data/**",
-      "use": "@vercel/static"
+      "source": "/css/:match*",
+      "destination": "/frontend/css/:match*"
     },
     {
-        "src": "robots.txt",
-        "use": "@vercel/static"
+      "source": "/js/:match*",
+      "destination": "/frontend/js/:match*"
     },
     {
-        "src": "sitemap.xml",
-        "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/robots.txt",
-      "dest": "/robots.txt"
+      "source": "/",
+      "destination": "/frontend/pages/index.html"
     },
     {
-      "src": "/sitemap.xml",
-      "dest": "/sitemap.xml"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/data/(.*)",
-      "dest": "/data/$1"
-    },
-    {
-      "src": "/css/(.*)",
-      "dest": "/frontend/css/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "/frontend/js/$1"
-    },
-    {
-      "src": "/pages/(.*)",
-      "dest": "/frontend/pages/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/frontend/pages/index.html"
-    },
-    {
-      "src": "/index",
-      "dest": "/frontend/pages/index.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/frontend/pages/login.html"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/frontend/pages/dashboard.html"
-    },
-    {
-      "src": "/appointments",
-      "dest": "/frontend/pages/appointments.html"
-    },
-    {
-      "src": "/billing",
-      "dest": "/frontend/pages/billing.html"
-    },
-    {
-      "src": "/checkout",
-      "dest": "/frontend/pages/checkout.html"
-    },
-    {
-      "src": "/integra-session",
-      "dest": "/frontend/pages/integra-session.html"
-    },
-    {
-      "src": "/llm-config",
-      "dest": "/frontend/pages/llm-config.html"
-    },
-    {
-      "src": "/pricing",
-      "dest": "/frontend/pages/pricing.html"
-    },
-    {
-      "src": "/profile",
-      "dest": "/frontend/pages/profile.html"
-    },
-    {
-      "src": "/reports",
-      "dest": "/frontend/pages/reports.html"
-    },
-    {
-      "src": "/(.*)\\.html",
-      "dest": "/frontend/pages/$1.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/pages/index.html"
+      "source": "/:path",
+      "destination": "/frontend/pages/:path.html"
     }
   ]
 }
