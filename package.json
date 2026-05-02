@@ -1,0 +1,7 @@
+{
+  "name": "integra-frontend",
+  "private": true,
+  "scripts": {
+    "build": "cp -r frontend public && cp -r assets public/"
+  }
+}
