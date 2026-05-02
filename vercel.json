@@ -1,12 +1,6 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "frontend/**", "use": "@vercel/static" },
-    { "src": "assets/**", "use": "@vercel/static" },
-    { "src": "data/**", "use": "@vercel/static" },
-    { "src": "robots.txt", "use": "@vercel/static" },
-    { "src": "sitemap.xml", "use": "@vercel/static" }
-  ],
+  "framework": null,
+  "buildCommand": "echo 'Static Site'",
   "cleanUrls": true,
   "rewrites": [
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
