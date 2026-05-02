@@ -1,29 +1,30 @@
 {
+  "version": 2,
+  "builds": [
+    { "src": "frontend/**", "use": "@vercel/static" },
+    { "src": "assets/**", "use": "@vercel/static" },
+    { "src": "data/**", "use": "@vercel/static" },
+    { "src": "robots.txt", "use": "@vercel/static" },
+    { "src": "sitemap.xml", "use": "@vercel/static" },
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
   "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/assets/:match*",
-      "destination": "/assets/:match*"
-    },
-    {
-      "source": "/data/:match*",
-      "destination": "/data/:match*"
-    },
-    {
-      "source": "/css/:match*",
-      "destination": "/frontend/css/:match*"
-    },
-    {
-      "source": "/js/:match*",
-      "destination": "/frontend/js/:match*"
-    },
-    {
-      "source": "/",
-      "destination": "/frontend/pages/index.html"
-    },
-    {
-      "source": "/:path",
-      "destination": "/frontend/pages/:path.html"
-    }
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/data/(.*)", "destination": "/data/$1" },
+    { "source": "/css/(.*)", "destination": "/frontend/css/$1" },
+    { "source": "/js/(.*)", "destination": "/frontend/js/$1" },
+    { "source": "/", "destination": "/frontend/pages/index.html" },
+    { "source": "/index", "destination": "/frontend/pages/index.html" },
+    { "source": "/login", "destination": "/frontend/pages/login.html" },
+    { "source": "/dashboard", "destination": "/frontend/pages/dashboard.html" },
+    { "source": "/appointments", "destination": "/frontend/pages/appointments.html" },
+    { "source": "/billing", "destination": "/frontend/pages/billing.html" },
+    { "source": "/checkout", "destination": "/frontend/pages/checkout.html" },
+    { "source": "/integra-session", "destination": "/frontend/pages/integra-session.html" },
+    { "source": "/llm-config", "destination": "/frontend/pages/llm-config.html" },
+    { "source": "/pricing", "destination": "/frontend/pages/pricing.html" },
+    { "source": "/profile", "destination": "/frontend/pages/profile.html" },
+    { "source": "/reports", "destination": "/frontend/pages/reports.html" }
   ]
 }
