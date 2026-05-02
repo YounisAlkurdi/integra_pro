@@ -164,6 +164,10 @@ async def send_invitation(data: EmailRequest, user: dict = Depends(get_current_u
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.get("/")
 async def sys_health():
     return {

@@ -1,0 +1,63 @@
+# ============================================================
+# .dockerignore - Integra Backend Docker
+# Only backend Python files are needed inside the container.
+# ============================================================
+
+# --- Virtual Environments (Windows/Local) ---
+venv/
+.venv/
+env/
+
+# --- Frontend (Hosted on Vercel, not AWS) ---
+frontend/
+assets/
+index.html
+sitemap.xml
+robots.txt
+vercel.json
+.vercelignore
+.well-known/
+
+# --- Documentation & Guides ---
+_INTEGRA_DOCS/
+*.md
+database_architecture.md
+
+# --- Database Schema (Runs on Supabase, not here) ---
+*.sql
+
+# --- Local Dev Tools ---
+.code-review-graph/
+.vscode/
+.idea/
+.editorconfig
+scripts/
+mcp_config.json
+
+# --- Git ---
+.git
+.gitignore
+
+# --- Python Artifacts ---
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache/
+
+# --- Backend Sub-folders Not Needed in Production ---
+backend/scratch/
+backend/tests/
+backend/livekit_error.txt
+
+# --- Secrets (Injected at runtime via docker-compose env_file) ---
+.env
+.env.example
+
+# --- Models Cache (Managed as Docker Volume) ---
+models_cache/
+
+# --- OS Artifacts ---
+.DS_Store
+Thumbs.db
+*.log

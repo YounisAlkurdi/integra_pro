@@ -11,7 +11,6 @@ pydantic-settings>=2.4.0,<3.0.0
 python-dotenv==1.2.2
 
 # --- Computer Vision & Biometrics (Imports: cv2, mp) ---
-opencv-python>=4.10.0
 opencv-contrib-python>=4.10.0
 mediapipe==0.10.14
 Pillow>=10.0.0
@@ -22,8 +21,6 @@ torch>=2.4.0
 torchvision
 transformers==4.45.0
 facenet-pytorch
-jax==0.4.35
-jaxlib==0.4.35
 
 # --- Data Science & Math (Imports: np, pd, scipy, sklearn) ---
 numpy>=2.0.0

@@ -2,7 +2,19 @@
 scripts/
 _INTEGRA_DOCS/
 
-# Python artifacts
+# Backend & AI (Deployed on AWS)
+backend/
+llm/
+scripts/
+tracker.py
+test.py
+req.txt
+requirements.txt
+*.py
+*.md
+!AWS_DEPLOYMENT_GUIDE.md
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo

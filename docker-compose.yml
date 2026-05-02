@@ -1,0 +1,27 @@
+# ============================================================
+# Integra Neural Engine — docker-compose.yml
+# ============================================================
+
+services:
+  integra-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: integra_core_engine
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Live code updates without rebuilding (development)
+      - ./backend:/app/backend
+      - ./tracker.py:/app/tracker.py
+      # Use existing local models — no re-downloading needed!
+      # Points to Windows HuggingFace cache already on this machine
+      - C:/Users/Younis/.cache:/root/.cache
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

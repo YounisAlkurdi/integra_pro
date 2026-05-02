@@ -1566,8 +1566,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("[Forensics] Initializing Engine...");
         addForensicLog("Engine Initializing...", "system");
 
-        const wsUrl = `ws://${window.location.hostname}:8000/ws/behavioral`;
-        forensicWS = new WebSocket(wsUrl);
+        // Use centralized config for Forensic WebSocket
+        forensicWS = new WebSocket(window.APP_CONFIG.wsUrl);
 
         forensicWS.onopen = () => {
             console.log("[Forensics] WebSocket Connected");
