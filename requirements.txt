@@ -1,0 +1,59 @@
+# ============================================================
+# 🚀 INTEGRA NEURAL ENGINE + DEEPFAKE DETECTION (FULL)
+# ============================================================
+
+# --- Core Web Server & Framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
+python-multipart>=0.0.20
+pydantic>=2.7.4,<3.0.0
+pydantic-settings>=2.4.0,<3.0.0
+python-dotenv==1.2.2
+
+# --- Computer Vision & Biometrics (Imports: cv2, mp) ---
+opencv-contrib-python>=4.10.0
+mediapipe==0.10.14
+Pillow>=10.0.0
+protobuf>=4.25,<5.0.0
+
+# --- AI & Deep Learning (Imports: torch, transformers, jax) ---
+torch>=2.4.0
+torchvision
+transformers==4.45.0
+facenet-pytorch
+
+# --- Data Science & Math (Imports: np, pd, scipy, sklearn) ---
+numpy>=2.0.0
+pandas
+scipy>=1.13.0
+scikit-learn
+
+# --- NLP & Linguistics (Imports: spacy, nltk, textstat) ---
+spacy
+textstat
+nltk
+beautifulsoup4>=4.12.0
+
+# --- Auth, Security & DB ---
+PyJWT>=2.8.0
+cryptography>=42.0.0
+passlib[bcrypt]>=1.7.4
+supabase>=2.10.0
+httpx>=0.28.0
+requests>=2.32.0
+
+# --- LangChain Core & Providers ---
+langchain>=0.3.20,<0.4.0
+langchain-community>=0.3.20,<0.4.0
+langchain-text-splitters>=0.3.0,<0.4.0
+langgraph>=0.2.60,<0.3.0
+langchain-openai
+langchain-anthropic
+langchain-google-genai
+langchain-groq
+langchain-ollama
+
+# --- Integration & External Services ---
+mcp>=1.6.0
+stripe>=11.0.0
+livekit-api>=0.8.0

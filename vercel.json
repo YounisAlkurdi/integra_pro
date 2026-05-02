@@ -1,10 +1,7 @@
 {
   "version": 2,
+  "name": "integra-frontend",
   "builds": [
-    {
-      "src": "backend/main.py",
-      "use": "@vercel/python"
-    },
     {
       "src": "frontend/**",
       "use": "@vercel/static"
@@ -16,6 +13,14 @@
     {
       "src": "data/**",
       "use": "@vercel/static"
+    },
+    {
+        "src": "robots.txt",
+        "use": "@vercel/static"
+    },
+    {
+        "src": "sitemap.xml",
+        "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -26,23 +31,6 @@
     {
       "src": "/sitemap.xml",
       "dest": "/sitemap.xml"
-    },
-    {
-      "src": "/.well-known/(.*)",
-      "dest": "/.well-known/$1"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/main.py"
-    },
-
-    {
-      "src": "/create-payment-intent",
-      "dest": "backend/main.py"
-    },
-    {
-      "src": "/config",
-      "dest": "backend/main.py"
     },
     {
       "src": "/assets/(.*)",
@@ -69,56 +57,56 @@
       "dest": "/frontend/pages/index.html"
     },
     {
-      "src": "/index\\.html",
+      "src": "/index",
       "dest": "/frontend/pages/index.html"
     },
     {
-      "src": "/login\\.html",
+      "src": "/login",
       "dest": "/frontend/pages/login.html"
     },
     {
-      "src": "/dashboard\\.html",
+      "src": "/dashboard",
       "dest": "/frontend/pages/dashboard.html"
     },
     {
-      "src": "/appointments\\.html",
+      "src": "/appointments",
       "dest": "/frontend/pages/appointments.html"
     },
     {
-      "src": "/billing\\.html",
+      "src": "/billing",
       "dest": "/frontend/pages/billing.html"
     },
     {
-      "src": "/checkout\\.html",
+      "src": "/checkout",
       "dest": "/frontend/pages/checkout.html"
     },
     {
-      "src": "/integra-session\\.html",
+      "src": "/integra-session",
       "dest": "/frontend/pages/integra-session.html"
     },
     {
-      "src": "/llm-config\\.html",
+      "src": "/llm-config",
       "dest": "/frontend/pages/llm-config.html"
     },
     {
-      "src": "/pricing\\.html",
+      "src": "/pricing",
       "dest": "/frontend/pages/pricing.html"
     },
     {
-      "src": "/profile\\.html",
+      "src": "/profile",
       "dest": "/frontend/pages/profile.html"
     },
     {
-      "src": "/reports\\.html",
+      "src": "/reports",
       "dest": "/frontend/pages/reports.html"
     },
     {
-      "src": "/(.*\\.html)",
-      "dest": "/frontend/pages/$1"
+      "src": "/(.*)\\.html",
+      "dest": "/frontend/pages/$1.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/pages/$1"
+      "dest": "/frontend/pages/index.html"
     }
   ]
 }
