@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 driftVal.textContent = `±${randomDrift}`;
             }
 
-            const response = await fetch(`${window.APP_CONFIG.nlpUrl}/analyze`, {
+            const response = await fetch(`${window.APP_CONFIG.nlpUrl}/analyze-forensics`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text })
@@ -1566,7 +1566,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("[Forensics] Initializing Engine...");
         addForensicLog("Engine Initializing...", "system");
 
-        const wsUrl = `ws://${window.location.hostname}:8001/ws`;
+        const wsUrl = `ws://${window.location.hostname}:8000/ws/behavioral`;
         forensicWS = new WebSocket(wsUrl);
 
         forensicWS.onopen = () => {

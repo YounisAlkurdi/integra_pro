@@ -7,6 +7,7 @@
  *
  * Usage:  Add <script src="config.js"></script> BEFORE any other scripts.
  *         All modules read from window.APP_CONFIG automatically.
+ *         const response = await fetch(`${window.APP_CONFIG.nlpUrl}/analyze-forensics`, {
  */
 
 window.APP_CONFIG = {
@@ -25,8 +26,8 @@ window.APP_CONFIG = {
     // STT default language
     sttLang: 'ar-SA',
 
-    // Forensic NLP Engine (Research-Grade)
+    // Forensic NLP Engine (Unified Backend)
     nlpUrl: window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
-            ? 'http://127.0.0.1:8003' 
-            : 'https://integra-nlp.vercel.app', 
+            ? 'http://127.0.0.1:8000/api' 
+            : window.location.origin + '/api', 
 };
