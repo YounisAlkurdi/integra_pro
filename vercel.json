@@ -5,8 +5,7 @@
     { "src": "assets/**", "use": "@vercel/static" },
     { "src": "data/**", "use": "@vercel/static" },
     { "src": "robots.txt", "use": "@vercel/static" },
-    { "src": "sitemap.xml", "use": "@vercel/static" },
-    { "src": "index.html", "use": "@vercel/static" }
+    { "src": "sitemap.xml", "use": "@vercel/static" }
   ],
   "cleanUrls": true,
   "rewrites": [
