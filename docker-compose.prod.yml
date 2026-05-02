@@ -1,0 +1,27 @@
+# ============================================================
+# Integra Neural Engine — Production (AWS EC2)
+# ============================================================
+
+services:
+  integra-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: integra_core_engine
+    ports:
+      - "80:8000" # Map port 80 (HTTP) to 8000 in container
+    env_file:
+      - .env
+    volumes:
+      # No local code mounting in production (uses code baked into the image)
+      # Create a named volume for model caching on EC2
+      - model_cache_vol:/root/.cache
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  model_cache_vol:
