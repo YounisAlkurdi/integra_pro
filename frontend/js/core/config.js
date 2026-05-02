@@ -10,14 +10,14 @@ window.APP_CONFIG = {
     // 🤖 BACKEND URL (Dynamic Detection)
     get backendUrl() {
         const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-        return isLocal ? 'http://127.0.0.1:8000' : `http://${this.awsIp}:8000`;
+        return isLocal ? 'http://127.0.0.1:8000' : `http://${this.awsIp}`;
     },
 
     // 📡 WEBSOCKET URL (Dynamic Detection)
     get wsUrl() {
         const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
         // Note: ws:// for local, wss:// if you add SSL to AWS later
-        return isLocal ? `ws://127.0.0.1:8000/ws/behavioral` : `ws://${this.awsIp}:8000/ws/behavioral`;
+        return isLocal ? `ws://127.0.0.1:8000/ws/behavioral` : `ws://${this.awsIp}/ws/behavioral`;
     },
 
     // 📊 NLP API PATH
