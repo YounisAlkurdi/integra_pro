@@ -1,0 +1,3 @@
+integra-ai.duckdns.org {
+    reverse_proxy integra-backend:8000
+}

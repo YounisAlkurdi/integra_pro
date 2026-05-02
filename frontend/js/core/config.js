@@ -4,20 +4,19 @@
  */
 
 window.APP_CONFIG = {
-    // ☁️ AWS PRODUCTION IP (Update this once your AWS server is live)
-    awsIp: '100.54.233.83', 
+    // ☁️ AWS PRODUCTION DOMAIN (DuckDNS)
+    awsDomain: 'integra-ai.duckdns.org', 
 
     // 🤖 BACKEND URL (Dynamic Detection)
     get backendUrl() {
         const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-        return isLocal ? 'http://127.0.0.1:8000' : `http://${this.awsIp}`;
+        return isLocal ? 'http://127.0.0.1:8000' : `https://${this.awsDomain}`;
     },
 
     // 📡 WEBSOCKET URL (Dynamic Detection)
     get wsUrl() {
         const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-        // Note: ws:// for local, wss:// if you add SSL to AWS later
-        return isLocal ? `ws://127.0.0.1:8000/ws/behavioral` : `ws://${this.awsIp}/ws/behavioral`;
+        return isLocal ? `ws://127.0.0.1:8000/ws/behavioral` : `wss://${this.awsDomain}/ws/behavioral`;
     },
 
     // 📊 NLP API PATH
