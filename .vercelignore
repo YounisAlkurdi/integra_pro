@@ -27,3 +27,4 @@ venv/
 # Git
 .git/
 .gitignore
+package.json
