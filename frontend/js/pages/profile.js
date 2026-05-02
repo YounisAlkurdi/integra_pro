@@ -262,7 +262,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if(!session) { showToast("Not authenticated", "error"); return; }
 
-            const res = await fetch('/api/external-mcps/test', {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/external-mcps/test'), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({

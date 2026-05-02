@@ -5,7 +5,7 @@
 
 window.APP_CONFIG = {
     // ☁️ AWS PRODUCTION DOMAIN (DuckDNS)
-    awsDomain: 'integra-ai.duckdns.org', 
+    awsDomain: 'integra-ai.duckdns.org',
 
     // 🤖 BACKEND URL (Dynamic Detection)
     get backendUrl() {
@@ -33,4 +33,18 @@ window.APP_CONFIG = {
 
     // 🗣️ STT default language
     sttLang: 'ar-SA'
+};
+
+/**
+ * 🔗 INTEGRA_SETTINGS — API routing helper
+ * Used by dashboard.js and other pages to build absolute backend URLs.
+ * Fixes 405 errors caused by relative URLs hitting Vercel instead of AWS.
+ */
+window.INTEGRA_SETTINGS = {
+    endpoint(path) {
+        return window.APP_CONFIG.backendUrl + path;
+    },
+    get wsUrl() {
+        return window.APP_CONFIG.wsUrl;
+    }
 };
