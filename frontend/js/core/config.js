@@ -5,7 +5,7 @@
 
 window.APP_CONFIG = {
     // ☁️ AWS PRODUCTION IP (Update this once your AWS server is live)
-    awsIp: '3.123.45.67', 
+    awsIp: '100.54.233.83', 
 
     // 🤖 BACKEND URL (Dynamic Detection)
     get backendUrl() {
