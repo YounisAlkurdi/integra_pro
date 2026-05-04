@@ -1,12 +1,8 @@
 import uuid
-import json
-import urllib.request
-import urllib.parse
-import urllib.error
 import mimetypes
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from utils import get_env_safe
+from .services.database_service import db
 
 class NodeProtocol(BaseModel):
     candidate_name: str
@@ -19,164 +15,115 @@ class NodeProtocol(BaseModel):
     max_duration_mins: Optional[int] = 10
     max_participants: Optional[int] = 2
 
-SUPABASE_URL = get_env_safe("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
-
-def _supabase_request(method: str, path: str, body=None):
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return []
-
-    if '?' in path:
-        base, query = path.split('?', 1)
-        encoded_query = urllib.parse.quote(query, safe='=&(),.!')
-        path = f"{base}?{encoded_query}"
-
-    url = f"{SUPABASE_URL}/rest/v1/{path}"
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-    }
-    data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+async def ensure_bucket_exists(bucket_name: str):
+    """
+    Tries to create a bucket if it doesn't exist using the async client.
+    """
+    if not db.client: return
     try:
-        with urllib.request.urlopen(req) as resp:
-            content = resp.read()
-            return json.loads(content) if content else []
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode()
-        print(f"Neural Buffer HTTP Error {e.code}: {error_body}")
-        return []
-    except Exception as e:
-        print(f"Neural Buffer Error: {e}")
-        return []
+        await db.client.storage.get_bucket(bucket_name)
+    except Exception:
+        try:
+            await db.client.storage.create_bucket(bucket_name, options={"public": True})
+        except Exception as e:
+            print(f"Neural Buffer Storage Error: Could not create bucket {bucket_name}: {e}")
 
-def ensure_bucket_exists(bucket_name: str):
+async def upload_to_supabase_storage(bucket: str, path: str, file_path: str):
     """
-    Tries to create a bucket if it doesn't exist.
+    Uploads a local file to Supabase Storage asynchronously and returns the public URL.
     """
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return
-    url = f"{SUPABASE_URL}/storage/v1/bucket"
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": "application/json"
-    }
-    body = {
-        "id": bucket_name,
-        "name": bucket_name,
-        "public": True
-    }
-    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            pass
-    except:
-        pass # Already exists
+    if not db.client: return None
 
-def upload_to_supabase_storage(bucket: str, path: str, file_path: str):
-    """
-    Uploads a local file to Supabase Storage and returns the public URL.
-    """
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        return None
+    await ensure_bucket_exists(bucket)
 
-    # Ensure bucket exists first
-    ensure_bucket_exists(bucket)
-
-    # 1. Read File
     try:
         with open(file_path, "rb") as f:
             file_data = f.read()
-    except Exception as e:
-        print(f"Storage Upload Failed (Read): {e}")
-        return None
-
-    # 2. Prepare Request
-    url = f"{SUPABASE_URL}/storage/v1/object/{bucket}/{path}"
-    content_type, _ = mimetypes.guess_type(file_path)
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-        "Content-Type": content_type or "application/octet-stream",
-        "x-upsert": "true"
-    }
-
-    req = urllib.request.Request(url, data=file_data, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            # Successfully uploaded
-            # Construct public URL (Assumes bucket is public)
-            public_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}"
-            return public_url
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode()
-        print(f"Storage Upload HTTP Error {e.code}: {error_body}")
-        # If it fails, maybe it already exists or bucket missing
-        return f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}"
+        
+        content_type, _ = mimetypes.guess_type(file_path)
+        
+        # storage operations are async in the newer sdk versions when using AsyncClient
+        await db.client.storage.from_(bucket).upload(
+            path=path,
+            file=file_data,
+            file_options={"content-type": content_type or "application/octet-stream", "upsert": "true"}
+        )
+        
+        return db.client.storage.from_(bucket).get_public_url(path)
     except Exception as e:
         print(f"Storage Upload Failed: {e}")
         return None
 
-def create_neural_node(node: NodeProtocol, user_id: str):
-    """Initializes a permanent control node."""
-    body = {**node.dict(), "user_id": user_id, "room_id": str(uuid.uuid4())}
-    result = _supabase_request("POST", "nodes", body)
-    return result[0] if result else body
-
-def get_active_streams(user_id: str = None):
-    """Returns only nodes that are NOT marked as deleted."""
-    # Get everything for user and filter in memory for 100% reliability
-    all_nodes = _supabase_request("GET", f"nodes?select=*&user_id=eq.{user_id}&order=created_at.desc") if user_id else []
-    return [n for n in all_nodes if not n.get('is_deleted')]
-
-def get_node_by_room_id(room_id: str):
-    """Fetches a specific node by its room_id without user_id filtering."""
-    result = _supabase_request("GET", f"nodes?select=*&room_id=eq.{room_id}")
-    return result[0] if result else None
-
-def delete_node(room_id: str):
-    """Marks node as archived and COMPLETED. Does NOT remove record."""
-    _supabase_request("PATCH", f"nodes?room_id=eq.{room_id}", {
-        "is_deleted": True,
-        "status": "COMPLETED"
-    })
-    return True
-
-def get_node_stats(user_id: str = None):
-    """
-    Calculates usage telemetry. 
-    Neural Logic: Only counts nodes created AFTER the latest successful payment cycle.
-    This ensures previous sub rooms or free rooms don't saturate new quotas.
-    """
-    if not user_id: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+async def create_neural_node(node: NodeProtocol, user_id: str):
+    """Initializes a permanent control node in the database asynchronously."""
+    room_id = str(uuid.uuid4())
+    data = {**node.dict(), "user_id": user_id, "room_id": room_id}
     
-    # 1. Fetch Latest Payment Date
-    last_payment_date = None
-    invoices = _supabase_request("GET", f"invoices?user_id=eq.{user_id}&status=eq.PAID&order=created_at.desc&limit=1")
-    if invoices:
-        last_payment_date = invoices[0].get('created_at')
+    result = await db.insert("nodes", data)
+    return result if result else data
 
-    # 2. Fetch Nodes with Date Filter if payment exists
-    node_query = f"nodes?select=status,is_deleted,created_at&user_id=eq.{user_id}"
-    if last_payment_date:
-        # filter nodes >= last_payment_date
-        node_query += f"&created_at=gte.{last_payment_date}"
+async def get_active_streams(user_id: str = None):
+    """Returns nodes for a user that are NOT marked as deleted asynchronously."""
+    if not user_id: return []
     
-    all_relevant_nodes = _supabase_request("GET", node_query)
+    return await db.select(
+        table="nodes",
+        filters={"user_id": user_id, "is_deleted": False},
+        order="created_at",
+        desc=True
+    )
+
+async def get_node_by_room_id(room_id: str):
+    """Fetches a specific node by its room_id asynchronously."""
+    res = await db.select(table="nodes", filters={"room_id": room_id}, limit=1)
+    return res[0] if res else None
+
+async def delete_node(room_id: str):
+    """Marks node as archived and COMPLETED asynchronously."""
+    res = await db.update(
+        table="nodes",
+        data={"is_deleted": True, "status": "COMPLETED"},
+        filters={"room_id": room_id}
+    )
+    return len(res) > 0
+
+async def get_node_stats(user_id: str = None):
+    """Calculates usage telemetry since the last payment asynchronously."""
+    if not user_id:
+        return {"total": 0, "active": 0, "completed": 0, "threats": 0}
     
-    total_consumed = len(all_relevant_nodes)
-    active_now = [n for n in all_relevant_nodes if not n.get('is_deleted')]
-    
-    pending = sum(1 for n in active_now if n.get('status') == 'PENDING')
-    completed = sum(1 for n in active_now if n.get('status') == 'COMPLETED')
-    
-    return {
-        "total": total_consumed, 
-        "active_view": len(active_now),
-        "active": pending,
-        "completed": completed,
-        "threats": 0 
-    }
+    try:
+        # 1. Get Latest Payment
+        invoice_resp = await db.select(
+            table="invoices",
+            filters={"user_id": user_id, "status": "PAID"},
+            order="created_at",
+            desc=True,
+            limit=1
+        )
+        
+        last_payment_date = invoice_resp[0].get('created_at') if invoice_resp else None
+        
+        # 2. Query Nodes (Manual filter for date to keep DatabaseService simple)
+        if not db.client: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+        
+        query = db.client.table("nodes").select("status,is_deleted,created_at").eq("user_id", user_id)
+        if last_payment_date:
+            query = query.gte("created_at", last_payment_date)
+        
+        node_resp = await query.execute()
+        all_nodes = node_resp.data
+        
+        total_consumed = len(all_nodes)
+        active_now = [n for n in all_nodes if not n.get('is_deleted')]
+        
+        return {
+            "total": total_consumed, 
+            "active_view": len(active_now),
+            "active": sum(1 for n in active_now if n.get('status') == 'PENDING'),
+            "completed": sum(1 for n in active_now if n.get('status') == 'COMPLETED'),
+            "threats": 0 
+        }
+    except Exception as e:
+        print(f"Failed to calculate node stats: {e}")
+        return {"total": 0, "active": 0, "completed": 0, "threats": 0}
