@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Optional
+from fastapi import APIRouter, Depends
+from typing import Optional
 from ..auth import get_current_user, get_current_user_optional
 from ..logs import ChatLogEntry, save_chat_log, get_node_chat_logs
 

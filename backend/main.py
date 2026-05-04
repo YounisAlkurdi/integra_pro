@@ -51,7 +51,7 @@ async def add_discovery_headers(request: Request, call_next):
     return response
 
 # --- 2. Route Registration (Modular) ---
-from routes import (
+from .routes import (
     user_routes,
     node_routes,
     log_routes,
