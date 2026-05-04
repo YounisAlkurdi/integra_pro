@@ -12,29 +12,20 @@ WEBHOOK_SECRET = get_env_safe("STRIPE_WEBHOOK_SECRET")
 SUPABASE_URL = get_env_safe("SUPABASE_URL")
 SUPABASE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
 
-def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
+from services.database_service import DatabaseService
+
+async def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
     """Internal database update after payment confirmation."""
-    import urllib.request
-    
     # Reload pricing data dynamically to ensure latest limits
     try:
         base_path = os.path.dirname(os.path.abspath(__file__))
-        pricing_path = os.path.join(base_path, '..', 'data', 'pricing.json')
+        pricing_path = os.path.join(base_path, 'data', 'pricing.json')
         with open(pricing_path, 'r') as f:
             neural_pricing = json.load(f)
     except Exception as e:
         print(f"=> ERROR: Failed to load pricing.json in _update_subscription_in_db: {e}")
         neural_pricing = PRICING_DATA
 
-    # Use on_conflict=user_id for UPSERT logic (requires unique constraint on user_id)
-    url = f"{SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id"
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates"
-    }
-    
     # Default Limits
     limit_data = {"interviews_per_month": 5, "max_duration_mins": 10, "max_participants": 2}
     
@@ -56,22 +47,18 @@ def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
         "max_duration_mins": limit_data.get("max_duration_mins", 10),
         "max_participants": limit_data.get("max_participants", 2)
     }
-    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+    
+    db = DatabaseService()
     try:
-        with urllib.request.urlopen(req) as r: return True
+        # Using upsert logic via user_id
+        await db.upsert("subscriptions", body, on_conflict="user_id")
+        return True
     except Exception as e:
         print(f"FAILED TO UPSERT SUBSCRIPTION: {e}")
         return False
 
-def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):
+async def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):
     """Creates an invoice record in the ledger."""
-    import urllib.request
-    url = f"{SUPABASE_URL}/rest/v1/invoices"
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json"
-    }
     body = {
         "user_id": user_id,
         "plan_id": plan_id,
@@ -79,9 +66,10 @@ def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):
         "payment_intent_id": payment_intent_id,
         "status": "PAID"
     }
-    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+    db = DatabaseService()
     try:
-        with urllib.request.urlopen(req) as r: return True
+        await db.insert("invoices", body)
+        return True
     except Exception as e:
         print(f"FAILED TO CREATE INVOICE: {e}")
         return False
@@ -163,8 +151,8 @@ async def execute_payment(payment_req: PaymentRequest, request: Request, user_id
         
         # PROACTIVE RECORDING: Link invoice immediately for synchronized feedback
         customer_id = getattr(intent, 'customer', None)
-        _update_subscription_in_db(user_id, payment_req.plan_id, payment_req.billing_cycle, customer_id)
-        _create_invoice_in_db(user_id, payment_req.plan_id, expected_amount, intent.id)
+        await _update_subscription_in_db(user_id, payment_req.plan_id, payment_req.billing_cycle, customer_id)
+        await _create_invoice_in_db(user_id, payment_req.plan_id, expected_amount, intent.id)
         
         return {"status": "success", "payment_intent_id": intent.id}
     except stripe.error.StripeError as e:
@@ -197,9 +185,9 @@ async def handle_stripe_webhook(request: Request):
 
         if user_id and plan_id:
             # 1. Update Subscription Status
-            _update_subscription_in_db(user_id, plan_id, cycle, intent.get("customer"))
+            await _update_subscription_in_db(user_id, plan_id, cycle, intent.get("customer"))
             # 2. Record Invoice in Ledger
-            _create_invoice_in_db(user_id, plan_id, intent.get("amount"), intent.id)
+            await _create_invoice_in_db(user_id, plan_id, intent.get("amount"), intent.id)
             print(f"STRIPE: Payment and Invoice confirmed for user {user_id}")
 
     return {"status": "event_processed"}
