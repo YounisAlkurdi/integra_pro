@@ -79,12 +79,13 @@ class DatabaseService:
             print(f"❌ DB Update Error [{table}]: {e}")
             return []
 
-    async def upsert(self, table: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def upsert(self, table: str, data: Dict[str, Any], on_conflict: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Generic async upsert operation."""
         if not self.client: return None
         
         try:
-            response = await self.client.table(table).upsert(data).execute()
+            query = self.client.table(table).upsert(data, on_conflict=on_conflict)
+            response = await query.execute()
             return response.data[0] if response.data else None
         except Exception as e:
             print(f"❌ DB Upsert Error [{table}]: {e}")
