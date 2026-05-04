@@ -161,7 +161,7 @@ class BehavioralTracker:
         self.distraction_timer = None
         self.last_counted      = False
 
-        print("Integra Engine v5.1 — Fixed: Port/Iris/Delta/Kalman/Thresholds: Online")
+        print("Integra Engine v5.1 — Behavioral Tracker (Modular Version): Online")
 
     # ──────────────────────────────────────────────────────
     def _iris_ratio_x(self, lm, w, h, iris, inner, outer):

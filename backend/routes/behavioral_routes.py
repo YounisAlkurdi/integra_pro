@@ -1,5 +1,8 @@
 from fastapi import APIRouter, WebSocket
-from tracker import BehavioralTracker
+try:
+    from tracker import BehavioralTracker
+except ImportError:
+    from ..tracker import BehavioralTracker
 import asyncio
 import cv2
 import numpy as np
