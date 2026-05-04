@@ -14,20 +14,10 @@ from typing import Optional
 
 router = APIRouter(prefix="/api/agent", tags=["Neural Agent"])
 
-# ChatMessageHistory: compatible import for langchain 0.3.x
-try:
-    from langchain_core.chat_history import InMemoryChatMessageHistory as ChatMessageHistory
-except ImportError:
-    from langchain_community.chat_message_histories import ChatMessageHistory
+from ..services.memory_service import SupabaseChatMessageHistory
 
-# Persistent Neural Buffer (In-memory storage for session history)
-# TODO: Phase 4 will migrate this to Supabase chat_history table
-MEMORY_BUFFER = {}
-
-def get_session_history(user_id: str) -> ChatMessageHistory:
-    if user_id not in MEMORY_BUFFER:
-        MEMORY_BUFFER[user_id] = ChatMessageHistory()
-    return MEMORY_BUFFER[user_id]
+# MEMORY_BUFFER is now deprecated in favor of Supabase persistent storage
+# Phase 4 Migration Complete
 
 
 class ChatRequest(BaseModel):
@@ -146,7 +136,9 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
                 handle_parsing_errors=True
             )
             
-            history = get_session_history(user_id)
+            # Load history from Supabase
+            history = SupabaseChatMessageHistory(user_id)
+            await history.aload_messages()
             
             result = await agent_executor.ainvoke({
                 "input": req.prompt,
@@ -155,8 +147,12 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             
             content = result["output"]
             
-            history.add_user_message(req.prompt)
-            history.add_ai_message(content)
+            # Save to history (Persistence)
+            from langchain_core.messages import HumanMessage, AIMessage
+            await history.aadd_messages([
+                HumanMessage(content=req.prompt),
+                AIMessage(content=content)
+            ])
             
         except Exception as tool_err:
             print(f"[Warning] Tool binding failed, falling back to standard chain: {tool_err}")
