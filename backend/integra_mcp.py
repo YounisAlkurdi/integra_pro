@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import datetime
+import asyncio
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
@@ -11,6 +12,7 @@ from logs import get_node_chat_logs
 from mailer import send_interview_invitation
 from auth import get_active_subscription
 from payments import PRICING_DATA
+from services.database_service import DatabaseService
 
 # Load environment
 load_dotenv()
@@ -32,7 +34,7 @@ def sanitize_uid(uid: str) -> str:
 # --- 0. Metadata: Platform Intelligence ---
 
 @mcp.tool()
-def get_platform_manifest() -> str:
+async def get_platform_manifest() -> str:
     """
     Returns the Integra Platform Manifest. 
     Provides high-level context about the platform's purpose, forensic capabilities, and architectural limits.
@@ -57,31 +59,22 @@ def get_platform_manifest() -> str:
 
 
 @mcp.tool()
-def list_active_streams(user_id: str) -> str:
+async def list_active_streams(user_id: str) -> str:
     """Scan Active Data Streams (Search by SUBJECT_IDENTIFICATION). Returns all live nodes for a user."""
     uid = sanitize_uid(user_id)
-    sub = get_active_subscription(uid)
+    sub = await get_active_subscription(uid)
     since = sub.get('created_at') if sub else None
-    interviews = get_active_streams(user_id=uid)
+    interviews = await get_active_streams(user_id=uid)
     return json.dumps(interviews, indent=2)
 
 @mcp.tool()
-def establish_secure_link(candidate_name: str, position: str, user_id: str, candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
+async def establish_secure_link(candidate_name: str, position: str, user_id: str, candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
     """
     INITIALIZE NODE (Establish Secure Link). 
     NOTE: Before calling this, it is HIGHLY RECOMMENDED to call 'sync_neural_quotas' 
     to verify if the user has enough interview slots remaining.
-    
-    Arguments:
-    - candidate_name: The name of the subject (Candidate).
-    - position: The role being interviewed for.
-    - user_id: The unique identifier for the user (UUID format).
-    - candidate_email: Target delivery address.
-    - scheduled_at: ISO timestamp. Empty for instant SESSION.
     """
     uid = sanitize_uid(user_id)
-    
-    # Logic matching dashboard.js: if no schedule, use NO_DELAY (current time)
     protocol_time = scheduled_at if scheduled_at else datetime.datetime.utcnow().isoformat()
     
     node = NodeProtocol(
@@ -91,40 +84,34 @@ def establish_secure_link(candidate_name: str, position: str, user_id: str, cand
         questions=questions or ["Identify your core strengths.", "Explain your approach to complex system architecture."],
         scheduled_at=protocol_time
     )
-    result = create_neural_node(node, user_id=uid)
+    result = await create_neural_node(node, user_id=uid)
     return json.dumps(result, indent=2)
 
 @mcp.tool()
-def transmit_invitation_protocol(candidate_name: str, candidate_email: str, scheduled_at: str, room_id: str) -> str:
+async def transmit_invitation_protocol(candidate_name: str, candidate_email: str, scheduled_at: str, room_id: str) -> str:
     """TRANSMIT INVITATION (Send Email). Dispatches the secure link to the target address."""
     domain = os.getenv("APP_DOMAIN", "https://tist-integra.vercel.app")
     room_link = f"{domain}/integra-session.html?room={room_id}&role=candidate"
     
-    return send_interview_invitation(candidate_name, candidate_email, scheduled_at, room_link)
+    # send_interview_invitation is still sync, using to_thread
+    email = await asyncio.to_thread(send_interview_invitation, candidate_name, candidate_email, scheduled_at, room_link)
+    return json.dumps(email)
 
 # --- 2. System Intelligence & Telemetry ---
 
 @mcp.tool()
-def get_neural_link_status(user_id: str) -> str:
+async def get_neural_link_status(user_id: str) -> str:
     """Telemetry Node: Total Nodes, Live Sessions, and Memory Capacity."""
     uid = sanitize_uid(user_id)
-    sub = get_active_subscription(uid)
-    since = sub.get('created_at') if sub else None
-    stats = get_node_stats(user_id=uid)
+    stats = await get_node_stats(user_id=uid)
     return json.dumps(stats, indent=2)
 
 @mcp.tool()
-def sync_neural_quotas(user_id: str) -> str:
-    """
-    Retrieves the ACTUAL Subscription Plan (Quotas, Limits, and Enforcements) from the LIVE billing system. 
-    Use this to determine if the user needs to UPGRADE their plan.
-    """
+async def sync_neural_quotas(user_id: str) -> str:
+    """Retrieves the ACTUAL Subscription Plan (Quotas, Limits, and Enforcements) from the LIVE billing system."""
     uid = sanitize_uid(user_id)
+    sub = await get_active_subscription(uid)
     
-    # 1. Fetch Real Subscription from Auth Engine
-    sub = get_active_subscription(uid)
-    
-    # 2. Pricing links for the Agent to suggest upgrades
     upgrade_info = {
         "upgrade_links": {
             "professional": "/upgrade?plan=professional",
@@ -134,17 +121,16 @@ def sync_neural_quotas(user_id: str) -> str:
     }
     
     if not sub: 
-        # Fallback to defaults if no record exists
+        stats = await get_node_stats(uid)
         return json.dumps({
             "status": "FREE_TIER", 
             "interviews_limit": 5, 
-            "usage_count": get_node_stats(uid).get('total', 0), 
+            "usage_count": stats.get('total', 0), 
             **upgrade_info
         })
     
-    # 3. Calculate Real Usage based on Subscription Reset Date
     since = sub.get('created_at')
-    stats = get_node_stats(uid)
+    stats = await get_node_stats(uid)
     
     return json.dumps({
         "plan_id": sub.get('plan_id'),
@@ -155,48 +141,36 @@ def sync_neural_quotas(user_id: str) -> str:
         **upgrade_info
     }, indent=2)
 
-# Simple manual TTL Cache for matrix nodes
 _MATRIX_NODES_CACHE = {}
-_MATRIX_NODES_TTL = 300  # 5 minutes
+_MATRIX_NODES_TTL = 300
 
 @mcp.tool()
-def get_external_matrix_nodes(user_id: str) -> str:
-    """
-    Retrieves the list of EXTERNAL Matrix Servers (Stripe, Slack, Jira, etc.) linked to this user.
-    Use this to see what external tools are available for orchestration.
-    """
+async def get_external_matrix_nodes(user_id: str) -> str:
+    """Retrieves the list of EXTERNAL Matrix Servers (Stripe, Slack, Jira, etc.) linked to this user."""
     import time
     uid = sanitize_uid(user_id)
-    
-    # Check cache
     now = time.time()
     if uid in _MATRIX_NODES_CACHE:
         cached_data, timestamp = _MATRIX_NODES_CACHE[uid]
         if now - timestamp < _MATRIX_NODES_TTL:
             return cached_data
             
-    from nodes import _supabase_request
-    
-    # Query the external_mcps table we created
-    res = _supabase_request("GET", f"external_mcps?user_id=eq.{uid}&is_active=eq.true")
+    db = DatabaseService()
+    res = await db.select("external_mcps", "*", filters={"user_id": uid, "is_active": True})
     
     if not res:
         result_str = "No external matrix nodes found. Suggest user to link them in Profile."
     else:
         result_str = json.dumps(res, indent=2)
         
-    # Save to cache
     _MATRIX_NODES_CACHE[uid] = (result_str, now)
     return result_str
 
 @mcp.tool()
-def purge_node(room_id: str, user_id: str) -> str:
-    """EXECUTE PURGE PROTOCOL (Terminate Session). Permanently deletes a node and clears neural buffers."""
-    from main import remove_node
-    uid = sanitize_uid(user_id)
-    # Note: Handled by API call in main.py, but we wrap it here for Agent access
+async def purge_node(room_id: str, user_id: str) -> str:
+    """EXECUTE PURGE PROTOCOL (Terminate Session). Permanently deletes a node."""
     from nodes import delete_node
-    if delete_node(room_id):
+    if await delete_node(room_id):
         return json.dumps({"status": "PURGED", "room_id": room_id})
     return "Error: Termination Signal Failed."
 
