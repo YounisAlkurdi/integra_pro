@@ -1,0 +1,39 @@
+{
+  "pricing_data": {
+    "plans": [
+      {
+        "id": "starter",
+        "name": "Starter",
+        "monthly": { "price": 0 },
+        "yearly": { "price": 0 },
+        "limits": {
+          "interviews_per_month": 15,
+          "max_duration_mins": 20,
+          "max_participants": 4
+        }
+      },
+      {
+        "id": "pro",
+        "name": "Professional",
+        "monthly": { "price": 49 },
+        "yearly": { "price": 39 },
+        "limits": {
+          "interviews_per_month": 50,
+          "max_duration_mins": 60,
+          "max_participants": 10
+        }
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "monthly": { "price": "Custom" },
+        "yearly": { "price": "Custom" },
+        "limits": {
+          "interviews_per_month": 999,
+          "max_duration_mins": 240,
+          "max_participants": 50
+        }
+      }
+    ]
+  }
+}

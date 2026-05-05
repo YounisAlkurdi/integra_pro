@@ -25,6 +25,15 @@ window.INTEGRA_SETTINGS = {
     // Helper to get formatted endpoint
     endpoint: function(path) {
         return `${this.BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    },
+
+    // 🚀 Professional Error Redirection Protocol
+    triggerError: function(code, message) {
+        const errorUrl = `error.html?code=${code}&msg=${encodeURIComponent(message)}`;
+        // Try to find the correct path relative to current location
+        const depth = window.location.pathname.split('/').length - 2;
+        const prefix = depth > 0 ? '../'.repeat(depth) : '';
+        window.location.href = prefix + errorUrl;
     }
 };
 

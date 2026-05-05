@@ -77,12 +77,12 @@ async def _create_invoice_in_db(user_id, plan_id, amount, payment_intent_id):
 # Pricing Protocols - Load once into Neural Cache
 try:
     base_path = os.path.dirname(os.path.abspath(__file__))
-    pricing_path = os.path.join(base_path, '..', 'data', 'pricing.json')
+    pricing_path = os.path.join(base_path, 'data', 'pricing.json')
     with open(pricing_path, 'r') as f:
         PRICING_DATA = json.load(f)
 except Exception as e:
     PRICING_DATA = None
-    print(f"=> ERROR: Pricing Protocal Cache Failure: {e}")
+    print(f"=> ERROR: Pricing Protocol Cache Failure: {e}")
 
 class PaymentRequest(BaseModel):
     payment_method_id: str
@@ -95,20 +95,44 @@ def validate_price(plan_id, cycle):
     SECURITY GATE: Integrity Verification for Pricing.
     Prevents client-side price tampering.
     """
+    global PRICING_DATA
+    
+    # RELOAD PROTOCOL: If cache is empty, attempt one-time restoration
+    if not PRICING_DATA:
+        try:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            pricing_path = os.path.join(base_path, 'data', 'pricing.json')
+            if os.path.exists(pricing_path):
+                with open(pricing_path, 'r') as f:
+                    PRICING_DATA = json.load(f)
+        except: pass
+
     if not PRICING_DATA:
         return -1
+
     try:
         plans = PRICING_DATA['pricing_data']['plans']
         plan = next((p for p in plans if p['id'] == plan_id), None)
         
-        if not plan: return -1
-        if str(plan[cycle]['price']).lower() == 'custom': return -1
+        if not plan: 
+            return -1
+            
+        # Neural Bypass for Enterprise
+        if str(plan[cycle]['price']).lower() == 'custom': 
+            return -1
         
+        price = int(plan[cycle]['price'])
+        
+        # 0. FREE PLAN PROTOCOL
+        if price == 0:
+            return 0
+            
         if cycle == 'monthly':
-            return int(plan['monthly']['price']) * 100
+            return price * 100
         else:
-            return int(plan['yearly']['price']) * 12 * 100 # Total for year
-    except Exception:
+            return price * 12 * 100 # Total for year
+    except Exception as e:
+        print(f"=> ERROR: Pricing Validation Failure: {e}")
         return -1
 
 async def execute_payment(payment_req: PaymentRequest, request: Request, user_id: str):
@@ -119,17 +143,29 @@ async def execute_payment(payment_req: PaymentRequest, request: Request, user_id
     expected_amount = validate_price(payment_req.plan_id, payment_req.billing_cycle)
     
     if expected_amount == -1:
-        raise HTTPException(status_code=400, detail="Invalid Execution Node: Plan not found.")
+        raise HTTPException(status_code=400, detail="Invalid Execution Node: Plan not found or pricing error.")
     
+    # 0. FREE TIER BYPASS: Handle $0 transactions without Stripe
+    if expected_amount == 0:
+        print(f"=> NEURAL_BYPASS: Zero-amount transaction for {user_id} (Plan: {payment_req.plan_id})")
+        success = await _update_subscription_in_db(user_id, payment_req.plan_id, payment_req.billing_cycle)
+        if success:
+            return {"status": "success", "message": "Neural link activated (Free Tier)"}
+        else:
+            raise HTTPException(status_code=500, detail="Database Sync Failure")
+
+    # 1. SECURITY GATE: Price Integrity Verification
     if payment_req.amount != expected_amount:
         client_ip = request.client.host
-        # PERSISTENT STORAGE: Secure Logging Protocol
-        # In new structure, logs should probably go to a logs folder or handled by logs.py
-        # For now, let's keep it in the root or backend? The doc says logs.py handles utilities.
-        # Let's put security_threats.log in the root for now as it was there, or move to logs/
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'security_threats.log')
-        with open(log_path, 'a') as log:
-            log.write(f"PROXIED_THREAT: [Plan:{payment_req.plan_id}] [IP:{client_ip}] [Attempted:{payment_req.amount}] [Required:{expected_amount}]\n")
+        # LOGGING PROTOCOL: Log security threats for audit
+        try:
+            log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
+            if not os.path.exists(log_dir): os.makedirs(log_dir)
+            log_path = os.path.join(log_dir, 'security_threats.log')
+            with open(log_path, 'a') as log:
+                log.write(f"PROXIED_THREAT: [Plan:{payment_req.plan_id}] [IP:{client_ip}] [Attempted:{payment_req.amount}] [Required:{expected_amount}]\n")
+        except: pass
+        
         raise HTTPException(status_code=403, detail="Security Violation: Price tampering detected.")
 
     try:

@@ -125,8 +125,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes'), {
                 headers: { 'Authorization': auth }
             });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                showToast(`Sync Error: ${errData.detail || 'Data Link Failed'}`, "error");
+                return [];
+            }
             return await res.json();
-        } catch (e) { return []; }
+        } catch (e) { 
+            showToast("Neural link interrupted. Retrying sync...", "error");
+            return []; 
+        }
     }
 
     async function fetchSubscription() {

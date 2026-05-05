@@ -186,9 +186,7 @@ async function processPayment(paymentMethodId) {
 
     let amount = 0;
     if (currentPlan.monthly.price === 'Custom') {
-        alert("Consultation required for Enterprise Tier.");
-        button.disabled = false;
-        button.textContent = 'Contact Sales';
+        window.INTEGRA_SETTINGS.triggerError('INFO', "Consultation required for Enterprise Tier. Our neural advisors will contact you shortly.");
         return;
     }
 
@@ -219,15 +217,11 @@ async function processPayment(paymentMethodId) {
             window.location.href = 'billing.html?status=success&plan=' + planId;
         } else {
             const errorMsg = result.detail || result.message || 'Unknown Protocol Error';
-            alert('Security Link Severed: ' + errorMsg);
-            button.disabled = false;
-            button.textContent = 'Retry Handshake';
+            window.INTEGRA_SETTINGS.triggerError(response.status || 'PAY_ERR', errorMsg);
         }
     } catch (err) {
         console.error("=> System Critical Error: ", err);
-        alert('Security Link Severed: Network timeout or connection lost.');
-        button.disabled = false;
-        button.textContent = 'Retry Handshake';
+        window.INTEGRA_SETTINGS.triggerError('NET_ERR', 'Network timeout or connection lost during secure handshake.');
     }
 }
 

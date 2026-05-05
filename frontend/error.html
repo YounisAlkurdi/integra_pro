@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integra | System Link Severed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030712;
+            --accent: #22d3ee;
+            --error: #ef4444;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .background-neural {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.05) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .error-container {
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            padding: 3rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .icon-shield {
+            width: 80px;
+            height: 80px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            color: var(--error);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+
+        .error-details {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--error);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2.5rem;
+            border-left: 2px solid var(--error);
+            text-align: left;
+            opacity: 0.8;
+        }
+
+        .btn-action {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: #fff;
+            color: var(--bg);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .glitch-text {
+            color: var(--error);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-neural"></div>
+    <div class="error-container">
+        <div class="icon-shield">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <span class="glitch-text">Security Protocol Violation</span>
+        <h1 id="error-title">Link Severed</h1>
+        <p id="error-message">The neural handshake was interrupted by a security oversight or network instability.</p>
+        
+        <div class="error-details" id="error-code">
+            CODE: 0x884_SECURITY_BREACH<br>
+            STATUS: 403 FORBIDDEN
+        </div>
+
+        <a href="index.html" class="btn-action">Return to Orbit</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const msg = params.get('msg');
+        
+        if (code) document.getElementById('error-code').innerHTML = `CODE: ${code}`;
+        if (msg) document.getElementById('error-message').textContent = decodeURIComponent(msg);
+        
+        // Dynamic title based on code
+        if (code === '403') {
+            document.getElementById('error-title').textContent = 'Access Revoked';
+        } else if (code === '404') {
+            document.getElementById('error-title').textContent = 'Node Not Found';
+        } else if (code === '500') {
+            document.getElementById('error-title').textContent = 'System Collapse';
+        }
+    </script>
+</body>
+</html>
