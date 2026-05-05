@@ -40,6 +40,10 @@
                         slideIn: {
                             '0%': { transform: 'translateX(30px)', opacity: 0 },
                             '100%': { transform: 'translateX(0)', opacity: 1 },
+                        },
+                        slideInRight: {
+                            '0%': { transform: 'translateX(100%) scale(0.95)', opacity: 0 },
+                            '100%': { transform: 'translateX(0) scale(1)', opacity: 1 },
                         }
                     }
                 }
@@ -63,6 +67,10 @@
     <!-- App Config (change backend URL here, NEVER put secrets) -->
     <script src="../js/core/config.js"></script>
     <script src="../js/core/settings.js"></script>
+
+    <!-- Lobby Modules -->
+    <script src="../js/pages/lobby/candidate-lobby.js"></script>
+    <script src="../js/pages/lobby/hr-lobby.js"></script>
 </head>
 <body class="bg-obsidian text-white overflow-y-auto lg:overflow-hidden min-h-screen h-full lg:h-screen flex flex-col font-sans">
     
@@ -438,7 +446,7 @@
                             </div>
                             <div class="flex-1">
                                 <p class="text-[11px] font-bold text-white tracking-wide">Neural Lexical Scan</p>
-                                <p id="lexicalStatus" class="text-[8px] text-cyan-400/60 font-mono uppercase tracking-widest">Processing...</p>
+                                <p id="lexicalStatusIntel" class="text-[8px] text-cyan-400/60 font-mono uppercase tracking-widest">Processing...</p>
                             </div>
                             <div class="w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"></div>
                         </div>

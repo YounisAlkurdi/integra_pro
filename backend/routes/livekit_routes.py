@@ -244,6 +244,15 @@ async def toggle_deepfake_requirement(req: ToggleDeepfakeRequest):
     return {"status": "UPDATED", "deepfake_required": req.required}
 
 
+@router.get("/toggle-deepfake")
+async def get_deepfake_requirement(room_id: str):
+    """Fetch current Gatekeeper AI (Deepfake) gate status for this session."""
+    node = await get_node_by_room_id(room_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return {"deepfake_required": node.get("deepfake_required", True)}
+
+
 @router.post("/decide-request")
 async def decide_request(req: DecisionRequest):
     """
@@ -269,10 +278,12 @@ async def decide_request(req: DecisionRequest):
     deepfake_required = node.get('deepfake_required', True) if node else True
 
     # 2. Prevent approval if not verified (ONLY if required and not overridden)
-    if req.decision.upper() == "APPROVED" and deepfake_required and liveness != "VERIFIED" and not req.is_override:
+    # SKIPPED is treated as equivalent to VERIFIED (protection was disabled by HR)
+    liveness_ok = liveness in ("VERIFIED", "SKIPPED")
+    if req.decision.upper() == "APPROVED" and deepfake_required and not liveness_ok and not req.is_override:
         raise HTTPException(
             status_code=403, 
-            detail="Security Block: Candidate must be VERIFIED by Gatekeeper before approval can be granted. Use Override if necessary."
+            detail="Security Block: Candidate must be VERIFIED by Gatekeeper before approval can be granted. Use VETO Override if necessary."
         )
 
     # 3. Update status

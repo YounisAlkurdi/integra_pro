@@ -1,21 +1,21 @@
 /**
- * integra-session.js — UI Controller v4 (Canvas Overlay Added)
+ * integra-session.js Ã¢â‚¬â€ UI Controller v4 (Canvas Overlay Added)
  *
  * Changes vs v3:
  *  - candidateIdentity tracked alongside candidateVideo
  *  - createParticipantPanel() injects a <canvas> overlay per panel
  *  - drawForensicCanvas() draws bbox / zone label / head arrow / iris dots
- *    exactly like index.html — called at the end of updateForensicUI()
+ *    exactly like index.html Ã¢â‚¬â€ called at the end of updateForensicUI()
  */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Init ─────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Init Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (window.lucide) window.lucide.createIcons();
 
     const API_BASE = window.APP_CONFIG?.backendUrl || 'http://127.0.0.1:8000';
 
-    // ── State ────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ State Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     let micEnabled    = true;
     let camEnabled    = true;
     let screenSharing = false;
@@ -32,11 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const participantFeeds = new Map();
     let candidateVideo    = null;
-    let candidateIdentity = null;   // ← NEW: track identity for canvas lookup
+    let candidateIdentity = null;   // Ã¢â€ Â NEW: track identity for canvas lookup
     let forensicWS        = null;
     let forensicInterval  = null;
 
-    // ── FIX 1: $ defined FIRST before any usage ───────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ FIX 1: $ defined FIRST before any usage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const $ = id => document.getElementById(id);
 
     // --- AI Agent Discovery: WebMCP Protocol (RFC-ready) ---
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // ── Spatial Grid Init ─────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Spatial Grid Init Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function initSpatialGrid() {
         const grid = $('spatialGrid');
         if (!grid) return;
@@ -66,14 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initSpatialGrid();
 
-    // ── AI Agent UI Init ──────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ AI Agent UI Init Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (aiAgentActive) {
         const agentDashboard = $('ai-agent-dashboard');
         if (agentDashboard) agentDashboard.classList.remove('hidden');
         // Audio bars now stay visible in the bottom container regardless
     }
 
-    // ── DOM refs ─────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DOM refs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const localVideo         = $('local-video');
     const remoteArea         = $('remote-area');
     const remotePlaceholder  = $('remote-placeholder');
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabIntelBtn)   tabIntelBtn.style.display   = 'none';
     }
 
-    // ── Toast ─────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Toast Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.showToast = function(message, type = 'info') {
         const colors = {
             success: 'border-green-500/30 text-green-400',
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => toast.remove(), 3500);
     };
 
-    // ── Log ──────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Log Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function addLog(message, type = 'system') {
         if (!logList) return;
         if (message.includes('Failed to fetch')) return;
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logList.scrollTop = logList.scrollHeight;
     }
 
-    // ── Verification Manager (Gatekeeper) ─────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Verification Manager (Gatekeeper) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.VerificationManager = {
         stream: null,
         recorder: null,
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ── Timer ─────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Timer Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function startTimer(initialSeconds) {
         sessionSeconds = initialSeconds;
         if (timerInterval) clearInterval(timerInterval);
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Feed management ───────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Feed management Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function getFeedBoxForRole(role) {
         if (role === 'hr' || role === 'admin') {
             return { feedEl: adminFeedEl, statusEl: adminStatusEl, labelEl: adminFeedLabel };
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (placeholder) placeholder.remove();
     }
 
-    // ── Transcription bubble ──────────────────────────────────────────────────
+    // ──────────────── Transcription bubble ────────────────
     function appendTranscription(role, text, isFinal) {
         const { feedEl } = getFeedBoxForRole(role);
         if (!feedEl) return;
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Dynamic Video Grid Layout ─────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Dynamic Video Grid Layout Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function updateGrid(count) {
         if (!remoteArea) return;
         remoteArea.style.display = 'grid';
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Remote participant video panel ────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Remote participant video panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     // CHANGED: added <canvas> overlay inside each panel
     function createParticipantPanel(identity, name, role) {
         if (remotePlaceholder) remotePlaceholder.classList.add('hidden');
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         panel.appendChild(waiting);
 
-        // ── NEW: forensic canvas overlay ──────────────────────────────────────
+        // Ã¢â€â‚¬Ã¢â€â‚¬ NEW: forensic canvas overlay Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         const overlayCanvas = document.createElement('canvas');
         overlayCanvas.id = `canvas-${identity}`;
         overlayCanvas.style.cssText = [
@@ -417,13 +417,13 @@ document.addEventListener('DOMContentLoaded', () => {
             'z-index:5',
         ].join(';');
         panel.appendChild(overlayCanvas);
-        // ─────────────────────────────────────────────────────────────────────
+        // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
         const label = document.createElement('div');
         label.className = 'absolute bottom-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-xl rounded-lg text-[9px] font-mono uppercase tracking-widest border border-white/5 z-10 flex items-center gap-3';
         label.innerHTML = `
             <div class="flex items-center gap-2">
-                <span class="text-cyan-400 font-bold">●</span>
+                <span class="text-cyan-400 font-bold">Ã¢â€”Â</span>
                 <span>${name || identity}</span>
             </div>
             <div id="quality-${identity}" class="flex gap-0.5 items-end h-2.5 opacity-40 transition-all">
@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Update control button visual state ───────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Update control button visual state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     function updateControlBtn(id, isActive, iconOn, iconOff) {
         const btn = $(id);
         if (!btn) return;
@@ -475,9 +475,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.toggle('btn-off', !isActive);
     }
 
-    // ────────────────────────────────────────────────────────────────────────────
-    // LiveKit Events → UI
-    // ────────────────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // LiveKit Events Ã¢â€ â€™ UI
+    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     window.addEventListener('lk:connected', (e) => {
         const { participantName, role, roomName } = e.detail;
@@ -552,8 +552,8 @@ document.addEventListener('DOMContentLoaded', () => {
             connectionBadge.textContent = `RECONNECT ${attempt}`;
             connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 uppercase tracking-widest animate-pulse';
         }
-        addLog(`⟳ Reconnecting... attempt ${attempt}`, 'error');
-        showToast(`Connection lost — retrying (${attempt})`, 'error');
+        addLog(`Ã¢Å¸Â³ Reconnecting... attempt ${attempt}`, 'error');
+        showToast(`Connection lost Ã¢â‚¬â€ retrying (${attempt})`, 'error');
     });
 
     window.addEventListener('lk:reconnected', () => {
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
             connectionBadge.textContent = 'LIVE';
             connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 uppercase tracking-widest animate-pulse';
         }
-        addLog('✓ Reconnected successfully', 'audio');
+        addLog('Ã¢Å“â€œ Reconnected successfully', 'audio');
         showToast('Reconnected!', 'success');
     });
 
@@ -629,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── FIX 2: Single endSession with full HR termination logic ──────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ FIX 2: Single endSession with full HR termination logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.endSession = async function() {
         showToast("TERMINATING CONNECTION...", "info");
 
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (waiting) waiting.classList.remove('hidden');
             if (role === 'candidate') {
                 candidateVideo    = null;
-                candidateIdentity = null;   // ← clear identity too
+                candidateIdentity = null;   // Ã¢â€ Â clear identity too
                 stopForensicEngine();
             }
         }
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-start forensic engine for HR when candidate video arrives
         if (action === 'add' && role === 'candidate' && (localRole === 'hr' || localRole === 'admin')) {
             candidateVideo    = element;
-            candidateIdentity = identity;   // ← save identity
+            candidateIdentity = identity;   // Ã¢â€ Â save identity
             startForensicEngine();
         }
     });
@@ -761,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Error: ${msg}`, 'error');
         showToast(msg, 'error');
 
-        if (msg.includes('Access allowed') || msg.includes('الدخول متاح')) {
+        if (msg.includes('Access allowed') || msg.includes('Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž Ã™â€¦Ã˜ÂªÃ˜Â§Ã˜Â­')) {
             if (joinLobby) {
                 const [msgAr, msgEn] = msg.split(' | ');
                 joinLobby.innerHTML = `
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </p>
                         <div class="mt-8 pt-8 border-t border-white/5">
                             <button onclick="window.location.reload()" class="px-8 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white text-white hover:text-obsidian transition-all">
-                                تحديث الصفحة
+                                Ã˜ÂªÃ˜Â­Ã˜Â¯Ã™Å Ã˜Â« Ã˜Â§Ã™â€žÃ˜ÂµÃ™ÂÃ˜Â­Ã˜Â©
                             </button>
                         </div>
                     </div>
@@ -790,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (msg.includes('Room is full') || msg.includes('الغرفة ممتلئة')) {
+        if (msg.includes('Room is full') || msg.includes('Ã˜Â§Ã™â€žÃ˜ÂºÃ˜Â±Ã™ÂÃ˜Â© Ã™â€¦Ã™â€¦Ã˜ÂªÃ™â€žÃ˜Â¦Ã˜Â©')) {
             if (joinLobby) {
                 const [msgAr, msgEn] = msg.split(' | ');
                 joinLobby.innerHTML = `
@@ -805,14 +805,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="text-center px-10">
                         <h3 class="text-2xl font-black uppercase tracking-tight mb-3 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                            ${msgAr || 'الغرفة ممتلئة'}
+                            ${msgAr || 'Ã˜Â§Ã™â€žÃ˜ÂºÃ˜Â±Ã™ÂÃ˜Â© Ã™â€¦Ã™â€¦Ã˜ÂªÃ™â€žÃ˜Â¦Ã˜Â©'}
                         </h3>
                         <p class="text-[11px] font-mono text-white/50 uppercase tracking-[0.2em] max-w-sm mx-auto leading-loose">
                             ${msgEn || 'Maximum participants reached for this session.'}
                         </p>
                         <div class="mt-10 p-1 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-md">
                             <button onclick="window.location.reload()" class="w-full px-8 py-4 bg-red-500 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] hover:bg-white text-white hover:text-red-600 transition-all shadow-xl hover:shadow-red-500/20 active:scale-95">
-                                محاولة الدخول مجدداً
+                                Ã™â€¦Ã˜Â­Ã˜Â§Ã™Ë†Ã™â€žÃ˜Â© Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž Ã™â€¦Ã˜Â¬Ã˜Â¯Ã˜Â¯Ã˜Â§Ã™â€¹
                             </button>
                         </div>
                         <p class="mt-6 text-[9px] font-black uppercase tracking-widest text-white/20">
@@ -824,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (msg.includes('expired') || msg.includes('انتهت صلاحيته')) {
+        if (msg.includes('expired') || msg.includes('Ã˜Â§Ã™â€ Ã˜ÂªÃ™â€¡Ã˜Âª Ã˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜ÂªÃ™â€¡')) {
             if (joinLobby) {
                 joinLobby.innerHTML = `
                     <div class="relative mb-10">
@@ -835,14 +835,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="text-center px-10">
                         <h3 class="text-2xl font-black uppercase tracking-tight mb-3 text-white/80">
-                            انتهت صلاحية الرابط
+                            Ã˜Â§Ã™â€ Ã˜ÂªÃ™â€¡Ã˜Âª Ã˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â§Ã˜Â¨Ã˜Â·
                         </h3>
                         <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-loose">
                             This session has already ended or been terminated by the host.
                         </p>
                         <div class="mt-10">
                             <a href="index.html" class="px-8 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white text-white hover:text-obsidian transition-all">
-                                العودة للرئيسية
+                                Ã˜Â§Ã™â€žÃ˜Â¹Ã™Ë†Ã˜Â¯Ã˜Â© Ã™â€žÃ™â€žÃ˜Â±Ã˜Â¦Ã™Å Ã˜Â³Ã™Å Ã˜Â©
                             </a>
                         </div>
                     </div>
@@ -858,26 +858,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Forensic Lexical Engine Integration ──────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Forensic Lexical Engine Integration Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     async function analyzeLexical(text) {
         if (!text) return;
         const wordCount = text.trim().split(/\s+/).length;
         
-        // ── Word Density Update ──────────────────────────────────────────────
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Word Density Update Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         const wordDensityEl = $('wordDensity');
         if (wordDensityEl) {
             const wpm = (wordCount / (text.length / 50)).toFixed(1); // Rough WPM estimate
             wordDensityEl.textContent = `${wpm} wpm`;
         }
 
-        // 🛡️ Filter short sentences to prevent inaccurate results
+        // Ã°Å¸â€ºÂ¡Ã¯Â¸Â Filter short sentences to prevent inaccurate results
         if (text.trim().length < 20) {
-            const lexicalStatus = $('lexicalStatus');
-            if (lexicalStatus) {
-                lexicalStatus.textContent = 'Collecting more data...';
-                lexicalStatus.className = 'text-[8px] text-white/30 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
-            }
-            return; 
+            const _setShort = (el) => {
+                if (!el) return;
+                el.textContent = 'Collecting more data...';
+                el.className = 'text-[8px] text-white/30 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
+            };
+            _setShort($('lexicalStatus'));
+            _setShort($('lexicalStatusIntel'));
+            return;
         }
 
         const lexicalStatus = $('lexicalStatus');
@@ -888,13 +890,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const lexPulse       = $('lexicalPulse');
 
         try {
-            if (lexicalStatus) {
-                lexicalStatus.textContent = 'Neural Scanning...';
-                lexicalStatus.className = 'text-[8px] text-cyan-400/60 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-cyan-400/10 rounded animate-pulse';
-            }
+            const _setScanning = (el) => {
+                if (!el) return;
+                el.textContent = 'Neural Scanning...';
+                el.className = 'text-[8px] text-cyan-400/60 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-cyan-400/10 rounded animate-pulse';
+            };
+            _setScanning(lexicalStatus);
+            _setScanning($('lexicalStatusIntel'));
             if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping';
             
-            // 📡 Dynamic Drift Simulation (makes it feel alive)
+            // Ã°Å¸â€œÂ¡ Dynamic Drift Simulation (makes it feel alive)
             const driftVal = $('driftVal');
             if (driftVal) {
                 const randomDrift = (Math.random() * 0.005).toFixed(4);
@@ -915,10 +920,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check text length to avoid false positives on short sentences
             const wordCount = text.split(' ').filter(w => w.length > 0).length;
             if (wordCount < 4) {
-                if (lexicalStatus) {
-                    lexicalStatus.innerHTML = `<span class="text-orange-400">SHORT SENTENCE</span>`;
-                    lexicalStatus.className = 'text-[9px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-orange-400/10 rounded border border-orange-400/20';
-                }
+                const _setShortSentence = (el) => {
+                    if (!el) return;
+                    el.innerHTML = `<span class="text-orange-400">SHORT SENTENCE</span>`;
+                    el.className = 'text-[9px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-orange-400/10 rounded border border-orange-400/20';
+                };
+                _setShortSentence(lexicalStatus);
+                _setShortSentence($('lexicalStatusIntel'));
                 if (patternMatch) patternMatch.textContent = "INSUFFICIENT_DATA";
                 return; // Not enough data for NLP
             }
@@ -928,20 +936,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nlpConf) nlpConf.textContent = confidence;
             if (nlpConfFill) nlpConfFill.style.width = `${confidence * 100}%`;
 
-            // Update UI with clear Verdict
-            if (lexicalStatus) {
+            // Update UI with clear Verdict — sync BOTH lexicalStatus panels
+            const _applyVerdict = (el) => {
+                if (!el) return;
                 if (prob < 0.3) {
-                    lexicalStatus.innerHTML = `<span class="text-green-400 font-black"><i data-lucide="user-check" class="w-3 h-3 inline pb-0.5"></i> HUMAN</span>`;
-                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-green-400/10 rounded border border-green-400/20';
+                    el.innerHTML = `<span class="text-green-400 font-black"><i data-lucide="user-check" class="w-3 h-3 inline pb-0.5"></i> HUMAN</span>`;
+                    el.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-green-400/10 rounded border border-green-400/20';
                 } else if (prob > 0.7) {
-                    lexicalStatus.innerHTML = `<span class="text-red-400 font-black"><i data-lucide="bot" class="w-3 h-3 inline pb-0.5"></i> AI GENERATED</span>`;
-                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-red-400/10 rounded border border-red-400/20';
+                    el.innerHTML = `<span class="text-red-400 font-black"><i data-lucide="bot" class="w-3 h-3 inline pb-0.5"></i> AI GENERATED</span>`;
+                    el.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-red-400/10 rounded border border-red-400/20';
                 } else {
-                    lexicalStatus.innerHTML = `<span class="text-yellow-400 font-black">UNCERTAIN</span>`;
-                    lexicalStatus.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-yellow-400/10 rounded border border-yellow-400/20';
+                    el.innerHTML = `<span class="text-yellow-400 font-black">UNCERTAIN</span>`;
+                    el.className = 'text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-yellow-400/10 rounded border border-yellow-400/20';
                 }
-                lucide.createIcons({ nodes: [lexicalStatus] });
-            }
+                lucide.createIcons({ nodes: [el] });
+            };
+            _applyVerdict(lexicalStatus);
+            _applyVerdict($('lexicalStatusIntel'));
 
             if (patternMatch) {
                 const patterns = ["SYNTACTIC_FLOW", "LEXICAL_DENSITY", "SEMANTIC_DRIFT", "NEURAL_SIGNATURE", "PROBABILISTIC_DECAY"];
@@ -972,22 +983,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-white/10 rounded-full';
 
             if (prob > 0.8) {
-                showToast('🚨 High AI Lexical Pattern Detected!', 'error');
+                showToast('Ã°Å¸Å¡Â¨ High AI Lexical Pattern Detected!', 'error');
                 addForensicLog(`LEXICAL ALERT: ${result.verdict}`, 'error');
             }
 
         } catch (err) {
             console.warn('[Forensic] Lexical engine error:', err);
-            if (lexicalStatus) {
-                lexicalStatus.textContent = 'Engine Offline';
-                lexicalStatus.className = 'text-[8px] text-white/20 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
-            }
+            const _setOffline = (el) => {
+                if (!el) return;
+                el.textContent = 'Engine Offline';
+                el.className = 'text-[8px] text-white/20 font-mono uppercase tracking-[0.2em] px-2 py-0.5 bg-white/5 rounded';
+            };
+            _setOffline(lexicalStatus);
+            _setOffline($('lexicalStatusIntel'));
             if (lexPulse) lexPulse.className = 'w-1.5 h-1.5 bg-white/10 rounded-full';
         }
     }
 
     async function saveLogToServer(sender, message) {
-        // Use currentRoomId from URL params (line 30) — reliable, doesn't depend on LiveKitSession state
+        // Use currentRoomId from URL params (line 30) Ã¢â‚¬â€ reliable, doesn't depend on LiveKitSession state
         const roomId = currentRoomId || window.LiveKitSession?.getState?.()?.roomName;
         if (!roomId || !message?.trim()) return;
 
@@ -1018,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── AI Agent Logic ────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ AI Agent Logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     let isAgentThinking = false;
 
     async function callAiAgent(speakerRole, text) {
@@ -1120,12 +1134,12 @@ document.addEventListener('DOMContentLoaded', () => {
         appendTranscription(myRole, e.detail.text, true);
         saveLogToServer(myName, e.detail.text);
 
-        // 🔍 Agent Analysis for HR speech
+        // Ã°Å¸â€Â Agent Analysis for HR speech
         if (aiAgentActive && (myRole === 'hr' || myRole === 'admin')) {
             callAiAgent('hr', e.detail.text);
         }
 
-        // 🔍 Only analyze if I am the candidate (for self-monitoring) 
+        // Ã°Å¸â€Â Only analyze if I am the candidate (for self-monitoring) 
         if (myRole === 'candidate') {
             analyzeLexical(e.detail.text);
         }
@@ -1143,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isFinal) {
             saveLogToServer(name || role.toUpperCase(), text);
 
-            // 🔍 HR/Admin analyzes remote candidate transcriptions
+            // Ã°Å¸â€Â HR/Admin analyzes remote candidate transcriptions
             const myRole = window.LiveKitSession?.getState?.()?.localRole || localRole;
             
             if (role === 'candidate' && (myRole === 'hr' || myRole === 'admin')) {
@@ -1157,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Control Buttons ───────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Control Buttons Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     $('btn-toggle-mic')?.addEventListener('click', async () => {
         await window.LiveKitSession?.toggleMic();
     });
@@ -1197,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Tab switching ─────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Tab switching Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
@@ -1214,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Audio Visualizer Bars ─────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Audio Visualizer Bars Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const audioBars = $('audio-bars');
     if (audioBars) {
         const BAR_COUNT = 32;
@@ -1256,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startBarAnimation();
     }
 
-    // ── Local camera preview ──────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Local camera preview Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     async function initPreviewCamera() {
         try {
             if (!navigator.mediaDevices) return;
@@ -1268,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initPreviewCamera();
 
-    // ── Join Session Function ─────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Join Session Function Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.joinSession = async function() {
         const btn       = $('btn-join');
         const inputRoom = document.getElementById('input-room');
@@ -1293,10 +1307,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (scheduledAt > (now.getTime() + buffer)) {
                 const diff = scheduledAt - now;
                 const minutes = Math.floor(diff / 60000);
-                showToast(`الموعد لم يحن بعد. يمكنك الدخول قبل 5 دقائق (مبقي ${minutes} دقيقة)`, "info");
+                showToast(`Ã˜Â§Ã™â€žÃ™â€¦Ã™Ë†Ã˜Â¹Ã˜Â¯ Ã™â€žÃ™â€¦ Ã™Å Ã˜Â­Ã™â€  Ã˜Â¨Ã˜Â¹Ã˜Â¯. Ã™Å Ã™â€¦Ã™Æ’Ã™â€ Ã™Æ’ Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž Ã™â€šÃ˜Â¨Ã™â€ž 5 Ã˜Â¯Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€š (Ã™â€¦Ã˜Â¨Ã™â€šÃ™Å  ${minutes} Ã˜Â¯Ã™â€šÃ™Å Ã™â€šÃ˜Â©)`, "info");
                 if (btn) {
                     btn.disabled = true;
-                    btn.textContent = `متبقي ${minutes} دقيقة`;
+                    btn.textContent = `Ã™â€¦Ã˜ÂªÃ˜Â¨Ã™â€šÃ™Å  ${minutes} Ã˜Â¯Ã™â€šÃ™Å Ã™â€šÃ˜Â©`;
                     setTimeout(() => { btn.disabled = false; window.joinSession(); }, Math.min(diff - buffer, 30000));
                 }
                 return;
@@ -1315,231 +1329,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 role: role
             });
 
-            if (result && (result.status === "AWAITING_APPROVAL" || result.liveness_status === "PENDING")) {
-                // If Deepfake verification is required
-                if (result.liveness_status === "PENDING") {
-                    window.VerificationManager.init(result.request_id, roomName, name);
+
+            if (result && (result.status === 'AWAITING_APPROVAL' || result.liveness_status === 'PENDING')) {
+                // Ã¢â€â‚¬Ã¢â€â‚¬ Delegate to CandidateLobby module Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                if (window.CandidateLobby) {
+                    window.CandidateLobby.show(
+                        result,
+                        roomName,
+                        name,
+                        API_BASE,
+                        window.joinSession  // called on approval
+                    );
                 }
-
-                if (joinLobby) {
-                    if (window._pollStatusInterval) clearTimeout(window._pollStatusInterval);
-                
-                    const setupCandidateRealtime = () => {
-                        if (!window.supabaseClient) {
-                            setTimeout(setupCandidateRealtime, 1000);
-                            return;
-                        }
-
-                        console.log(`[Lobby] Candidate subscribing to status for room: ${roomName}`);
-                        
-                        // AUTO-START VERIFICATION TO SAVE TIME
-                        if (check && check.liveness_status === "PENDING") {
-                            console.log("[Lobby] Auto-starting verification...");
-                            window.VerificationManager.init(check.id, roomName, name);
-                        }
-
-                        const channel = window.supabaseClient
-                            .channel(`candidate-status-${roomName}-${name}`)
-                            .on('postgres_changes', {
-                                event: 'UPDATE',
-                                schema: 'public',
-                                table: 'join_requests',
-                                filter: `room_id=eq.${roomName} AND participant_name=eq.${name}`
-                            }, (payload) => {
-                                const check = payload.new;
-                                console.log("[Lobby] Status Update:", check.status, check.liveness_status);
-
-                                if (check.liveness_status === "FAILED") {
-                                    channel.unsubscribe();
-                                    showToast("Deepfake detected! Verification failed.", "error");
-                                    if (joinLobby) {
-                                        joinLobby.innerHTML = `
-                                            <div class="text-center">
-                                                <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
-                                                <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
-                                                <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
-                                                <button onclick="location.reload()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white uppercase transition-all">Try Again</button>
-                                            </div>
-                                        `;
-                                        lucide.createIcons({ nodes: [joinLobby] });
-                                    }
-                                    return;
-                                }
-
-                                if (check.liveness_status === "ERROR") {
-                                    const errCode = check.error_details || "UNKNOWN_ERROR";
-                                    let userMsg = "Technical error during verification.";
-                                    
-                                    if (errCode === "NO_FACE_DETECTED") userMsg = "Face not found! Please ensure your face is clearly visible and try again.";
-                                    if (errCode === "POOR_LIGHTING") userMsg = "Lighting is too dark! Move to a brighter area and retry.";
-                                    if (errCode === "SYSTEM_OFFLINE") userMsg = "Verification server is currently busy. Please wait a moment and retry.";
-
-                                    showToast(userMsg, "warning", 6000);
-                                    
-                                    if (joinLobby) {
-                                        const statusLabel = joinLobby.querySelector('.text-cyan-400') || joinLobby.querySelector('.text-amber-400');
-                                        if (statusLabel) {
-                                            statusLabel.textContent = `ERROR: ${userMsg}`;
-                                            statusLabel.className = "text-[9px] font-black text-amber-400 uppercase tracking-widest leading-tight px-4 block";
-                                        }
-                                        
-                                        const retryBtn = document.createElement('button');
-                                        retryBtn.className = 'mt-4 px-8 py-3 bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95';
-                                        retryBtn.textContent = 'Retry Identity Scan';
-                                        retryBtn.onclick = () => window.VerificationManager.init(check.id, roomName, name);
-                                        
-                                        const statusContainer = joinLobby.querySelector('.mt-8') || joinLobby.querySelector('.text-center');
-                                        if (statusContainer) {
-                                            const oldBtn = statusContainer.querySelector('button');
-                                            if (oldBtn) oldBtn.remove();
-                                            statusContainer.appendChild(retryBtn);
-                                        }
-                                    }
-                                    return;
-                                }
-
-                                if (check.status === "APPROVED" && (check.liveness_status === "VERIFIED" || check.is_override)) {
-                                    channel.unsubscribe();
-                                    window.joinSession(); // Re-join to get the token and enter
-                                } else if (check.status === "REJECTED") {
-                                    channel.unsubscribe();
-                                    showToast("تم رفض طلب الدخول | Entry rejected", "error");
-                                    if (joinLobby) {
-                                        joinLobby.innerHTML = `<h3 class="text-red-500 font-bold uppercase">Entry Rejected</h3>`;
-                                    }
-                                }
-
-                                // Listen for Nudges
-                                if (payload.old && check.nudge_count > payload.old.nudge_count) {
-                                    showToast("⚠️ Interviewer is waiting! Please verify identity.", "warning", 8000);
-                                    const alertDiv = document.createElement('div');
-                                    alertDiv.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-obsidian p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.5)] z-[10000] animate-bounce text-center';
-                                    alertDiv.innerHTML = `
-                                        <i data-lucide="bell-ring" class="w-16 h-16 mx-auto mb-4"></i>
-                                        <h2 class="text-2xl font-black uppercase mb-2">Interviewer is Waiting</h2>
-                                        <p class="font-bold opacity-80">Please complete the identity scan to proceed.</p>
-                                    `;
-                                    document.body.appendChild(alertDiv);
-                                    if (window.lucide) window.lucide.createIcons({ nodes: [alertDiv] });
-                                    setTimeout(() => alertDiv.remove(), 5000);
-                                    // Play attention sound if available
-                                    try { new Audio('/assets/sounds/nudge.mp3').play(); } catch(e){}
-                                }
-                            })
-                            .subscribe();
-                    };
-
-                    setupCandidateRealtime();
-                
-                    joinLobby.innerHTML = `
-                        <div class="relative mb-10">
-                            <div class="absolute -inset-10 bg-cyan-500/10 rounded-full blur-3xl"></div>
-                            <div class="w-32 h-32 rounded-full border-2 border-cyan-500/20 flex items-center justify-center">
-                                <div class="w-20 h-20 border-b-2 border-cyan-400 rounded-full animate-spin"></div>
-                                <i data-lucide="shield-check" class="absolute w-8 h-8 text-cyan-400 animate-pulse"></i>
-                            </div>
-                        </div>
-                        <div class="text-center px-10">
-                            <h3 class="text-xl font-black uppercase tracking-widest mb-3 text-white">
-                                ${result.liveness_status === 'PENDING' ? 'Identity Verification Required' : 'الطلب قيد الانتظار'}
-                            </h3>
-                            <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed mb-6">
-                                ${result.message_en || 'Please wait for identity verification and host approval.'}
-                            </p>
-
-                            ${result.liveness_status === 'PENDING' ? `
-                                <div class="mt-8">
-                                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4">
-                                        <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
-                                        <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">
-                                            Initializing Bio-Security Scan...
-                                        </span>
-                                    </div>
-                                    <p class="text-[9px] text-white/40 uppercase">Starting automatically to save time</p>
-                                </div>
-                            ` : `
-                                <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
-                                    <span class="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></span>
-                                    <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest">
-                                        Verifying Identity...
-                                    </span>
-                                </div>
-                            `}
-                        </div>
-                    `;
-                    lucide.createIcons({ nodes: [joinLobby] });
-                }
-
-                const pollRequestStatus = async () => {
-                    try {
-                        const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
-                        if (!checkRaw.ok) {
-                            pollDelay = Math.min(pollDelay * 1.5, 15000);
-                            window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
-                            return;
-                        }
-                        
-                        const check = await checkRaw.json();
-
-                        // 1. Check for Deepfake Failure
-                        if (check.liveness_status === "FAILED") {
-                            window._pollStatusInterval = null;
-                            showToast("Deepfake detected! Verification failed.", "error");
-                            if (joinLobby) {
-                                joinLobby.innerHTML = `
-                                    <div class="text-center">
-                                        <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
-                                        <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
-                                        <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
-                                        <button onclick="location.reload()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white uppercase transition-all">Try Again</button>
-                                    </div>
-                                `;
-                                lucide.createIcons({ nodes: [joinLobby] });
-                            }
-                            return;
-                        }
-
-                        if (check.liveness_status === "ERROR") {
-                            showToast("Verification Error. Retrying...", "warning");
-                            // Logic similar to realtime branch
-                        }
-
-                        // 2. Check for Approval
-                        if (check.status === "APPROVED" && (check.liveness_status === "VERIFIED" || check.is_override)) {
-                            window._pollStatusInterval = null;
-                            window.joinSession();
-                        } else if (check.status === "REJECTED") {
-                            window._pollStatusInterval = null;
-                            showToast("تم رفض طلب الدخول | Entry rejected", "error");
-                            if (joinLobby) {
-                                joinLobby.innerHTML = `<h3 class="text-red-500 font-bold uppercase">Entry Rejected</h3>`;
-                            }
-                        } else {
-                            // Still PENDING, exponential backoff
-                            pollDelay = Math.min(pollDelay * 1.5, 15000);
-                            window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
-                        }
-                    } catch (e) {
-                        console.error("Polling error:", e);
-                        pollDelay = Math.min(pollDelay * 1.5, 15000);
-                        window._pollStatusInterval = setTimeout(pollRequestStatus, pollDelay);
-                    }
-                };
-                
-                pollRequestStatus();
                 return;
             }
 
-            if (meta) {
-                const startTime = new Date(meta.created_at).getTime();
-                const now = new Date().getTime();
-                const elapsedSeconds = Math.floor((now - startTime) / 1000);
-                const totalAllowedSeconds = (meta.max_duration_mins || 10) * 60;
-                const remainingSeconds = totalAllowedSeconds - elapsedSeconds;
-
-                console.log(`[Timer] Total: ${totalAllowedSeconds}s, Elapsed: ${elapsedSeconds}s, Remaining: ${remainingSeconds}s`);
-                startTimer(remainingSeconds);
-            }
 
         } catch (err) {
             console.error("[Join] Connection failed:", err);
@@ -1557,317 +1361,19 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('System initialized. Awaiting session...');
     }
 
-    // ── HR Lobby Monitor ──────────────────────────────────────────────────────
-    if (localRole === 'hr' || localRole === 'interviewer') {
-        const lobbyContainer = document.createElement('div');
-        lobbyContainer.id = 'hr-lobby-notifs';
-        lobbyContainer.className = 'fixed top-20 right-6 w-80 space-y-4 z-[9999]';
-        
-        // --- MASTER AI TOGGLE ---
-        const masterToggle = document.createElement('div');
-        masterToggle.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl mb-4 ring-1 ring-white/5 flex items-center justify-between';
-        masterToggle.innerHTML = `
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                    <i data-lucide="shield-alert" class="w-4 h-4 text-cyan-400"></i>
-                </div>
-                <div>
-                    <h5 class="text-[10px] font-black text-white uppercase tracking-widest">Gatekeeper AI</h5>
-                    <p class="text-[8px] text-white/40 uppercase">Identity Protection</p>
-                </div>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="master-ai-toggle" class="sr-only peer" checked>
-                <div class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
-            </label>
-        `;
-        lobbyContainer.appendChild(masterToggle);
-        if (window.lucide) window.lucide.createIcons({ scope: masterToggle });
-
-        masterToggle.querySelector('#master-ai-toggle').onchange = async (e) => {
-            const isRequired = e.target.checked;
-            showToast(`AI Verification ${isRequired ? 'Enabled' : 'Disabled'}`, isRequired ? "info" : "warning");
-            
-            try {
-                await fetch(`${API_BASE}/api/livekit/toggle-deepfake`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room_id: currentRoomId, required: isRequired })
-                });
-            } catch(err) { console.error("Toggle failed:", err); }
-        };
-
-        document.body.appendChild(lobbyContainer);
-
-        const renderLobbyCard = (req) => {
-            if (document.getElementById(`lobby-card-${req.id}`)) return;
-            const entryTime = new Date(req.created_at).getTime();
-            
-            const card = document.createElement('div');
-            card.id = `lobby-card-${req.id}`;
-            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5 relative overflow-hidden';
-            card.innerHTML = `
-                <div class="absolute top-0 left-0 w-full h-1 bg-white/5">
-                    <div class="lobby-progress-bar h-full bg-cyan-500 w-0 transition-all duration-1000"></div>
-                </div>
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                        <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
-                            <span class="lobby-timer text-[8px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded-full">00:00</span>
-                        </div>
-                        <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
-                        
-                        <!-- Deepfake Verification Badge -->
-                        <div class="mt-2 flex flex-col gap-1">
-                            <div class="flex items-center gap-2">
-                                <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                                    req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                    req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 
-                                    req.liveness_status === 'ERROR' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
-                                    req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                                    'bg-white/5 text-white/40 border-white/10'
-                                }">
-                                    ${req.liveness_status === 'ERROR' ? 'Gatekeeper: TECH ERROR' : `Gatekeeper: ${req.liveness_status || 'PENDING'}`}
-                                </span>
-                                ${req.liveness_status === 'VERIFYING' ? `
-                                    <span class="text-[7px] text-white/30 animate-pulse">Processing...</span>
-                                ` : ''}
-                            </div>
-                            ${req.liveness_status === 'ERROR' ? `
-                                <p class="text-[7px] font-bold text-amber-400/60 uppercase tracking-tighter">
-                                    Reason: ${req.error_details || 'Generic Failure'}
-                                </p>
-                            ` : ''}
-                            <p class="stalling-warning hidden text-[7px] font-black text-amber-500 uppercase animate-pulse">⚠️ Possible Stalling - No Action Taken</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
-                        رفض
-                    </button>
-                    <div class="flex flex-col gap-2">
-                        <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
-                            قبول
-                        </button>
-                        <div class="flex gap-2">
-                            <button class="btn-nudge flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500 border border-amber-500/20 rounded-lg text-[7px] font-black uppercase text-amber-400 hover:text-obsidian transition-all" title="Nudge candidate to verify">
-                                NUDGE
-                            </button>
-                            <button class="btn-veto flex-1 py-1.5 bg-red-500/10 hover:bg-red-500 border border-red-500/20 rounded-lg text-[7px] font-black uppercase text-red-400 hover:text-white transition-all" title="Emergency Override (Veto)">
-                                VETO
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Live Timer Update Logic
-            const timerInterval = setInterval(() => {
-                if (!document.getElementById(`lobby-card-${req.id}`)) {
-                    clearInterval(timerInterval);
-                    return;
-                }
-                const now = new Date().getTime();
-                const diff = Math.floor((now - entryTime) / 1000);
-                const mins = Math.floor(diff / 60).toString().padStart(2, '0');
-                const secs = (diff % 60).toString().padStart(2, '0');
-                
-                const timerEl = card.querySelector('.lobby-timer');
-                const progressEl = card.querySelector('.lobby-progress-bar');
-                const stallingEl = card.querySelector('.stalling-warning');
-                
-                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
-                if (progressEl) progressEl.style.width = `${Math.min(diff / 1.8, 100)}%`; // Progress to 3 mins
-
-                if (diff > 120 && (req.liveness_status === 'PENDING' || !req.liveness_status)) {
-                    card.classList.add('ring-2', 'ring-amber-500/50', 'bg-amber-500/5');
-                    if (stallingEl) stallingEl.classList.remove('hidden');
-                }
-            }, 1000);
-
-            lobbyContainer.appendChild(card);
-            if (window.lucide) window.lucide.createIcons({ scope: card });
-
-            card.querySelector('.btn-approve').onclick = async (e) => {
-                const btn = e.currentTarget;
-                const badge = card.querySelector('.liveness-badge');
-                const currentStatus = badge ? badge.getAttribute('data-status') : 'PENDING';
-                
-                if (currentStatus !== 'VERIFIED') {
-                    showToast("⚠️ لا يمكن قبول المرشح قبل اكتمال التحقق | Verification incomplete", "warning");
-                    return;
-                }
-
-                btn.disabled = true;
-                btn.innerHTML = '<span class="animate-pulse">APPROVING...</span>';
-
-                try {
-                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
-                    });
-                    
-                    if (res.ok) {
-                        card.classList.add('opacity-0', 'scale-95');
-                        setTimeout(() => card.remove(), 300);
-                        showToast("تمت الموافقة على دخول المرشح", "success");
-                    } else {
-                        const err = await res.json();
-                        showToast(err.detail || "Failed to approve", "error");
-                        btn.disabled = false;
-                        btn.textContent = 'قبول';
-                    }
-                } catch (err) {
-                    showToast("Network error during approval", "error");
-                    btn.disabled = false;
-                    btn.textContent = 'قبول';
-                }
-            };
-
-            card.querySelector('.btn-deny').onclick = async () => {
-                await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
-                });
-                card.remove();
-            };
-
-            card.querySelector('.btn-nudge').onclick = async (e) => {
-                const b = e.currentTarget;
-                b.disabled = true;
-                try {
-                    await fetch(`${API_BASE}/api/livekit/nudge-candidate`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ request_id: req.id })
-                    });
-                    showToast("Sent nudge to candidate", "info");
-                    setTimeout(() => b.disabled = false, 5000);
-                } catch(err) { b.disabled = false; }
-            };
-
-            card.querySelector('.btn-veto').onclick = async (e) => {
-                const reason = prompt(`⚠️ EMERGENCY OVERRIDE for ${req.participant_name}\nPlease enter reason for Veto (e.g., Camera Hardware Failure):`);
-                if (!reason) return;
-
-                const btn = e.currentTarget;
-                btn.disabled = true;
-                btn.textContent = 'BYPASSING...';
-
-                try {
-                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            room_id: currentRoomId, 
-                            participant_name: req.participant_name, 
-                            decision: 'APPROVED',
-                            is_override: true,
-                            override_reason: reason
-                        })
-                    });
-                    
-                    if (res.ok) {
-                        card.classList.add('opacity-0', 'scale-110');
-                        setTimeout(() => card.remove(), 300);
-                        showToast("Manual Override Successful", "success");
-                    } else {
-                        btn.disabled = false;
-                        btn.textContent = 'VETO';
-                        showToast("Bypass failed", "error");
-                    }
-                } catch (err) {
-                    btn.disabled = false;
-                    btn.textContent = 'VETO';
-                    showToast("Network error during bypass", "error");
-                }
-            };
-        };
-
-        const updateLobbyCard = (req) => {
-            const card = document.getElementById(`lobby-card-${req.id}`);
-            if (!card) return;
-
-            const badge = card.querySelector('.liveness-badge');
-            if (badge) {
-                badge.setAttribute('data-status', req.liveness_status || 'PENDING');
-                badge.className = `liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                    req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                    req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                    req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                }`;
-                badge.innerHTML = `Gatekeeper: ${req.liveness_status || 'PENDING'}`;
-                
-                const approveBtn = card.querySelector('.btn-approve');
-                if (req.liveness_status !== 'VERIFIED') {
-                    approveBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-white/5');
-                    approveBtn.classList.remove('bg-cyan-500');
-                    approveBtn.title = "تحذير: لم يتم التحقق من هوية المرشح بعد";
-                } else {
-                    approveBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-white/5');
-                    approveBtn.classList.add('bg-cyan-500');
-                    approveBtn.title = "تم التحقق بنجاح";
-                }
-            }
-        };
-
-        const setupRealtimeLobby = async () => {
-            if (!window.supabaseClient) {
-                console.warn("[Lobby] Supabase client not found. Retrying in 2s...");
-                setTimeout(setupRealtimeLobby, 2000);
-                return;
-            }
-
-            console.log(`[Lobby] Subscribing to real-time updates for room: ${currentRoomId}`);
-
-            // 1. Initial Load
-            try {
-                const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
-                if (res.ok) {
-                    const requests = await res.json();
-                    requests.forEach(renderLobbyCard);
-                }
-            } catch (e) { console.error("Initial lobby load failed:", e); }
-
-            // 2. Realtime Subscription
-            window.supabaseClient
-                .channel(`lobby-${currentRoomId}`)
-                .on('postgres_changes', { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'join_requests', 
-                    filter: `room_id=eq.${currentRoomId}` 
-                }, (payload) => {
-                    console.log("[Lobby] Realtime Event:", payload.eventType, payload);
-                    
-                    if (payload.eventType === 'INSERT') {
-                        renderLobbyCard(payload.new);
-                    } else if (payload.eventType === 'UPDATE') {
-                        updateLobbyCard(payload.new);
-                    } else if (payload.eventType === 'DELETE') {
-                        const cardId = payload.old ? payload.old.id : null;
-                        if (cardId) {
-                            const card = document.getElementById(`lobby-card-${cardId}`);
-                            if (card) card.remove();
-                        }
-                    }
-                })
-                .subscribe();
-        };
-
-        setupRealtimeLobby();
+    // Ã¢â€â‚¬Ã¢â€â‚¬ HR Lobby Monitor Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    if (localRole === 'hr' || localRole === 'interviewer' || localRole === 'admin') {
+        // Delegate entirely to HRLobby module
+        if (window.HRLobby) {
+            window.HRLobby.init(currentRoomId, API_BASE);
+        }
     }
 
 
-    // ── Copy Invite Link ──────────────────────────────────────────────────────
+
+
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Copy Invite Link Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.copyInviteLink = function() {
         const inputRoom = document.getElementById('input-room');
         const room = inputRoom ? inputRoom.value.trim() : 'integra-room-01';
@@ -1879,13 +1385,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // ── triggerCognitiveTest ──────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ triggerCognitiveTest Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.triggerCognitiveTest = function() {
         if (typeof showToast === 'function') showToast('Cognitive Challenge Protocol Initiated', 'info');
         addForensicLog("Cognitive Challenge Triggered", "warning");
     };
 
-    // ── Forensic Engine ───────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Forensic Engine Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     async function startForensicEngine() {
         if (forensicWS || forensicInterval) return;
 
@@ -1994,7 +1500,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── NEW: Draw forensic overlay on candidate's canvas ─────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ NEW: Draw forensic overlay on candidate's canvas Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     let lastDrawData = null;
     let isDrawing    = false;
 
@@ -2041,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const flipX = (x) => isMirrored ? (320 - x) * scaleX : x * scaleX;
 
-            // ── BBox ──────────────────────────────────────────────────────────
+            // Ã¢â€â‚¬Ã¢â€â‚¬ BBox Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
             if (currentData.bbox) {
                 const x1 = isMirrored ? flipX(currentData.bbox[2]) : flipX(currentData.bbox[0]);
                 const y1 = currentData.bbox[1] * scaleY;
@@ -2107,7 +1613,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // ── Iris/Dots ─────────────────────────────────────────────────────
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Iris/Dots Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
             if (currentData.landmarks) {
                 const isBlinking  = currentData.is_blinking === true;
                 ctx.fillStyle     = isBlinking ? '#ffb800' : '#ffffff';
@@ -2122,7 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // ─────────────────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     function updateForensicUI(data) {
         if (!data) return;
@@ -2238,10 +1744,20 @@ document.addEventListener('DOMContentLoaded', () => {
         updateGazeGrid(data.zone);
 
         if (data.status === 'SUSPICIOUS' || data.status === 'DISTRACTED') {
-            addForensicLog(`${data.status}: ${data.reason}`, 'warning');
+            const now = Date.now();
+            // Deduplicate on STATUS only (ignore rapidly-alternating reasons), 5s cooldown
+            if (data.status !== updateForensicUI._lastAlertStatus ||
+                now - updateForensicUI._lastAlertTime > 5000) {
+                updateForensicUI._lastAlertStatus = data.status;
+                updateForensicUI._lastAlertTime   = now;
+                addForensicLog(`${data.status}: ${data.reason || ''}`, 'warning');
+            }
+        } else if (data.status === 'SAFE' || data.status === 'FOCUSED') {
+            // Reset so next alert logs immediately when status returns to SUSPICIOUS
+            updateForensicUI._lastAlertStatus = null;
         }
 
-        // ── NEW: draw canvas overlay on every frame ───────────────────────────
+        // Ã¢â€â‚¬Ã¢â€â‚¬ NEW: draw canvas overlay on every frame Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         drawForensicCanvas(data);
     }
 

@@ -4,8 +4,8 @@
       {
         "id": "starter",
         "name": "Starter",
-        "monthly": { "price": 0 },
-        "yearly": { "price": 0 },
+        "monthly": { "price": 99 },
+        "yearly": { "price": 89 },
         "limits": {
           "interviews_per_month": 15,
           "max_duration_mins": 20,
@@ -14,13 +14,13 @@
       },
       {
         "id": "pro",
-        "name": "Professional",
-        "monthly": { "price": 49 },
-        "yearly": { "price": 39 },
+        "name": "Premium",
+        "monthly": { "price": 299 },
+        "yearly": { "price": 249 },
         "limits": {
-          "interviews_per_month": 50,
+          "interviews_per_month": 40,
           "max_duration_mins": 60,
-          "max_participants": 10
+          "max_participants": 8
         }
       },
       {
