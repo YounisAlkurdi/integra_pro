@@ -1786,37 +1786,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (err) {
                     btn.disabled = false;
                     btn.textContent = 'VETO';
-                }
-            };
-                setTimeout(() => b.disabled = false, 5000);
-            };
-
-            card.querySelector('.btn-veto').onclick = async (e) => {
-                const reason = prompt("⚠️ EMERGENCY VETO: Enter reason for bypassing identity verification:");
-                if (!reason) return;
-
-                const b = e.currentTarget;
-                b.disabled = true;
-                try {
-                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            room_id: currentRoomId, 
-                            participant_name: req.participant_name, 
-                            decision: 'APPROVED',
-                            is_override: true,
-                            override_reason: reason
-                        })
-                    });
-                    if (res.ok) {
-                        card.classList.add('opacity-0', 'scale-95');
-                        setTimeout(() => card.remove(), 300);
-                        showToast("Security Veto Applied. Candidate admitted.", "warning");
-                    }
-                } catch(err) {
-                    showToast("Veto failed", "error");
-                    b.disabled = false;
+                    showToast("Network error during bypass", "error");
                 }
             };
         };
