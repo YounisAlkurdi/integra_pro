@@ -1560,14 +1560,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ── Forensic Engine ───────────────────────────────────────────────────────
-    function startForensicEngine() {
+    async function startForensicEngine() {
         if (forensicWS || forensicInterval) return;
 
         console.log("[Forensics] Initializing Engine...");
         addForensicLog("Engine Initializing...", "system");
 
-        // Use centralized config for Forensic WebSocket
-        forensicWS = new WebSocket(window.APP_CONFIG.wsUrl);
+        // 1. Get Authentication Token
+        let token = null;
+        try {
+            if (window.supabase) {
+                const { data: { session } } = await window.supabase.auth.getSession();
+                token = session?.access_token;
+            }
+        } catch (err) {
+            console.error("[Forensics] Failed to get session token:", err);
+        }
+
+        // 2. Build WebSocket URL with Token
+        const wsUrl = new URL(window.APP_CONFIG.wsUrl);
+        if (token) wsUrl.searchParams.set('token', token);
+
+        // 3. Initialize WebSocket
+        forensicWS = new WebSocket(wsUrl.toString());
 
         forensicWS.onopen = () => {
             console.log("[Forensics] WebSocket Connected");

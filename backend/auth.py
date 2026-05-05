@@ -10,25 +10,13 @@ from .services.database_service import db
 SUPABASE_URL = get_env_safe("SUPABASE_URL")
 SUPABASE_JWT_SECRET = get_env_safe("SUPABASE_JWT_SECRET")
 
-# Simple memory cache for public keys
-_PUBLIC_KEYS_CACHE = None
+# Modern Supabase uses ES256 (Asymmetric) - JWKS is the best way to handle this
+JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+jwks_client = jwt.PyJWKClient(JWKS_URL)
 
 async def get_supabase_jwks():
     """Fetches the active public keys from Supabase asynchronously."""
-    global _PUBLIC_KEYS_CACHE
-    if _PUBLIC_KEYS_CACHE:
-        return _PUBLIC_KEYS_CACHE
-    
-    try:
-        # Supabase projects expose their public keys as JWKS here
-        url = f"{SUPABASE_URL}/auth/v1/keys"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5)
-            if response.status_code == 200:
-                _PUBLIC_KEYS_CACHE = response.json().get("keys", [])
-                return _PUBLIC_KEYS_CACHE
-    except Exception as e:
-        print(f"=> Neural Trace Error: Failed to fetch JWKS: {e}")
+    # Note: jwks_client handles internal caching
     return []
 
 async def get_current_user(request: Request):
@@ -44,39 +32,80 @@ async def get_current_user(request: Request):
         )
     return user
 
+async def verify_token(token: str) -> Optional[dict]:
+    """
+    Core token verification logic. Supports ES256 (Supabase Modern) and HS256 (Legacy).
+    """
+    try:
+        # 1. Peek at the header to decide which algorithm/key to use
+        header = jwt.get_unverified_header(token)
+        alg = header.get("alg", "HS256")
+        kid = header.get("kid")
+        
+        # 2. Asymmetric Verification (Modern ES256 / JWKS)
+        if alg == "ES256":
+            try:
+                signing_key = jwks_client.get_signing_key_from_jwt(token)
+                payload = jwt.decode(
+                    token, 
+                    signing_key.key, 
+                    algorithms=["ES256"], 
+                    options={"verify_aud": False}
+                )
+                return payload
+            except Exception as e:
+                print(f"❌ Neural Trace: ES256 Verification Failed: {e}")
+                # Fallback to HS256 just in case
+        
+        # 3. Symmetric Verification (Legacy HS256)
+        secret = SUPABASE_JWT_SECRET.strip() if SUPABASE_JWT_SECRET else None
+        if secret:
+            potential_secrets = []
+            
+            # Base64 decoded versions
+            for decoder in [base64.b64decode, base64.urlsafe_b64decode]:
+                try:
+                    missing_padding = len(secret) % 4
+                    s_to_decode = secret + ('=' * (4 - missing_padding)) if missing_padding else secret
+                    potential_secrets.append(decoder(s_to_decode))
+                except Exception:
+                    pass
+            
+            # Raw string version
+            potential_secrets.append(secret.encode('utf-8'))
+
+            for s in potential_secrets:
+                try:
+                    payload = jwt.decode(token, s, algorithms=["HS256"], options={"verify_aud": False})
+                    return payload
+                except jwt.InvalidSignatureError:
+                    continue
+                except Exception:
+                    continue
+
+        print(f"❌ Neural Trace: Invalid token: Signature verification failed for alg={alg}, kid={kid}")
+        if secret:
+            print(f"💡 Hint: The secret in .env starts with '{secret[:10]}...' and is {len(secret)} chars long.")
+        return None
+
+    except jwt.ExpiredSignatureError:
+        print("❌ Neural Trace: Signature expired.")
+        return None
+    except Exception as e:
+        print(f"❌ Neural Trace: Authentication Error: {e}")
+        return None
+
 async def get_current_user_optional(request: Request) -> Optional[dict]:
     """
     Optional authentication dependency. Returns None if signature is invalid or missing.
+    Automatically detects algorithm (HS256 vs ES256) and uses appropriate verification.
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
     
     token = auth_header.split(" ")[1]
-    secret = SUPABASE_JWT_SECRET
-    if not secret:
-        return None
-
-    try:
-        # Support base64 decoded secrets common in Supabase
-        missing_padding = len(secret) % 4
-        secret_to_decode = secret + ('=' * (4 - missing_padding)) if missing_padding else secret
-        decoded_secret = base64.b64decode(secret_to_decode)
-    except Exception:
-        decoded_secret = secret
-
-    try:
-        payload = jwt.decode(token, decoded_secret, algorithms=["HS256"], options={"verify_aud": False})
-        return payload
-    except jwt.ExpiredSignatureError:
-        print("❌ Neural Trace: Signature expired.")
-        return None
-    except jwt.InvalidTokenError as e:
-        print(f"❌ Neural Trace: Invalid token: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Neural Trace: Authentication failure: {e}")
-        return None
+    return await verify_token(token)
 
 async def get_active_subscription(user_id: str):
     """

@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function fetchNodeStats() {
         try {
             const auth = await getAuthHeader();
-            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/stats'), {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes/stats'), {
                 headers: { 'Authorization': auth }
             });
             return await res.json();

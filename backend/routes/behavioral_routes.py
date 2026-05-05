@@ -22,9 +22,8 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.bool_):    return bool(obj)
         return super().default(obj)
 
+from ..auth import verify_token
 import jwt
-import base64
-from ..auth import SUPABASE_JWT_SECRET
 
 @router.websocket("/ws/behavioral")
 async def behavioral_websocket(websocket: WebSocket, token: str = None):
@@ -37,15 +36,9 @@ async def behavioral_websocket(websocket: WebSocket, token: str = None):
         return
 
     # Verify Token
-    try:
-        # Base64 decode secret (Supabase standard)
-        missing_padding = len(SUPABASE_JWT_SECRET) % 4
-        secret_to_decode = SUPABASE_JWT_SECRET + ('=' * (4 - missing_padding)) if missing_padding else SUPABASE_JWT_SECRET
-        decoded_secret = base64.b64decode(secret_to_decode)
-        
-        jwt.decode(token, decoded_secret, algorithms=["HS256"], options={"verify_aud": False})
-    except Exception as e:
-        print(f"📡 Behavioral WS: Auth Failed: {e}")
+    user = await verify_token(token)
+    if not user:
+        print(f"📡 Behavioral WS: Auth Failed for token {token[:10]}...")
         await websocket.close(code=4002)
         return
 
