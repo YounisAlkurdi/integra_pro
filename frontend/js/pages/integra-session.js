@@ -1351,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
                                                 <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
                                                 <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
+                                                <button onclick="location.reload()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white uppercase transition-all">Try Again</button>
                                             </div>
                                         `;
                                         lucide.createIcons({ nodes: [joinLobby] });
@@ -1358,7 +1359,28 @@ document.addEventListener('DOMContentLoaded', () => {
                                     return;
                                 }
 
-                                if (check.status === "APPROVED" && check.liveness_status !== "PENDING") {
+                                if (check.liveness_status === "ERROR") {
+                                    showToast("Technical error during verification. Please try again.", "warning");
+                                    // Reset to pending state in UI so they can retry
+                                    if (joinLobby) {
+                                        joinLobby.querySelector('.text-cyan-400').textContent = "ERROR: Bad Lighting or No Face Detected";
+                                        joinLobby.querySelector('.text-cyan-400').className = "text-[9px] font-black text-amber-400 uppercase tracking-widest";
+                                        
+                                        const retryBtn = document.createElement('button');
+                                        retryBtn.className = 'mt-4 px-8 py-3 bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all';
+                                        retryBtn.textContent = 'Retry Identity Scan';
+                                        retryBtn.onclick = () => window.VerificationManager.init(check.id, roomName, name);
+                                        
+                                        const statusContainer = joinLobby.querySelector('.mt-8');
+                                        if (statusContainer) {
+                                            statusContainer.innerHTML = '';
+                                            statusContainer.appendChild(retryBtn);
+                                        }
+                                    }
+                                    return;
+                                }
+
+                                if (check.status === "APPROVED" && (check.liveness_status === "VERIFIED" || check.is_override)) {
                                     channel.unsubscribe();
                                     window.joinSession(); // Re-join to get the token and enter
                                 } else if (check.status === "REJECTED") {
@@ -1367,6 +1389,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (joinLobby) {
                                         joinLobby.innerHTML = `<h3 class="text-red-500 font-bold uppercase">Entry Rejected</h3>`;
                                     }
+                                }
+
+                                // Listen for Nudges
+                                if (payload.old && check.nudge_count > payload.old.nudge_count) {
+                                    showToast("⚠️ Interviewer is waiting! Please verify identity.", "warning", 8000);
+                                    const alertDiv = document.createElement('div');
+                                    alertDiv.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-obsidian p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.5)] z-[10000] animate-bounce text-center';
+                                    alertDiv.innerHTML = `
+                                        <i data-lucide="bell-ring" class="w-16 h-16 mx-auto mb-4"></i>
+                                        <h2 class="text-2xl font-black uppercase mb-2">Interviewer is Waiting</h2>
+                                        <p class="font-bold opacity-80">Please complete the identity scan to proceed.</p>
+                                    `;
+                                    document.body.appendChild(alertDiv);
+                                    if (window.lucide) window.lucide.createIcons({ nodes: [alertDiv] });
+                                    setTimeout(() => alertDiv.remove(), 5000);
+                                    // Play attention sound if available
+                                    try { new Audio('/assets/sounds/nudge.mp3').play(); } catch(e){}
                                 }
                             })
                             .subscribe();
@@ -1386,15 +1425,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h3 class="text-xl font-black uppercase tracking-widest mb-3 text-white">
                                 ${result.liveness_status === 'PENDING' ? 'Identity Verification Required' : 'الطلب قيد الانتظار'}
                             </h3>
-                            <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
+                            <p class="text-[11px] font-mono text-white/40 uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed mb-6">
                                 ${result.message_en || 'Please wait for identity verification and host approval.'}
                             </p>
-                            <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
-                                <span class="w-2 h-2 ${result.liveness_status === 'PENDING' ? 'bg-amber-500' : 'bg-cyan-500'} rounded-full animate-ping"></span>
-                                <span class="text-[9px] font-black ${result.liveness_status === 'PENDING' ? 'text-amber-400' : 'text-cyan-400'} uppercase tracking-widest">
-                                    ${result.liveness_status === 'PENDING' ? 'Action Required: Verification' : 'Verifying Identity...'}
-                                </span>
-                            </div>
+
+                            ${result.liveness_status === 'PENDING' ? `
+                                <button onclick="window.VerificationManager.init('${result.request_id}', '${roomName}', '${name}')" 
+                                        class="px-8 py-3 bg-amber-500 hover:bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                                    Start Deepfake Scan
+                                </button>
+                            ` : `
+                                <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
+                                    <span class="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></span>
+                                    <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest">
+                                        Verifying Identity...
+                                    </span>
+                                </div>
+                            `}
                         </div>
                     `;
                     lucide.createIcons({ nodes: [joinLobby] });
@@ -1421,6 +1468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
                                         <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
                                         <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
+                                        <button onclick="location.reload()" class="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white uppercase transition-all">Try Again</button>
                                     </div>
                                 `;
                                 lucide.createIcons({ nodes: [joinLobby] });
@@ -1428,8 +1476,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
+                        if (check.liveness_status === "ERROR") {
+                            showToast("Verification Error. Retrying...", "warning");
+                            // Logic similar to realtime branch
+                        }
+
                         // 2. Check for Approval
-                        if (check.status === "APPROVED" && check.liveness_status !== "PENDING") {
+                        if (check.status === "APPROVED" && (check.liveness_status === "VERIFIED" || check.is_override)) {
                             window._pollStatusInterval = null;
                             window.joinSession();
                         } else if (check.status === "REJECTED") {
@@ -1508,10 +1561,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
                                 req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
                                 req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                req.liveness_status === 'ERROR' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
                                 req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                'bg-white/5 text-white/40 border-white/10'
                             }">
-                                Gatekeeper: ${req.liveness_status || 'PENDING'}
+                                ${req.liveness_status === 'ERROR' ? 'Gatekeeper: TECH ERROR' : `Gatekeeper: ${req.liveness_status || 'PENDING'}`}
                             </span>
                         </div>
                     </div>
@@ -1520,29 +1574,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
                         رفض
                     </button>
-                    <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
-                        قبول
-                    </button>
+                    <div class="flex flex-col gap-2">
+                        <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
+                            قبول
+                        </button>
+                        <div class="flex gap-2">
+                            <button class="btn-nudge flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500 border border-amber-500/20 rounded-lg text-[7px] font-black uppercase text-amber-400 hover:text-obsidian transition-all" title="Nudge candidate to verify">
+                                NUDGE
+                            </button>
+                            <button class="btn-veto flex-1 py-1.5 bg-red-500/10 hover:bg-red-500 border border-red-500/20 rounded-lg text-[7px] font-black uppercase text-red-400 hover:text-white transition-all" title="Emergency Override (Veto)">
+                                VETO
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
 
             lobbyContainer.appendChild(card);
             if (window.lucide) window.lucide.createIcons({ scope: card });
 
-            card.querySelector('.btn-approve').onclick = async () => {
+            card.querySelector('.btn-approve').onclick = async (e) => {
+                const btn = e.currentTarget;
                 const badge = card.querySelector('.liveness-badge');
                 const currentStatus = badge ? badge.getAttribute('data-status') : 'PENDING';
+                
                 if (currentStatus !== 'VERIFIED') {
-                    if (!confirm("⚠️ تنبيه أمني: هذا المرشح لم يجتز اختبار الـ Deepfake أو لا يزال قيد الفحص. هل تريد السماح له بالدخول على مسؤوليتك؟")) {
-                        return;
-                    }
+                    showToast("⚠️ لا يمكن قبول المرشح قبل اكتمال التحقق | Verification incomplete", "warning");
+                    return;
                 }
-                await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
-                });
-                card.remove();
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="animate-pulse">APPROVING...</span>';
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
+                    });
+                    
+                    if (res.ok) {
+                        card.classList.add('opacity-0', 'scale-95');
+                        setTimeout(() => card.remove(), 300);
+                        showToast("تمت الموافقة على دخول المرشح", "success");
+                    } else {
+                        const err = await res.json();
+                        showToast(err.detail || "Failed to approve", "error");
+                        btn.disabled = false;
+                        btn.textContent = 'قبول';
+                    }
+                } catch (err) {
+                    showToast("Network error during approval", "error");
+                    btn.disabled = false;
+                    btn.textContent = 'قبول';
+                }
             };
 
             card.querySelector('.btn-deny').onclick = async () => {
@@ -1552,6 +1637,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
                 });
                 card.remove();
+            };
+
+            card.querySelector('.btn-nudge').onclick = async (e) => {
+                const b = e.currentTarget;
+                b.disabled = true;
+                await fetch(`${API_BASE}/api/livekit/nudge-candidate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request_id: req.id })
+                });
+                showToast("Sent nudge to candidate", "info");
+                setTimeout(() => b.disabled = false, 5000);
+            };
+
+            card.querySelector('.btn-veto').onclick = async (e) => {
+                const reason = prompt("⚠️ EMERGENCY VETO: Enter reason for bypassing identity verification:");
+                if (!reason) return;
+
+                const b = e.currentTarget;
+                b.disabled = true;
+                try {
+                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            room_id: currentRoomId, 
+                            participant_name: req.participant_name, 
+                            decision: 'APPROVED',
+                            is_override: true,
+                            override_reason: reason
+                        })
+                    });
+                    if (res.ok) {
+                        card.classList.add('opacity-0', 'scale-95');
+                        setTimeout(() => card.remove(), 300);
+                        showToast("Security Veto Applied. Candidate admitted.", "warning");
+                    }
+                } catch(err) {
+                    showToast("Veto failed", "error");
+                    b.disabled = false;
+                }
             };
         };
 
@@ -1572,10 +1698,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const approveBtn = card.querySelector('.btn-approve');
                 if (req.liveness_status !== 'VERIFIED') {
-                    approveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    approveBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-white/5');
+                    approveBtn.classList.remove('bg-cyan-500');
                     approveBtn.title = "تحذير: لم يتم التحقق من هوية المرشح بعد";
                 } else {
-                    approveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    approveBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-white/5');
+                    approveBtn.classList.add('bg-cyan-500');
                     approveBtn.title = "تم التحقق بنجاح";
                 }
             }

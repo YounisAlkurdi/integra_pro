@@ -122,13 +122,20 @@ async def get_livekit_token(req: TokenRequest):
         
         if existing_reqs.data:
             req_obj = existing_reqs.data[0]
-            if req_obj['status'] != 'APPROVED':
+            
+            # --- SECURITY GATE: Mandatory Deepfake Verification ---
+            # Even if status is APPROVED, if they aren't VERIFIED, they stay in lobby
+            # UNLESS an explicit HR Override was granted.
+            is_overridden = req_obj.get('is_override', False)
+            if req_obj['status'] != 'APPROVED' or (req_obj.get('liveness_status') != 'VERIFIED' and not is_overridden):
                 return {
                     "status": "AWAITING_APPROVAL",
                     "request_id": req_obj['id'],
                     "liveness_status": req_obj.get('liveness_status', 'PENDING'),
-                    "message_ar": "بانتظار موافقة المحاور للدخول...",
-                    "message_en": "Waiting for HR to approve your entry..."
+                    "is_overridden": is_overridden,
+                    "message_ar": "بانتظار التحقق من الهوية وموافقة المحاور..." if not is_overridden else "تم تجاوز التحقق من قبل المحاور. جاري الدخول...",
+                    "message_en": "Waiting for identity verification and HR approval..." if not is_overridden else "Verification bypassed by HR. Joining...",
+                    "nudge_count": req_obj.get('nudge_count', 0)
                 }
         else:
             # Create new PENDING request
@@ -197,16 +204,59 @@ class DecisionRequest(BaseModel):
     room_id: str
     participant_name: str
     decision: str
+    is_override: bool = False
+    override_reason: str = None
+
+class NudgeRequest(BaseModel):
+    request_id: str
+
+@router.post("/nudge-candidate")
+async def nudge_candidate(req: NudgeRequest):
+    """Increment nudge count to trigger UI alert on candidate side."""
+    await db.client.rpc("increment_nudge", {"row_id": req.request_id}).execute()
+    return {"status": "NUDGED"}
 
 
 @router.post("/decide-request")
 async def decide_request(req: DecisionRequest):
+    """
+    HR decision to allow or block a candidate.
+    Must ensure the candidate is VERIFIED before approving.
+    """
+    # 1. Fetch current liveness status
+    res = await db.client.table("join_requests") \
+        .select("liveness_status") \
+        .eq("room_id", req.room_id) \
+        .eq("participant_name", req.participant_name) \
+        .order("created_at", desc=True) \
+        .limit(1) \
+        .execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Join request not found.")
+    
+    liveness = res.data[0].get("liveness_status", "PENDING")
+
+    # 2. Prevent approval if not verified (unless overridden)
+    if req.decision.upper() == "APPROVED" and liveness != "VERIFIED" and not req.is_override:
+        raise HTTPException(
+            status_code=403, 
+            detail="Security Block: Candidate must be VERIFIED by Gatekeeper before approval can be granted. Use Override if necessary."
+        )
+
+    # 3. Update status
+    update_data = {"status": req.decision.upper()}
+    if req.is_override:
+        update_data["is_override"] = True
+        update_data["override_reason"] = req.override_reason or "No reason provided"
+
     await db.client.table("join_requests") \
-        .update({"status": req.decision.upper()}) \
+        .update(update_data) \
         .eq("room_id", req.room_id) \
         .eq("participant_name", req.participant_name) \
         .eq("status", "PENDING") \
         .execute()
+        
     return {"status": "UPDATED", "decision": req.decision}
 
 
