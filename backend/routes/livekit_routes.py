@@ -109,51 +109,65 @@ async def get_livekit_token(req: TokenRequest):
             if "not_found" in str(e).lower() or "404" in str(e): pass 
             else: print(f"[LiveKit] Limit check error: {e}")
 
-    # 3. Admission Control (Lobby System)
-    if req.role.lower() == "candidate":
-        # Check for ANY existing request
-        existing_reqs = await db.client.table("join_requests") \
-            .select("*") \
-            .eq("room_id", req.roomName) \
-            .eq("participant_name", req.participantName) \
-            .order("created_at", desc=True) \
-            .limit(1) \
-            .execute()
-        
-        if existing_reqs.data:
-            req_obj = existing_reqs.data[0]
+        # 3. Admission Control (Lobby System)
+        if req.role.lower() == "candidate":
+            # Fetch node settings to see if Deepfake is even required
+            deepfake_required = node.get('deepfake_required', True) # Default to True for safety
+
+            # Check for ANY existing request
+            existing_reqs = await db.client.table("join_requests") \
+                .select("*") \
+                .eq("room_id", req.roomName) \
+                .eq("participant_name", req.participantName) \
+                .order("created_at", desc=True) \
+                .limit(1) \
+                .execute()
             
-            # --- SECURITY GATE: Mandatory Deepfake Verification ---
-            # Even if status is APPROVED, if they aren't VERIFIED, they stay in lobby
-            # UNLESS an explicit HR Override was granted.
-            is_overridden = req_obj.get('is_override', False)
-            if req_obj['status'] != 'APPROVED' or (req_obj.get('liveness_status') != 'VERIFIED' and not is_overridden):
+            if existing_reqs.data:
+                req_obj = existing_reqs.data[0]
+                
+                # --- SECURITY GATE: Conditional Deepfake Verification ---
+                is_overridden = req_obj.get('is_override', False)
+                
+                # If Deepfake is NOT required, we only care about HR 'APPROVED' status
+                if not deepfake_required:
+                    if req_obj['status'] != 'APPROVED':
+                        return {
+                            "status": "AWAITING_APPROVAL",
+                            "request_id": req_obj['id'],
+                            "liveness_status": "SKIPPED",
+                            "message_ar": "بانتظار موافقة المحاور للدخول...",
+                            "message_en": "Waiting for HR to approve your entry..."
+                        }
+                else:
+                    # If Deepfake IS required, check both approval and liveness
+                    if req_obj['status'] != 'APPROVED' or (req_obj.get('liveness_status') != 'VERIFIED' and not is_overridden):
+                        return {
+                            "status": "AWAITING_APPROVAL",
+                            "request_id": req_obj['id'],
+                            "liveness_status": req_obj.get('liveness_status', 'PENDING'),
+                            "is_overridden": is_overridden,
+                            "message_ar": "بانتظار التحقق من الهوية وموافقة المحاور..." if not is_overridden else "تم تجاوز التحقق من قبل المحاور. جاري الدخول...",
+                            "message_en": "Waiting for identity verification and HR approval..." if not is_overridden else "Verification bypassed by HR. Joining...",
+                            "nudge_count": req_obj.get('nudge_count', 0)
+                        }
+            else:
+                # Create new PENDING request
+                new_req = await db.client.table("join_requests").insert({
+                    "room_id": req.roomName,
+                    "participant_name": req.participantName,
+                    "status": "PENDING"
+                }).execute()
+                
+                req_id = new_req.data[0]['id'] if new_req.data else None
+                
                 return {
                     "status": "AWAITING_APPROVAL",
-                    "request_id": req_obj['id'],
-                    "liveness_status": req_obj.get('liveness_status', 'PENDING'),
-                    "is_overridden": is_overridden,
-                    "message_ar": "بانتظار التحقق من الهوية وموافقة المحاور..." if not is_overridden else "تم تجاوز التحقق من قبل المحاور. جاري الدخول...",
-                    "message_en": "Waiting for identity verification and HR approval..." if not is_overridden else "Verification bypassed by HR. Joining...",
-                    "nudge_count": req_obj.get('nudge_count', 0)
+                    "request_id": req_id,
+                    "liveness_status": "SKIPPED" if not deepfake_required else "PENDING",
+                    "message_ar": "بانتظار موافقة المحاور للدخول...",
+                    "message_en": "Waiting for HR to approve your entry..."
                 }
-        else:
-            # Create new PENDING request
-            new_req = await db.client.table("join_requests").insert({
-                "room_id": req.roomName,
-                "participant_name": req.participantName,
-                "status": "PENDING"
-            }).execute()
-            
-            req_id = new_req.data[0]['id'] if new_req.data else None
-            
-            return {
-                "status": "AWAITING_APPROVAL",
-                "request_id": req_id,
-                "liveness_status": "PENDING",
-                "message_ar": "بانتظار موافقة المحاور للدخول...",
-                "message_en": "Waiting for HR to approve your entry..."
-            }
 
     # --- Generate token ---
     try:
@@ -216,6 +230,19 @@ async def nudge_candidate(req: NudgeRequest):
     await db.client.rpc("increment_nudge", {"row_id": req.request_id}).execute()
     return {"status": "NUDGED"}
 
+class ToggleDeepfakeRequest(BaseModel):
+    room_id: str
+    required: bool
+
+@router.post("/toggle-deepfake")
+async def toggle_deepfake_requirement(req: ToggleDeepfakeRequest):
+    """HR master switch to enable/disable Deepfake gate for this session."""
+    await db.client.table("nodes") \
+        .update({"deepfake_required": req.required}) \
+        .eq("room_id", req.room_id) \
+        .execute()
+    return {"status": "UPDATED", "deepfake_required": req.required}
+
 
 @router.post("/decide-request")
 async def decide_request(req: DecisionRequest):
@@ -223,8 +250,8 @@ async def decide_request(req: DecisionRequest):
     HR decision to allow or block a candidate.
     Must ensure the candidate is VERIFIED before approving.
     """
-    # 1. Fetch current liveness status
-    res = await db.client.table("join_requests") \
+    # 1. Fetch current liveness status and node settings
+    req_res = await db.client.table("join_requests") \
         .select("liveness_status") \
         .eq("room_id", req.room_id) \
         .eq("participant_name", req.participant_name) \
@@ -232,13 +259,17 @@ async def decide_request(req: DecisionRequest):
         .limit(1) \
         .execute()
     
-    if not res.data:
+    if not req_res.data:
         raise HTTPException(status_code=404, detail="Join request not found.")
     
-    liveness = res.data[0].get("liveness_status", "PENDING")
+    liveness = req_res.data[0].get("liveness_status", "PENDING")
 
-    # 2. Prevent approval if not verified (unless overridden)
-    if req.decision.upper() == "APPROVED" and liveness != "VERIFIED" and not req.is_override:
+    # Fetch node settings
+    node = await get_node_by_room_id(req.room_id)
+    deepfake_required = node.get('deepfake_required', True) if node else True
+
+    # 2. Prevent approval if not verified (ONLY if required and not overridden)
+    if req.decision.upper() == "APPROVED" and deepfake_required and liveness != "VERIFIED" and not req.is_override:
         raise HTTPException(
             status_code=403, 
             detail="Security Block: Candidate must be VERIFIED by Gatekeeper before approval can be granted. Use Override if necessary."

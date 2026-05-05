@@ -27,33 +27,49 @@ async def process_video_and_update_db(request_id: str, video_path: str):
         video_url = await upload_to_supabase_storage("verification_videos", storage_path, video_path)
         
         # 2. Run Analysis (Heavy CPU task, run in thread)
-        results = await asyncio.to_thread(detector.analyze, video_path)
+        try:
+            results = await asyncio.to_thread(detector.analyze, video_path)
+        except Exception as e:
+            results = {"error": "SYSTEM_OFFLINE", "message": str(e)}
         
-        if "error" in results:
-            await db.client.table("join_requests").update({
-                "liveness_status": "FAILED",
-                "verification_video_path": video_url
-            }).eq("id", request_id).execute()
-            return
-
-        # 3. Extract results
+        # 3. Determine Database Status and Error Details
         verdict = results.get("verdict", "UNCERTAIN")
         score = results.get("final_score", 0.0)
         report_b64 = results.get("report_image", "") 
+        
+        # 4. Handle Specific Failure Scenarios
+        db_status = "FAILED" # Default to failed if uncertain and no specific error
+        error_msg = None
 
-        # 4. Determine Database Status
-        db_status = "VERIFIED" if verdict == "REAL" else "FAILED"
-        if verdict == "UNCERTAIN": db_status = "UNCERTAIN"
+        if verdict == "REAL":
+            db_status = "VERIFIED"
+        elif verdict == "FAKE":
+            db_status = "FAILED"
+        
+        # Check for technical errors (No face, lighting, etc.)
+        if "error" in results or verdict == "UNCERTAIN":
+            db_status = "ERROR"
+            # Map common error strings to user-friendly codes
+            raw_err = str(results.get("error", "UNCERTAIN")).upper()
+            if "NO FACE" in raw_err or "NOT FOUND" in raw_err:
+                error_msg = "NO_FACE_DETECTED"
+            elif "LIGHTING" in raw_err or "DARK" in raw_err:
+                error_msg = "POOR_LIGHTING"
+            elif "OFFLINE" in raw_err or "CONNECTION" in raw_err:
+                error_msg = "SYSTEM_OFFLINE"
+            else:
+                error_msg = raw_err or "TECHNICAL_TIMEOUT"
 
         # 5. Update Supabase (Async)
         update_data = {
             "liveness_status": db_status,
             "deepfake_score": float(score),
-            "forensic_report_url": f"data:image/png;base64,{report_b64}",
-            "verification_video_path": video_url 
+            "forensic_report_url": f"data:image/png;base64,{report_b64}" if report_b64 else None,
+            "verification_video_path": video_url,
+            "error_details": error_msg
         }
         
-        print(f"✅ Gatekeeper: Analysis complete. Result: {verdict} ({score:.2f})")
+        print(f"✅ Gatekeeper: Analysis complete. Result: {db_status} | Reason: {error_msg or 'N/A'}")
         await db.client.table("join_requests").update(update_data).eq("id", request_id).execute()
 
     except Exception as e:

@@ -1331,6 +1331,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         console.log(`[Lobby] Candidate subscribing to status for room: ${roomName}`);
+                        
+                        // AUTO-START VERIFICATION TO SAVE TIME
+                        if (check && check.liveness_status === "PENDING") {
+                            console.log("[Lobby] Auto-starting verification...");
+                            window.VerificationManager.init(check.id, roomName, name);
+                        }
+
                         const channel = window.supabaseClient
                             .channel(`candidate-status-${roomName}-${name}`)
                             .on('postgres_changes', {
@@ -1360,20 +1367,31 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
 
                                 if (check.liveness_status === "ERROR") {
-                                    showToast("Technical error during verification. Please try again.", "warning");
-                                    // Reset to pending state in UI so they can retry
+                                    const errCode = check.error_details || "UNKNOWN_ERROR";
+                                    let userMsg = "Technical error during verification.";
+                                    
+                                    if (errCode === "NO_FACE_DETECTED") userMsg = "Face not found! Please ensure your face is clearly visible and try again.";
+                                    if (errCode === "POOR_LIGHTING") userMsg = "Lighting is too dark! Move to a brighter area and retry.";
+                                    if (errCode === "SYSTEM_OFFLINE") userMsg = "Verification server is currently busy. Please wait a moment and retry.";
+
+                                    showToast(userMsg, "warning", 6000);
+                                    
                                     if (joinLobby) {
-                                        joinLobby.querySelector('.text-cyan-400').textContent = "ERROR: Bad Lighting or No Face Detected";
-                                        joinLobby.querySelector('.text-cyan-400').className = "text-[9px] font-black text-amber-400 uppercase tracking-widest";
+                                        const statusLabel = joinLobby.querySelector('.text-cyan-400') || joinLobby.querySelector('.text-amber-400');
+                                        if (statusLabel) {
+                                            statusLabel.textContent = `ERROR: ${userMsg}`;
+                                            statusLabel.className = "text-[9px] font-black text-amber-400 uppercase tracking-widest leading-tight px-4 block";
+                                        }
                                         
                                         const retryBtn = document.createElement('button');
-                                        retryBtn.className = 'mt-4 px-8 py-3 bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all';
+                                        retryBtn.className = 'mt-4 px-8 py-3 bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95';
                                         retryBtn.textContent = 'Retry Identity Scan';
                                         retryBtn.onclick = () => window.VerificationManager.init(check.id, roomName, name);
                                         
-                                        const statusContainer = joinLobby.querySelector('.mt-8');
+                                        const statusContainer = joinLobby.querySelector('.mt-8') || joinLobby.querySelector('.text-center');
                                         if (statusContainer) {
-                                            statusContainer.innerHTML = '';
+                                            const oldBtn = statusContainer.querySelector('button');
+                                            if (oldBtn) oldBtn.remove();
                                             statusContainer.appendChild(retryBtn);
                                         }
                                     }
@@ -1430,10 +1448,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             </p>
 
                             ${result.liveness_status === 'PENDING' ? `
-                                <button onclick="window.VerificationManager.init('${result.request_id}', '${roomName}', '${name}')" 
-                                        class="px-8 py-3 bg-amber-500 hover:bg-white text-obsidian rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                                    Start Deepfake Scan
-                                </button>
+                                <div class="mt-8">
+                                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4">
+                                        <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
+                                        <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest">
+                                            Initializing Bio-Security Scan...
+                                        </span>
+                                    </div>
+                                    <p class="text-[9px] text-white/40 uppercase">Starting automatically to save time</p>
+                                </div>
                             ` : `
                                 <div class="mt-8 py-3 px-6 bg-white/5 rounded-full inline-flex items-center gap-3 border border-white/5">
                                     <span class="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></span>
@@ -1539,34 +1562,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const lobbyContainer = document.createElement('div');
         lobbyContainer.id = 'hr-lobby-notifs';
         lobbyContainer.className = 'fixed top-20 right-6 w-80 space-y-4 z-[9999]';
+        
+        // --- MASTER AI TOGGLE ---
+        const masterToggle = document.createElement('div');
+        masterToggle.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl mb-4 ring-1 ring-white/5 flex items-center justify-between';
+        masterToggle.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-cyan-400"></i>
+                </div>
+                <div>
+                    <h5 class="text-[10px] font-black text-white uppercase tracking-widest">Gatekeeper AI</h5>
+                    <p class="text-[8px] text-white/40 uppercase">Identity Protection</p>
+                </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="master-ai-toggle" class="sr-only peer" checked>
+                <div class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+            </label>
+        `;
+        lobbyContainer.appendChild(masterToggle);
+        if (window.lucide) window.lucide.createIcons({ scope: masterToggle });
+
+        masterToggle.querySelector('#master-ai-toggle').onchange = async (e) => {
+            const isRequired = e.target.checked;
+            showToast(`AI Verification ${isRequired ? 'Enabled' : 'Disabled'}`, isRequired ? "info" : "warning");
+            
+            try {
+                await fetch(`${API_BASE}/api/livekit/toggle-deepfake`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_id: currentRoomId, required: isRequired })
+                });
+            } catch(err) { console.error("Toggle failed:", err); }
+        };
+
         document.body.appendChild(lobbyContainer);
 
         const renderLobbyCard = (req) => {
             if (document.getElementById(`lobby-card-${req.id}`)) return;
-
+            const entryTime = new Date(req.created_at).getTime();
+            
             const card = document.createElement('div');
             card.id = `lobby-card-${req.id}`;
-            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5 relative overflow-hidden';
             card.innerHTML = `
+                <div class="absolute top-0 left-0 w-full h-1 bg-white/5">
+                    <div class="lobby-progress-bar h-full bg-cyan-500 w-0 transition-all duration-1000"></div>
+                </div>
                 <div class="flex items-start gap-4 mb-4">
                     <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
                         <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
                     </div>
                     <div class="flex-1">
-                        <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                            <span class="lobby-timer text-[8px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded-full">00:00</span>
+                        </div>
                         <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
                         
                         <!-- Deepfake Verification Badge -->
-                        <div class="mt-2 flex items-center gap-2">
-                            <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                                req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                req.liveness_status === 'ERROR' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
-                                req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                                'bg-white/5 text-white/40 border-white/10'
-                            }">
-                                ${req.liveness_status === 'ERROR' ? 'Gatekeeper: TECH ERROR' : `Gatekeeper: ${req.liveness_status || 'PENDING'}`}
-                            </span>
+                        <div class="mt-2 flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                                    req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                    req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 
+                                    req.liveness_status === 'ERROR' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]' :
+                                    req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
+                                    'bg-white/5 text-white/40 border-white/10'
+                                }">
+                                    ${req.liveness_status === 'ERROR' ? 'Gatekeeper: TECH ERROR' : `Gatekeeper: ${req.liveness_status || 'PENDING'}`}
+                                </span>
+                                ${req.liveness_status === 'VERIFYING' ? `
+                                    <span class="text-[7px] text-white/30 animate-pulse">Processing...</span>
+                                ` : ''}
+                            </div>
+                            ${req.liveness_status === 'ERROR' ? `
+                                <p class="text-[7px] font-bold text-amber-400/60 uppercase tracking-tighter">
+                                    Reason: ${req.error_details || 'Generic Failure'}
+                                </p>
+                            ` : ''}
+                            <p class="stalling-warning hidden text-[7px] font-black text-amber-500 uppercase animate-pulse">⚠️ Possible Stalling - No Action Taken</p>
                         </div>
                     </div>
                 </div>
@@ -1589,6 +1665,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
+
+            // Live Timer Update Logic
+            const timerInterval = setInterval(() => {
+                if (!document.getElementById(`lobby-card-${req.id}`)) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                const now = new Date().getTime();
+                const diff = Math.floor((now - entryTime) / 1000);
+                const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+                const secs = (diff % 60).toString().padStart(2, '0');
+                
+                const timerEl = card.querySelector('.lobby-timer');
+                const progressEl = card.querySelector('.lobby-progress-bar');
+                const stallingEl = card.querySelector('.stalling-warning');
+                
+                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+                if (progressEl) progressEl.style.width = `${Math.min(diff / 1.8, 100)}%`; // Progress to 3 mins
+
+                if (diff > 120 && (req.liveness_status === 'PENDING' || !req.liveness_status)) {
+                    card.classList.add('ring-2', 'ring-amber-500/50', 'bg-amber-500/5');
+                    if (stallingEl) stallingEl.classList.remove('hidden');
+                }
+            }, 1000);
 
             lobbyContainer.appendChild(card);
             if (window.lucide) window.lucide.createIcons({ scope: card });
@@ -1642,12 +1742,52 @@ document.addEventListener('DOMContentLoaded', () => {
             card.querySelector('.btn-nudge').onclick = async (e) => {
                 const b = e.currentTarget;
                 b.disabled = true;
-                await fetch(`${API_BASE}/api/livekit/nudge-candidate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ request_id: req.id })
-                });
-                showToast("Sent nudge to candidate", "info");
+                try {
+                    await fetch(`${API_BASE}/api/livekit/nudge-candidate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ request_id: req.id })
+                    });
+                    showToast("Sent nudge to candidate", "info");
+                    setTimeout(() => b.disabled = false, 5000);
+                } catch(err) { b.disabled = false; }
+            };
+
+            card.querySelector('.btn-veto').onclick = async (e) => {
+                const reason = prompt(`⚠️ EMERGENCY OVERRIDE for ${req.participant_name}\nPlease enter reason for Veto (e.g., Camera Hardware Failure):`);
+                if (!reason) return;
+
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                btn.textContent = 'BYPASSING...';
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            room_id: currentRoomId, 
+                            participant_name: req.participant_name, 
+                            decision: 'APPROVED',
+                            is_override: true,
+                            override_reason: reason
+                        })
+                    });
+                    
+                    if (res.ok) {
+                        card.classList.add('opacity-0', 'scale-110');
+                        setTimeout(() => card.remove(), 300);
+                        showToast("Manual Override Successful", "success");
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = 'VETO';
+                        showToast("Bypass failed", "error");
+                    }
+                } catch (err) {
+                    btn.disabled = false;
+                    btn.textContent = 'VETO';
+                }
+            };
                 setTimeout(() => b.disabled = false, 5000);
             };
 
