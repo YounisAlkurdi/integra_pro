@@ -1276,6 +1276,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (joinLobby) {
+                    if (window._pollStatusInterval) clearTimeout(window._pollStatusInterval);
+                
+                    const setupCandidateRealtime = () => {
+                        if (!window.supabaseClient) {
+                            setTimeout(setupCandidateRealtime, 1000);
+                            return;
+                        }
+
+                        console.log(`[Lobby] Candidate subscribing to status for room: ${roomName}`);
+                        const channel = window.supabaseClient
+                            .channel(`candidate-status-${roomName}-${name}`)
+                            .on('postgres_changes', {
+                                event: 'UPDATE',
+                                schema: 'public',
+                                table: 'join_requests',
+                                filter: `room_id=eq.${roomName} AND participant_name=eq.${name}`
+                            }, (payload) => {
+                                const check = payload.new;
+                                console.log("[Lobby] Status Update:", check.status, check.liveness_status);
+
+                                if (check.liveness_status === "FAILED") {
+                                    channel.unsubscribe();
+                                    showToast("Deepfake detected! Verification failed.", "error");
+                                    if (joinLobby) {
+                                        joinLobby.innerHTML = `
+                                            <div class="text-center">
+                                                <i data-lucide="alert-octagon" class="w-16 h-16 text-red-500 mx-auto mb-4"></i>
+                                                <h3 class="text-red-500 font-black uppercase tracking-widest">Identity Fraud Detected</h3>
+                                                <p class="text-xs text-white/40 mt-2">Verification system has flagged this session.</p>
+                                            </div>
+                                        `;
+                                        lucide.createIcons({ nodes: [joinLobby] });
+                                    }
+                                    return;
+                                }
+
+                                if (check.status === "APPROVED" && check.liveness_status !== "PENDING") {
+                                    channel.unsubscribe();
+                                    window.joinSession(); // Re-join to get the token and enter
+                                } else if (check.status === "REJECTED") {
+                                    channel.unsubscribe();
+                                    showToast("تم رفض طلب الدخول | Entry rejected", "error");
+                                    if (joinLobby) {
+                                        joinLobby.innerHTML = `<h3 class="text-red-500 font-bold uppercase">Entry Rejected</h3>`;
+                                    }
+                                }
+                            })
+                            .subscribe();
+                    };
+
+                    setupCandidateRealtime();
+                
                     joinLobby.innerHTML = `
                         <div class="relative mb-10">
                             <div class="absolute -inset-10 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -1302,9 +1354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     lucide.createIcons({ nodes: [joinLobby] });
                 }
 
-                let pollDelay = 3000;
-                if (window._pollStatusInterval) clearTimeout(window._pollStatusInterval);
-                
                 const pollRequestStatus = async () => {
                     try {
                         const checkRaw = await fetch(`${API_BASE}/api/livekit/request-status?room_id=${roomName}&participant_name=${name}`);
@@ -1613,23 +1662,33 @@ document.addEventListener('DOMContentLoaded', () => {
             stopForensicEngine();
         };
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+    const captureCanvas = document.createElement('canvas');
+    const captureCtx    = captureCanvas.getContext('2d', { alpha: false }); // Optimization: no alpha
+    captureCanvas.width  = 320;
+    captureCanvas.height = 240;
 
-        forensicInterval = setInterval(() => {
-            if (!candidateVideo || forensicWS.readyState !== WebSocket.OPEN) return;
+    let isCapturing = false;
 
-            canvas.width  = 320;
-            canvas.height = 240;
-            ctx.drawImage(candidateVideo, 0, 0, canvas.width, canvas.height);
+    forensicInterval = setInterval(async () => {
+        if (!candidateVideo || forensicWS.readyState !== WebSocket.OPEN || isCapturing) return;
 
-            canvas.toBlob((blob) => {
+        isCapturing = true;
+        try {
+            captureCtx.drawImage(candidateVideo, 0, 0, 320, 240);
+            
+            // Use quality 0.4 for faster compression if performance is still an issue
+            captureCanvas.toBlob((blob) => {
                 if (blob && forensicWS.readyState === WebSocket.OPEN) {
                     forensicWS.send(blob);
                 }
-            }, 'image/jpeg', 0.5);
-        }, 100);
-    }
+                isCapturing = false;
+            }, 'image/jpeg', 0.4);
+        } catch (err) {
+            console.error("[Forensics] Capture Error:", err);
+            isCapturing = false;
+        }
+    }, 150); // Slightly increased interval to 150ms for better stability
+}
 
     function stopForensicEngine() {
         if (forensicInterval) clearInterval(forensicInterval);
@@ -1652,124 +1711,132 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── NEW: Draw forensic overlay on candidate's canvas ─────────────────────
+    let lastDrawData = null;
+    let isDrawing    = false;
+
     function drawForensicCanvas(data) {
         if (!candidateIdentity) return;
         const canvas = $(`canvas-${candidateIdentity}`);
         if (!canvas || !candidateVideo) return;
 
-        // Match canvas dimensions to the displayed video element
-        canvas.width  = candidateVideo.videoWidth  || candidateVideo.clientWidth  || 640;
-        canvas.height = candidateVideo.videoHeight || candidateVideo.clientHeight || 480;
+        lastDrawData = data;
+        if (isDrawing) return;
+        
+        isDrawing = true;
+        requestAnimationFrame(() => {
+            const currentData = lastDrawData;
+            isDrawing = false;
+            if (!currentData) return;
 
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const targetW = candidateVideo.videoWidth  || candidateVideo.clientWidth  || 640;
+            const targetH = candidateVideo.videoHeight || candidateVideo.clientHeight || 480;
 
-        const status = data.status || 'NO_FACE';
-        const color  = status === 'FOCUSED'    ? '#22d3ee'   // cyan-400
-                     : status === 'SUSPICIOUS' ? '#ffb800'   // amber
-                                               : '#ff3535';  // red
-
-        // The forensic engine receives 320x240 frames
-        const scaleX = canvas.width / 320;
-        const scaleY = canvas.height / 240;
-
-        // Check if the video is mirrored (usually true for local participant preview)
-        const transform = window.getComputedStyle(candidateVideo).transform;
-        const isMirrored = transform !== 'none' && transform.includes('matrix(-1,') 
-                        || candidateVideo.style.transform.includes('scaleX(-1)')
-                        || (typeof localRole !== 'undefined' && localRole === 'candidate');
-
-        const flipX = (x) => isMirrored ? (320 - x) * scaleX : x * scaleX;
-
-        // ── BBox corner brackets ──────────────────────────────────────────────
-        if (data.bbox) {
-            const x1 = isMirrored ? flipX(data.bbox[2]) : flipX(data.bbox[0]);
-            const y1 = data.bbox[1] * scaleY;
-            const x2 = isMirrored ? flipX(data.bbox[0]) : flipX(data.bbox[2]);
-            const y2 = data.bbox[3] * scaleY;
-            
-            const cL = 18;
-            ctx.strokeStyle = color;
-            ctx.lineWidth   = 2.5;
-
-            [
-                [x1,      y1 + cL, x1, y1,      x1 + cL, y1     ],   // top-left
-                [x2 - cL, y1,      x2, y1,      x2,      y1 + cL],   // top-right
-                [x1,      y2 - cL, x1, y2,      x1 + cL, y2     ],   // bottom-left
-                [x2 - cL, y2,      x2, y2,      x2,      y2 - cL],   // bottom-right
-            ].forEach(([ax, ay, bx, by, cx2, cy2]) => {
-                ctx.beginPath();
-                ctx.moveTo(ax, ay);
-                ctx.lineTo(bx, by);
-                ctx.lineTo(cx2, cy2);
-                ctx.stroke();
-            });
-
-            // ── Zone label above bbox ─────────────────────────────────────────
-            const zone = data.zone || 'CENTER';
-            if (zone !== 'CENTER') {
-                const zoneLabels = {
-                    LEFT:       '◄ LEFT',
-                    RIGHT:      'RIGHT ►',
-                    DOWN:       '▼ DOWN',
-                    UP:         '▲ UP',
-                    DOWN_LEFT:  '▼◄ PHONE',
-                    DOWN_RIGHT: '▼► PHONE',
-                    UP_LEFT:    '▲◄ ABOVE',
-                    UP_RIGHT:   '▲► ABOVE',
-                };
-                ctx.font      = 'bold 11px "Space Mono", monospace';
-                ctx.fillStyle = color;
-                ctx.fillText(zoneLabels[zone] || zone, x1, Math.max(14, y1 - 10));
+            // Only resize if dimensions actually changed (Optimization)
+            if (canvas.width !== targetW || canvas.height !== targetH) {
+                canvas.width  = targetW;
+                canvas.height = targetH;
             }
 
-            // ── Head direction arrow ──────────────────────────────────────────
-            if (data.head_pose) {
-                const cx   = (x1 + x2) / 2;
-                const cy   = (y1 + y2) / 2;
-                let yaw  = data.head_pose.yaw   || 0;
-                const pitch = data.head_pose.pitch || 0;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (isMirrored) yaw = -yaw; // Flip yaw direction
+            const status = currentData.status || 'NO_FACE';
+            const color  = status === 'FOCUSED'    ? '#22d3ee'   // cyan-400
+                         : status === 'SUSPICIOUS' ? '#ffb800'   // amber
+                                                   : '#ff3535';  // red
 
-                if (Math.abs(yaw) > 4 || Math.abs(pitch) > 4) {
-                    const ex = cx + yaw * 1.8 * scaleX;
-                    const ey = cy + pitch * 1.8 * scaleY;
-                    const aL = 10;
-                    const angle = Math.atan2(ey - cy, ex - cx);
+            // The forensic engine receives 320x240 frames
+            const scaleX = canvas.width / 320;
+            const scaleY = canvas.height / 240;
 
-                    ctx.strokeStyle = 'rgba(255,184,0,0.85)';
-                    ctx.lineWidth   = 2;
+            // Mirror logic
+            const transform = window.getComputedStyle(candidateVideo).transform;
+            const isMirrored = transform !== 'none' && transform.includes('matrix(-1,') 
+                            || candidateVideo.style.transform.includes('scaleX(-1)')
+                            || (typeof localRole !== 'undefined' && localRole === 'candidate');
 
+            const flipX = (x) => isMirrored ? (320 - x) * scaleX : x * scaleX;
+
+            // ── BBox ──────────────────────────────────────────────────────────
+            if (currentData.bbox) {
+                const x1 = isMirrored ? flipX(currentData.bbox[2]) : flipX(currentData.bbox[0]);
+                const y1 = currentData.bbox[1] * scaleY;
+                const x2 = isMirrored ? flipX(currentData.bbox[0]) : flipX(currentData.bbox[2]);
+                const y2 = currentData.bbox[3] * scaleY;
+                
+                const cL = 18;
+                ctx.strokeStyle = color;
+                ctx.lineWidth   = 2.5;
+
+                [
+                    [x1,      y1 + cL, x1, y1,      x1 + cL, y1     ],
+                    [x2 - cL, y1,      x2, y1,      x2,      y1 + cL],
+                    [x1,      y2 - cL, x1, y2,      x1 + cL, y2     ],
+                    [x2 - cL, y2,      x2, y2,      x2,      y2 - cL],
+                ].forEach(([ax, ay, bx, by, cx2, cy2]) => {
                     ctx.beginPath();
-                    ctx.moveTo(cx, cy);
-                    ctx.lineTo(ex, ey);
+                    ctx.moveTo(ax, ay);
+                    ctx.lineTo(bx, by);
+                    ctx.lineTo(cx2, cy2);
                     ctx.stroke();
+                });
 
-                    // Arrowhead
-                    ctx.beginPath();
-                    ctx.moveTo(ex, ey);
-                    ctx.lineTo(ex - aL * Math.cos(angle - 0.4), ey - aL * Math.sin(angle - 0.4));
-                    ctx.moveTo(ex, ey);
-                    ctx.lineTo(ex - aL * Math.cos(angle + 0.4), ey - aL * Math.sin(angle + 0.4));
-                    ctx.stroke();
+                const zone = currentData.zone || 'CENTER';
+                if (zone !== 'CENTER') {
+                    const zoneLabels = {
+                        LEFT: '◄ LEFT', RIGHT: 'RIGHT ►', DOWN: '▼ DOWN', UP: '▲ UP',
+                        DOWN_LEFT: '▼◄ PHONE', DOWN_RIGHT: '▼► PHONE', UP_LEFT: '▲◄ ABOVE', UP_RIGHT: '▲► ABOVE',
+                    };
+                    ctx.font      = 'bold 11px "Space Mono", monospace';
+                    ctx.fillStyle = color;
+                    ctx.fillText(zoneLabels[zone] || zone, x1, Math.max(14, y1 - 10));
+                }
+
+                if (currentData.head_pose) {
+                    const cx   = (x1 + x2) / 2;
+                    const cy   = (y1 + y2) / 2;
+                    let yaw  = currentData.head_pose.yaw   || 0;
+                    const pitch = currentData.head_pose.pitch || 0;
+
+                    if (isMirrored) yaw = -yaw;
+
+                    if (Math.abs(yaw) > 4 || Math.abs(pitch) > 4) {
+                        const ex = cx + yaw * 1.8 * scaleX;
+                        const ey = cy + pitch * 1.8 * scaleY;
+                        const aL = 10;
+                        const angle = Math.atan2(ey - cy, ex - cx);
+
+                        ctx.strokeStyle = 'rgba(255,184,0,0.85)';
+                        ctx.lineWidth   = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(ex, ey);
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(ex, ey);
+                        ctx.lineTo(ex - aL * Math.cos(angle - 0.4), ey - aL * Math.sin(angle - 0.4));
+                        ctx.moveTo(ex, ey);
+                        ctx.lineTo(ex - aL * Math.cos(angle + 0.4), ey - aL * Math.sin(angle + 0.4));
+                        ctx.stroke();
+                    }
                 }
             }
-        }
 
-        // ── Iris + nose landmark dots ─────────────────────────────────────────
-        if (data.landmarks) {
-            const isBlinking  = data.is_blinking === true;
-            ctx.fillStyle     = isBlinking ? '#ffb800' : '#ffffff';
-            const dotRadius   = isBlinking ? 5 : 3;
+            // ── Iris/Dots ─────────────────────────────────────────────────────
+            if (currentData.landmarks) {
+                const isBlinking  = currentData.is_blinking === true;
+                ctx.fillStyle     = isBlinking ? '#ffb800' : '#ffffff';
+                const dotRadius   = isBlinking ? 5 : 3;
 
-            Object.values(data.landmarks).forEach(pt => {
-                if (!Array.isArray(pt) || pt.length < 2) return;
-                ctx.beginPath();
-                ctx.arc(flipX(pt[0]), pt[1] * scaleY, dotRadius, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
+                Object.values(currentData.landmarks).forEach(pt => {
+                    if (!Array.isArray(pt) || pt.length < 2) return;
+                    ctx.beginPath();
+                    ctx.arc(flipX(pt[0]), pt[1] * scaleY, dotRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        });
     }
     // ─────────────────────────────────────────────────────────────────────────
 
