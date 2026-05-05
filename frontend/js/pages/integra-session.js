@@ -1393,153 +1393,146 @@ document.addEventListener('DOMContentLoaded', () => {
         lobbyContainer.className = 'fixed top-20 right-6 w-80 space-y-4 z-[9999]';
         document.body.appendChild(lobbyContainer);
 
-        const knownRequests = new Set();
+        const renderLobbyCard = (req) => {
+            if (document.getElementById(`lobby-card-${req.id}`)) return;
 
-        let hrPollDelay = 5000;
-        async function startSmartMonitoring() {
-            const meta = await fetchRoomMeta(currentRoomId);
-            const scheduledAt = meta?.scheduled_at ? new Date(meta.scheduled_at) : null;
+            const card = document.createElement('div');
+            card.id = `lobby-card-${req.id}`;
+            card.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
+            card.innerHTML = `
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                        <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
+                        <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
+                        
+                        <!-- Deepfake Verification Badge -->
+                        <div class="mt-2 flex items-center gap-2">
+                            <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                                req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
+                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            }">
+                                Gatekeeper: ${req.liveness_status || 'PENDING'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
+                        رفض
+                    </button>
+                    <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
+                        قبول
+                    </button>
+                </div>
+            `;
 
-            const checkLogic = async () => {
-                if (!currentRoomId) return;
-                const now = new Date();
+            lobbyContainer.appendChild(card);
+            if (window.lucide) window.lucide.createIcons({ scope: card });
 
-                if (scheduledAt) {
-                    const diff = scheduledAt - now;
-                    const fiveMins = 5 * 60 * 1000;
-                    if (diff > fiveMins) {
-                        console.log(`[HR Monitor] Too early. Check-back in 1 min. Remaining: ${Math.round(diff / 60000)}m`);
-                        setTimeout(startSmartMonitoring, 60000);
+            card.querySelector('.btn-approve').onclick = async () => {
+                const badge = card.querySelector('.liveness-badge');
+                const currentStatus = badge ? badge.getAttribute('data-status') : 'PENDING';
+                if (currentStatus !== 'VERIFIED') {
+                    if (!confirm("⚠️ تنبيه أمني: هذا المرشح لم يجتز اختبار الـ Deepfake أو لا يزال قيد الفحص. هل تريد السماح له بالدخول على مسؤوليتك؟")) {
                         return;
                     }
                 }
-
-                try {
-                    const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
-                    if (res.ok) {
-                        const requests = await res.json();
-                        
-                        // If there are pending requests, we poll faster. Otherwise, exponential backoff.
-                        if (requests.length > 0) {
-                            hrPollDelay = 5000; // reset to 5s if there is activity
-                        } else {
-                            hrPollDelay = Math.min(hrPollDelay * 1.2, 20000); // Backoff up to 20s
-                        }
-
-                        requests.forEach(req => {
-                            const reqKey = `${req.participant_name}`;
-                            let card = document.getElementById(`lobby-card-${req.id}`);
-                            
-                            if (card) {
-                                // Update existing card status if changed
-                                const badge = card.querySelector('.liveness-badge');
-                                if (badge) {
-                                    const currentStatus = badge.getAttribute('data-status');
-                                    if (currentStatus !== req.liveness_status) {
-                                        badge.setAttribute('data-status', req.liveness_status || 'PENDING');
-                                        badge.className = `liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                                            req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                            req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                            req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                                            'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                        }`;
-                                        badge.innerHTML = `Gatekeeper: ${req.liveness_status || 'PENDING'}`;
-                                        
-                                        // Optionally update button state
-                                        const approveBtn = card.querySelector('.btn-approve');
-                                        if (req.liveness_status !== 'VERIFIED') {
-                                            approveBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                                            approveBtn.title = "تحذير: لم يتم التحقق من هوية المرشح بعد";
-                                        } else {
-                                            approveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                                            approveBtn.title = "تم التحقق بنجاح";
-                                        }
-                                    }
-                                }
-                                return;
-                            }
-
-                            const newCard = document.createElement('div');
-                            newCard.id = `lobby-card-${req.id}`;
-                            newCard.className = 'bg-obsidian/90 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl animate-[slideIn_0.3s_ease-out] ring-1 ring-white/5';
-                            newCard.innerHTML = `
-                                <div class="flex items-start gap-4 mb-4">
-                                    <div class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                                        <i data-lucide="user-plus" class="w-5 h-5 text-cyan-400"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        <h4 class="text-[11px] font-black text-white uppercase tracking-widest mb-1">طلب انضمام جديد</h4>
-                                        <p class="text-[13px] font-bold text-white/90">${req.participant_name}</p>
-                                        
-                                        <!-- Deepfake Verification Badge -->
-                                        <div class="mt-2 flex items-center gap-2">
-                                            <span data-status="${req.liveness_status || 'PENDING'}" class="liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
-                                                req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                                req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                                req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
-                                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                            }">
-                                                Gatekeeper: ${req.liveness_status || 'PENDING'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button class="btn-deny px-4 py-2 bg-white/5 hover:bg-red-500/20 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all">
-                                        رفض
-                                    </button>
-                                    <button class="btn-approve px-4 py-2 bg-cyan-500 hover:bg-white border border-cyan-400/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-white hover:text-obsidian transition-all shadow-lg shadow-cyan-500/20">
-                                        قبول
-                                    </button>
-                                </div>
-                            `;
-
-                            lobbyContainer.appendChild(newCard);
-                            if (window.lucide) window.lucide.createIcons({ scope: newCard });
-
-                            newCard.querySelector('.btn-approve').onclick = async () => {
-                                if (req.liveness_status !== 'VERIFIED') {
-                                    if (!confirm("⚠️ تنبيه أمني: هذا المرشح لم يجتز اختبار الـ Deepfake أو لا يزال قيد الفحص. هل تريد السماح له بالدخول على مسؤوليتك؟")) {
-                                        return;
-                                    }
-                                }
-                                await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
-                                });
-                                newCard.remove();
-                            };
-
-                            newCard.querySelector('.btn-deny').onclick = async () => {
-                                await fetch(`${API_BASE}/api/livekit/decide-request`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
-                                });
-                                newCard.remove();
-                                knownRequests.delete(reqKey);
-                            };
-
-                            lobbyContainer.appendChild(card);
-                            lucide.createIcons({ nodes: [card] });
-                        });
-                    } else {
-                        hrPollDelay = Math.min(hrPollDelay * 1.2, 20000);
-                    }
-                } catch (e) { 
-                    console.error("Lobby check failed:", e); 
-                    hrPollDelay = Math.min(hrPollDelay * 1.5, 20000);
-                }
-
-                setTimeout(checkLogic, hrPollDelay);
+                await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'APPROVED' })
+                });
+                card.remove();
             };
 
-            checkLogic();
-        }
+            card.querySelector('.btn-deny').onclick = async () => {
+                await fetch(`${API_BASE}/api/livekit/decide-request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_id: currentRoomId, participant_name: req.participant_name, decision: 'REJECTED' })
+                });
+                card.remove();
+            };
+        };
 
-        startSmartMonitoring();
+        const updateLobbyCard = (req) => {
+            const card = document.getElementById(`lobby-card-${req.id}`);
+            if (!card) return;
+
+            const badge = card.querySelector('.liveness-badge');
+            if (badge) {
+                badge.setAttribute('data-status', req.liveness_status || 'PENDING');
+                badge.className = `liveness-badge text-[8px] font-black uppercase px-2 py-0.5 rounded border ${
+                    req.liveness_status === 'VERIFIED' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                    req.liveness_status === 'FAILED' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                    req.liveness_status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse' :
+                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`;
+                badge.innerHTML = `Gatekeeper: ${req.liveness_status || 'PENDING'}`;
+                
+                const approveBtn = card.querySelector('.btn-approve');
+                if (req.liveness_status !== 'VERIFIED') {
+                    approveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    approveBtn.title = "تحذير: لم يتم التحقق من هوية المرشح بعد";
+                } else {
+                    approveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    approveBtn.title = "تم التحقق بنجاح";
+                }
+            }
+        };
+
+        const setupRealtimeLobby = async () => {
+            if (!window.supabaseClient) {
+                console.warn("[Lobby] Supabase client not found. Retrying in 2s...");
+                setTimeout(setupRealtimeLobby, 2000);
+                return;
+            }
+
+            console.log(`[Lobby] Subscribing to real-time updates for room: ${currentRoomId}`);
+
+            // 1. Initial Load
+            try {
+                const res = await fetch(`${API_BASE}/api/livekit/pending-requests/${currentRoomId}`);
+                if (res.ok) {
+                    const requests = await res.json();
+                    requests.forEach(renderLobbyCard);
+                }
+            } catch (e) { console.error("Initial lobby load failed:", e); }
+
+            // 2. Realtime Subscription
+            window.supabaseClient
+                .channel(`lobby-${currentRoomId}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'join_requests', 
+                    filter: `room_id=eq.${currentRoomId}` 
+                }, (payload) => {
+                    console.log("[Lobby] Realtime Event:", payload.eventType, payload);
+                    
+                    if (payload.eventType === 'INSERT') {
+                        renderLobbyCard(payload.new);
+                    } else if (payload.eventType === 'UPDATE') {
+                        updateLobbyCard(payload.new);
+                    } else if (payload.eventType === 'DELETE') {
+                        const cardId = payload.old ? payload.old.id : null;
+                        if (cardId) {
+                            const card = document.getElementById(`lobby-card-${cardId}`);
+                            if (card) card.remove();
+                        }
+                    }
+                })
+                .subscribe();
+        };
+
+        setupRealtimeLobby();
     }
+
 
     // ── Copy Invite Link ──────────────────────────────────────────────────────
     window.copyInviteLink = function() {
