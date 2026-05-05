@@ -357,6 +357,15 @@ const LiveKitSession = (() => {
                 }
             });
 
+            // ── Connection quality ───────────────────────────────────────────
+            room.on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+                dispatch('lk:connection-quality', {
+                    quality,
+                    identity: participant.identity,
+                    isLocal: participant === room.localParticipant
+                });
+            });
+
             // 4. Connect
             await room.connect(tokenData.url, tokenData.token);
 

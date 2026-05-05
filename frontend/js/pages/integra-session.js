@@ -420,8 +420,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // ─────────────────────────────────────────────────────────────────────
 
         const label = document.createElement('div');
-        label.className = 'absolute bottom-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-xl rounded-lg text-[9px] font-mono uppercase tracking-widest border border-white/5 z-10';
-        label.innerHTML = `<span class="text-cyan-400 font-bold mr-2">●</span><span>${name || identity}</span>`;
+        label.className = 'absolute bottom-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-xl rounded-lg text-[9px] font-mono uppercase tracking-widest border border-white/5 z-10 flex items-center gap-3';
+        label.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="text-cyan-400 font-bold">●</span>
+                <span>${name || identity}</span>
+            </div>
+            <div id="quality-${identity}" class="flex gap-0.5 items-end h-2.5 opacity-40 transition-all">
+                <div class="w-0.5 h-1 bg-current rounded-full"></div>
+                <div class="w-0.5 h-1.5 bg-current rounded-full"></div>
+                <div class="w-0.5 h-2 bg-current rounded-full"></div>
+            </div>
+        `;
         panel.appendChild(label);
 
         const ring = document.createElement('div');
@@ -553,6 +563,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         addLog('✓ Reconnected successfully', 'audio');
         showToast('Reconnected!', 'success');
+    });
+
+    window.addEventListener('lk:connection-quality', (e) => {
+        const { quality, identity, isLocal } = e.detail;
+        
+        // 1. Handle Local Quality Badge
+        if (isLocal && connectionBadge) {
+            const colors = {
+                Excellent: 'bg-cyan-400/10 border-cyan-400/30 text-cyan-400',
+                Good:      'bg-green-500/10 border-green-500/30 text-green-400',
+                Poor:      'bg-amber-500/10 border-amber-500/30 text-amber-400',
+                Lost:      'bg-red-500/10 border-red-500/30 text-red-400',
+            };
+            connectionBadge.textContent = quality === 'Excellent' ? 'LIVE' : quality.toUpperCase();
+            connectionBadge.className = `text-[9px] font-mono px-3 py-1 rounded-full border uppercase tracking-widest transition-all ${colors[quality] || colors.Excellent}`;
+            if (quality === 'Poor' || quality === 'Lost') connectionBadge.classList.add('animate-pulse');
+        }
+
+        // 2. Handle Remote Quality Signal Bars
+        const indicator = $(`quality-${identity}`);
+        if (indicator) {
+            const bars = indicator.querySelectorAll('div');
+            const colorClass = quality === 'Excellent' ? 'text-cyan-400' : 
+                               quality === 'Good'      ? 'text-green-400' :
+                               quality === 'Poor'      ? 'text-amber-400' : 'text-red-500';
+            
+            indicator.classList.remove('text-cyan-400', 'text-green-400', 'text-amber-400', 'text-red-500', 'opacity-40');
+            indicator.classList.add(colorClass);
+            
+            bars.forEach((bar, i) => {
+                if (quality === 'Excellent') bar.style.opacity = '1';
+                else if (quality === 'Good') bar.style.opacity = i < 2 ? '1' : '0.2';
+                else if (quality === 'Poor') bar.style.opacity = i < 1 ? '1' : '0.2';
+                else bar.style.opacity = '0.2';
+            });
+        }
     });
 
     window.addEventListener('lk:disconnected', () => {
