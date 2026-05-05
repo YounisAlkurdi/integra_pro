@@ -173,7 +173,7 @@ async def get_livekit_token(req: TokenRequest):
     try:
         normalized_role = req.role.lower()
         max_mins = node.get('max_duration_mins', 10) if node else 10
-        dynamic_ttl = (max_mins * 60) + 600
+        dynamic_ttl = 24 * 3600  # 24 hours to accommodate lobby wait time
         
         token = (
             AccessToken(api_key, api_secret)
@@ -298,6 +298,18 @@ async def decide_request(req: DecisionRequest):
         .eq("participant_name", req.participant_name) \
         .eq("status", "PENDING") \
         .execute()
+
+    if req.decision.upper() == "APPROVED":
+        # Mark the session as started if it hasn't been already
+        # We can just set started_at = now() for the node.
+        # But wait, supabase doesn't easily let us set conditionally if null in one update without raw SQL
+        # Let's just fetch it first or simply update it. 
+        node = await get_node_by_room_id(req.room_id)
+        if node and not node.get('started_at'):
+            await db.client.table("nodes") \
+                .update({"started_at": "now()"}) \
+                .eq("room_id", req.room_id) \
+                .execute()
         
     return {"status": "UPDATED", "decision": req.decision}
 

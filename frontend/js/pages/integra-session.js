@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const { data, error } = await window.supabase
                 .from('nodes')
-                .select('created_at, max_duration_mins, scheduled_at')
+                .select('created_at, started_at, max_duration_mins, scheduled_at')
                 .eq('room_id', roomId)
                 .single();
 
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data;
         } catch (e) {
             console.warn("[RoomMeta] Falling back to default limits:", e);
-            return { created_at: new Date().toISOString(), max_duration_mins: 10, scheduled_at: null };
+            return { created_at: new Date().toISOString(), started_at: null, max_duration_mins: 10, scheduled_at: null };
         }
     }
 
@@ -500,19 +500,30 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`Connected to room: ${roomName} as ${role.toUpperCase()}`);
 
         fetchRoomMeta(roomName).then(meta => {
-            const createdAt = new Date(meta.created_at).getTime();
             const now = Date.now();
-            const totalDuration = meta.duration_seconds || 600;
-            const elapsed = Math.floor((now - createdAt) / 1000);
-            const remaining = totalDuration - elapsed;
+            const totalDuration = (meta.max_duration_mins || 10) * 60;
+            
+            if (meta.started_at) {
+                const startedAt = new Date(meta.started_at).getTime();
+                const elapsed = Math.floor((now - startedAt) / 1000);
+                const remaining = totalDuration - elapsed;
 
-            if (remaining <= 0) {
-                showToast("SESSION HAS EXPIRED.", "error");
-                timerEl.textContent = "00:00";
-                setTimeout(() => { window.endSession?.(); }, 2000);
+                if (remaining <= 0) {
+                    showToast("SESSION HAS EXPIRED.", "error");
+                    if (timerEl) timerEl.textContent = "00:00";
+                    setTimeout(() => { window.endSession?.(); }, 2000);
+                } else {
+                    startTimer(remaining);
+                    addLog(`Session active. ${Math.floor(remaining / 60)}m ${remaining % 60}s remaining.`, 'system');
+                }
             } else {
-                startTimer(remaining);
-                addLog(`Session active. ${Math.floor(remaining / 60)}m ${remaining % 60}s remaining.`, 'system');
+                // Not started yet
+                if (timerEl) {
+                    const m = String(Math.max(0, meta.max_duration_mins || 10)).padStart(2, '0');
+                    timerEl.textContent = `${m}:00`;
+                    timerEl.classList.add('text-white/40');
+                }
+                addLog('Waiting for candidate admission to start timer...', 'system');
             }
         });
 
@@ -678,6 +689,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setFeedLabel(role, name);
         setFeedStatus(role, 'CONNECTED', true);
+
+        // If candidate joins, try starting the timer if not already running
+        if (role === 'candidate' && sessionSeconds <= 0 && !timerInterval) {
+            fetchRoomMeta(currentRoomId).then(meta => {
+                if (meta.started_at) {
+                    if (timerEl) timerEl.classList.remove('text-white/40');
+                    const now = Date.now();
+                    const totalDuration = (meta.max_duration_mins || 10) * 60;
+                    const startedAt = new Date(meta.started_at).getTime();
+                    const elapsed = Math.floor((now - startedAt) / 1000);
+                    const remaining = totalDuration - elapsed;
+                    if (remaining > 0) {
+                        startTimer(remaining);
+                        addLog(`Active session timer started. ${Math.floor(remaining / 60)}m remaining.`, 'system');
+                    }
+                }
+            });
+        }
     });
 
     window.addEventListener('lk:participant-left', (e) => {
