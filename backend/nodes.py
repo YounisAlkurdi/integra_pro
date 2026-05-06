@@ -99,12 +99,14 @@ async def delete_node(room_id: str):
     return len(res) > 0
 
 async def get_node_stats(user_id: str = None):
-    """Calculates usage telemetry since the last payment asynchronously."""
+    """Calculates usage telemetry since the last payment and current live/completed counts."""
     if not user_id:
         return {"total": 0, "active": 0, "completed": 0, "threats": 0}
     
     try:
-        # 1. Get Latest Payment / Billing Cycle Start
+        if not db.client: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+        
+        # 1. Get Latest Payment / Billing Cycle Start for Quota
         invoice_resp = await db.select(
             table="invoices",
             filters={"user_id": user_id, "status": "PAID"},
@@ -112,28 +114,29 @@ async def get_node_stats(user_id: str = None):
             desc=True,
             limit=1
         )
-        
         last_payment_date = invoice_resp[0].get('created_at') if invoice_resp else None
         
-        # 2. Query Nodes (Excluding deleted nodes from the quota count)
-        if not db.client: return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+        # 2. Fetch ALL nodes for status tracking (Active/Completed)
+        all_nodes_resp = await db.client.table("nodes").select("status,is_deleted,created_at").eq("user_id", user_id).execute()
+        all_nodes = all_nodes_resp.data or []
         
-        # We only count nodes that are NOT deleted against the user quota
-        query = db.client.table("nodes").select("status,is_deleted,created_at").eq("user_id", user_id).eq("is_deleted", False)
+        # 3. Calculate Global Status Counts (Non-deleted only)
+        active_count = sum(1 for n in all_nodes if n.get('status') == 'PENDING' and not n.get('is_deleted'))
+        completed_count = sum(1 for n in all_nodes if n.get('status') == 'COMPLETED' and not n.get('is_deleted'))
         
+        # 4. Calculate Quota Consumption (Total nodes created in this cycle, including deleted ones)
         if last_payment_date:
-            query = query.gte("created_at", last_payment_date)
-        
-        node_resp = await query.execute()
-        active_nodes = node_resp.data
-        
-        total_consumed = len(active_nodes)
+            from datetime import datetime
+            lp_date = datetime.fromisoformat(last_payment_date.replace('Z', '+00:00'))
+            quota_nodes = [n for n in all_nodes if datetime.fromisoformat(n.get('created_at').replace('Z', '+00:00')) >= lp_date]
+            total_consumed = len(quota_nodes)
+        else:
+            total_consumed = len(all_nodes)
         
         return {
             "total": total_consumed, 
-            "active_view": total_consumed,
-            "active": sum(1 for n in active_nodes if n.get('status') == 'PENDING'),
-            "completed": sum(1 for n in active_nodes if n.get('status') == 'COMPLETED'),
+            "active": active_count,
+            "completed": completed_count,
             "threats": 0 
         }
     except Exception as e:

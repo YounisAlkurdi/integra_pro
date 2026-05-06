@@ -612,19 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('lk:disconnected', () => {
-        clearInterval(timerInterval);
-
-        if (connectionBadge) {
-            connectionBadge.textContent = 'OFFLINE';
-            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
-        }
-
-        setFeedStatus('hr', 'OFFLINE', false);
-        setFeedStatus('candidate', 'OFFLINE', false);
-
-        addLog('Session terminated by server', 'error');
-
+    window.showTerminationOverlay = function() {
         const overlay = $('termination-overlay');
         if (overlay) {
             overlay.classList.remove('hidden');
@@ -638,6 +626,27 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Session ended', 'error');
             setTimeout(() => { window.location.href = 'index.html'; }, 2000);
         }
+    };
+
+    window.addEventListener('lk:disconnected', () => {
+        clearInterval(timerInterval);
+
+        if (connectionBadge) {
+            connectionBadge.textContent = 'OFFLINE';
+            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
+        }
+
+        setFeedStatus('hr', 'OFFLINE', false);
+        setFeedStatus('candidate', 'OFFLINE', false);
+
+        addLog('Session terminated by server', 'error');
+
+        if (localRole === 'candidate') {
+            window.showTerminationOverlay();
+        } else {
+            showToast('Session ended', 'error');
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
+        }
     });
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ FIX 2: Single endSession with full HR termination logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -646,13 +655,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (localRole === 'hr' || localRole === 'admin') {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session } } = await window.supabase.auth.getSession();
                 const authHeader = session ? `Bearer ${session.access_token}` : null;
 
                 if (authHeader && currentRoomId) {
-                    // Temporarily disable global termination so the candidate isn't kicked if HR simply leaves
-                    // To completely destroy the room, a dedicated "End Interview for All" button should be used instead.
-                    /*
                     await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
@@ -662,21 +668,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'DELETE',
                         headers: { 'Authorization': authHeader }
                     });
-                    */
                 }
             } catch (e) {
                 console.error("Failed to execute global termination protocol:", e);
             }
 
+            window.LiveKitSession?.disconnect();
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
             }, 800);
         } else {
             window.LiveKitSession?.disconnect();
+            window.showTerminationOverlay();
         }
     };
 
-    $('btn-leave')?.addEventListener('click', () => {
+    $('btn-end-session')?.addEventListener('click', () => {
         window.endSession();
     });
 
