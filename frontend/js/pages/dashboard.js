@@ -269,36 +269,57 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        list.innerHTML = sessions.map(s => `
-            <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl hover:bg-white/[0.03] hover:border-cyan-400/20 transition-all duration-500 overflow-hidden reveal active cursor-pointer">
-                <div class="flex justify-between items-center gap-6 relative z-10">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-cyan-400/10 rounded-full flex items-center justify-center text-cyan-400 font-mono text-xs border border-cyan-400/20">
-                            ${(s.candidate_name || 'N').charAt(0).toUpperCase()}
+        list.innerHTML = sessions.map(s => {
+            const isCompleted = s.status === 'COMPLETED';
+            const statusClass = isCompleted 
+                ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                : 'bg-cyan-400/5 border-cyan-400/20 text-cyan-400';
+            
+            const cardOpacity = isCompleted ? 'opacity-60' : 'opacity-100';
+            const hoverEffect = isCompleted ? '' : 'hover:bg-white/[0.03] hover:border-cyan-400/20';
+
+            return `
+                <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl ${hoverEffect} transition-all duration-500 overflow-hidden reveal active ${isCompleted ? '' : 'cursor-pointer'} ${cardOpacity}">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 ${isCompleted ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20'} rounded-full flex items-center justify-center font-mono text-xs border">
+                                ${(s.candidate_name || 'N').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold tracking-tight text-white ${isCompleted ? '' : 'group-hover:text-cyan-400'} transition-colors">${s.candidate_name || 'Unknown'}</h4>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">${s.position || 'N/A'}</p>
+                                    <span class="text-[8px] text-white/10">•</span>
+                                    <p class="text-[9px] font-mono ${isCompleted ? 'text-white/20' : 'text-cyan-400/40'} uppercase tracking-[0.2em]">📅 ${formatDate(s.scheduled_at)}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-sm font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">${s.candidate_name || 'Unknown'}</h4>
-                            <div class="flex items-center gap-3 mt-1">
-                                <p class="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">${s.position || 'N/A'}</p>
-                                <span class="text-[8px] text-white/10">•</span>
-                                <p class="text-[9px] font-mono text-cyan-400/40 uppercase tracking-[0.2em]">📅 ${formatDate(s.scheduled_at)}</p>
+                        
+                        <div class="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                            <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden lg:block">ID: ${s.room_id.substring(0, 8)}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="px-3 py-1 ${statusClass} text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
+                                
+                                ${isCompleted ? `
+                                    <button class="px-4 py-2 bg-white/5 text-white/40 text-[8px] font-bold uppercase rounded-lg border border-white/10 cursor-not-allowed flex items-center gap-2">
+                                        <i data-lucide="file-text" class="w-3 h-3"></i> Archived
+                                    </button>
+                                ` : `
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all text-white/40" title="Copy Candidate Link"><i data-lucide="link" class="w-4 h-4"></i></button>
+                                        <button onclick="terminateSession('${s.room_id}')" class="p-2 hover:text-red-500 transition-all text-white/40" title="Archive Session"><i data-lucide="archive" class="w-4 h-4"></i></button>
+                                        <button onclick="joinAsHR('${s.room_id}')" class="ml-2 px-4 py-2 bg-white/5 hover:bg-white text-white hover:text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target flex items-center gap-2 border border-white/10 hover:border-white">
+                                            <i data-lucide="play" class="w-3 h-3"></i> Join
+                                        </button>
+                                    </div>
+                                `}
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="flex items-center gap-6">
-                        <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden sm:block">ID: ${s.room_id.substring(0, 8)}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="px-3 py-1 bg-cyan-400/5 border border-cyan-400/20 text-cyan-400 text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
-                            <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all" title="Copy Candidate Link"><i data-lucide="link" class="w-4 h-4"></i></button>
-                            <button onclick="terminateSession('${s.room_id}')" class="p-2 hover:text-red-500 transition-all" title="Terminate Session"><i data-lucide="x" class="w-4 h-4"></i></button>
-                            <button onclick="joinAsHR('${s.room_id}')" class="px-4 py-2 bg-white/5 hover:bg-white text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target"><i data-lucide="play" class="w-3 h-3 inline mr-1"></i> Join</button>
-                        </div>
-                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 ${isCompleted ? '' : 'group-hover:from-cyan-400/5 group-hover:via-transparent'} transition-all duration-700"></div>
                 </div>
-                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:via-transparent transition-all duration-700"></div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         lucide.createIcons();
         init3DTilt();
@@ -470,31 +491,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!userChoice) return;
 
         try {
-            showToast("EXECUTING PURGE PROTOCOL...", "system");
+            showToast("ARCHIVING SESSION DATA...", "system");
             const auth = await getAuthHeader();
             
-            // 1. Force-terminate LiveKit Room (Kicks everyone out)
-            const lkRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/livekit/room/${rid}`), {
-                method: 'DELETE',
+            // 1. Mark as COMPLETED and stop LiveKit room
+            // This is the non-destructive professional flow
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/livekit/complete/${rid}`), {
+                method: 'POST',
                 headers: { 'Authorization': auth }
             });
             
-            if (!lkRes.ok) {
-                console.warn("LiveKit Room might already be inactive. Proceeding with DB cleanup.");
-            }
-
-            // 2. Remove from Local Registry (DB)
-            const nodeRes = await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/nodes/${rid}`), {
-                method: 'DELETE',
-                headers: { 'Authorization': auth }
-            });
-
-            if (nodeRes.ok || lkRes.ok) {
-                showToast("SESSION TERMINATED & PURGED", "success");
+            if (res.ok) {
+                showToast("SESSION ARCHIVED SUCCESSFULLY", "success");
                 await renderInterviews();
                 await updateStats();
             } else {
-                showToast("Purge Signal Interrupted", "error");
+                showToast("Archive Signal Interrupted", "error");
             }
         } catch (e) {
             console.error("Critical Failure in Termination Module:", e);

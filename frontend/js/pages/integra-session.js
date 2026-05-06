@@ -20,9 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let camEnabled    = true;
     let screenSharing = false;
     let sttEnabled    = false;
-    let sessionSeconds = 0;
-    let maxSeconds     = 600;
     let timerInterval  = null;
+    let sessionSeconds = 0;          // Declared sessionSeconds
+    let sessionEnding  = false;      // Guard against double termination
+    let disconnectGraceTimer = null; // 10s window for candidates
 
     const urlParams = new URLSearchParams(window.location.search);
     let localRole     = urlParams.get('role') || 'candidate';
@@ -501,17 +502,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetchRoomMeta(roomName).then(meta => {
             const now = Date.now();
-            const totalDuration = (meta.max_duration_mins || 10) * 60;
+            const maxDuration = meta.max_duration_mins || 10;
+            const totalDuration = maxDuration * 60;
             
             if (meta.started_at) {
+                if (timerEl) timerEl.classList.remove('text-white/40');
+                
+                // Parse started_at safely as UTC
                 const startedAt = new Date(meta.started_at).getTime();
+                const now = Date.now();
                 const elapsed = Math.floor((now - startedAt) / 1000);
                 const remaining = totalDuration - elapsed;
 
                 if (remaining <= 0) {
                     showToast("SESSION HAS EXPIRED.", "error");
                     if (timerEl) timerEl.textContent = "00:00";
-                    setTimeout(() => { window.endSession?.(); }, 2000);
+                    setTimeout(() => { if (!sessionEnding) window.endSession?.(); }, 2000);
                 } else {
                     startTimer(remaining);
                     addLog(`Session active. ${Math.floor(remaining / 60)}m ${remaining % 60}s remaining.`, 'system');
@@ -519,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Not started yet
                 if (timerEl) {
-                    const m = String(Math.max(0, meta.max_duration_mins || 10)).padStart(2, '0');
+                    const m = String(Math.max(0, maxDuration)).padStart(2, '0');
                     timerEl.textContent = `${m}:00`;
                     timerEl.classList.add('text-white/40');
                 }
@@ -615,6 +621,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showTerminationOverlay = function() {
         const overlay = $('termination-overlay');
         if (overlay) {
+            const statusText = overlay.querySelector('p');
+            if (statusText) {
+                statusText.innerHTML = `Interview Terminated. The secure link has been decommissioned.<br>All session data, logs, and forensics have been archived to the central vault.`;
+            }
             overlay.classList.remove('hidden');
             if (window.lucide) window.lucide.createIcons({ nodes: [overlay] });
 
@@ -629,54 +639,119 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.addEventListener('lk:disconnected', () => {
-        clearInterval(timerInterval);
-
-        if (connectionBadge) {
-            connectionBadge.textContent = 'OFFLINE';
-            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
-        }
-
-        setFeedStatus('hr', 'OFFLINE', false);
-        setFeedStatus('candidate', 'OFFLINE', false);
-
-        addLog('Session terminated by server', 'error');
+        if (sessionEnding) return; // Already ending formally
 
         if (localRole === 'candidate') {
-            window.showTerminationOverlay();
+            addLog("Connection dropped. Starting 10s grace window...", "error");
+            disconnectGraceTimer = setTimeout(() => {
+                if (connectionBadge) {
+                    connectionBadge.textContent = 'OFFLINE';
+                    connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 uppercase tracking-widest';
+                }
+                clearInterval(timerInterval);
+                setFeedStatus('candidate', 'OFFLINE', false);
+                addLog('Session terminated by server (Grace period expired)', 'error');
+                window.showTerminationOverlay();
+            }, 10000);
         } else {
-            showToast('Session ended', 'error');
-            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
+            // HR/Admin Grace Window
+            addLog("Local disconnect detected. Attempting to restore link...", "warning");
+            if (connectionBadge) {
+                connectionBadge.textContent = 'RECONNECTING';
+                connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 uppercase tracking-widest animate-pulse';
+            }
+            
+            // HR doesn't end session automatically, but we start a timer to alert them
+            disconnectGraceTimer = setTimeout(() => {
+                addLog("Reconnection timed out. Please check your network.", "error");
+            }, 30000);
         }
     });
 
+    window.addEventListener('lk:reconnected', () => {
+        if (disconnectGraceTimer) {
+            clearTimeout(disconnectGraceTimer);
+            disconnectGraceTimer = null;
+        }
+
+        addLog("Secure link restored. Synchronizing forensic state...", "success");
+        if (connectionBadge) {
+            connectionBadge.textContent = 'RESTORED';
+            connectionBadge.className = 'text-[9px] font-mono px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 uppercase tracking-widest';
+        }
+
+        // Recalculate remaining time from source of truth (Supabase started_at)
+        fetchRoomMeta(currentRoomId).then(meta => {
+            if (meta && meta.started_at) {
+                const now = Date.now();
+                const totalDuration = (meta.max_duration_mins || 10) * 60;
+                const startedAt = new Date(meta.started_at).getTime();
+                const elapsed = Math.floor((now - startedAt) / 1000);
+                const remaining = totalDuration - elapsed;
+                
+                if (remaining > 0) {
+                    startTimer(remaining);
+                    addLog(`Timer synchronized: ${Math.floor(remaining / 60)}m remaining.`, 'system');
+                } else {
+                    addLog("Session time expired during reconnection.", "error");
+                    window.endSession();
+                }
+            }
+        });
+    });
+
+
     // Ã¢â€â‚¬Ã¢â€â‚¬ FIX 2: Single endSession with full HR termination logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.endSession = async function() {
-        showToast("TERMINATING CONNECTION...", "info");
+        if (sessionEnding) return;
+        
+        const isHR = (localRole === 'hr' || localRole === 'admin');
+        
+        if (isHR) {
+            showToast("INITIATING TERMINATION VOTE...", "info");
+        } else {
+            sessionEnding = true;
+            showToast("DISCONNECTING...", "info");
+        }
 
-        if (localRole === 'hr' || localRole === 'admin') {
+        clearInterval(timerInterval);
+
+        if (isHR) {
             try {
                 const { data: { session } } = await window.supabase.auth.getSession();
                 const authHeader = session ? `Bearer ${session.access_token}` : null;
+                const identity = window.LiveKitSession?.getIdentity?.();
 
-                if (authHeader && currentRoomId) {
-                    await fetch(`${API_BASE}/api/livekit/room/${currentRoomId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': authHeader }
+                if (authHeader && currentRoomId && identity) {
+                    const res = await fetch(`${API_BASE}/api/livekit/vote-end`, {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': authHeader,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            room_id: currentRoomId,
+                            identity: identity
+                        })
                     });
 
-                    await fetch(`${API_BASE}/api/nodes/${currentRoomId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': authHeader }
-                    });
+                    const result = await res.json();
+
+                    if (result.status === 'COMPLETED') {
+                        sessionEnding = true;
+                        showToast("CONSENSUS REACHED. ROOM DECOMMISSIONED.", "success");
+                        window.LiveKitSession?.disconnect();
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1000);
+                    } else if (result.status === 'VOTED') {
+                        showToast(`VOTE RECORDED (${result.votes}/${result.total_hrs} HRs). WAITING FOR CONSENSUS.`, "info");
+                    }
                 }
             } catch (e) {
-                console.error("Failed to execute global termination protocol:", e);
+                console.error("Failed to execute termination vote:", e);
+                showToast("TERMINATION FAILED", "error");
             }
-
-            window.LiveKitSession?.disconnect();
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 800);
         } else {
             window.LiveKitSession?.disconnect();
             window.showTerminationOverlay();
