@@ -148,3 +148,64 @@ async def get_node_stats(user_id: str = None):
     except Exception as e:
         print(f"❌ [INTEGRA_CORE] Failed to calculate node stats: {e}")
         return {"total": 0, "active": 0, "completed": 0, "threats": 0}
+
+async def get_signed_video_url(video_path: str, user_id: str):
+    """
+    Generates a secure Signed URL for a verification video.
+    First verifies that the video's room belongs to the requesting user.
+    URL expires in 3600 seconds (1 hour).
+    """
+    if not db.client or not video_path:
+        return None
+
+    try:
+        # Security: Extract room_id from path (format: "room-uuid/filename.mp4")
+        room_id_from_path = video_path.split('/')[0]
+
+        ownership_check = await db.select(
+            table="nodes",
+            filters={"room_id": room_id_from_path, "user_id": user_id},
+            limit=1
+        )
+        if not ownership_check:
+            print(f"🚫 [INTEGRA_SECURITY] Unauthorized video access by user {user_id} for {video_path}")
+            return None
+
+        # Generate signed URL — expires in 1 hour
+        result = await db.client.storage.from_("verification_videos").create_signed_url(
+            path=video_path,
+            expires_in=3600
+        )
+        return result.get("signedURL") or result.get("signed_url")
+    except Exception as e:
+        print(f"❌ [INTEGRA_CORE] Failed to generate signed URL: {e}")
+        return None
+
+async def get_interview_report(room_id: str, user_id: str):
+    """
+    Fetches the AI-generated interview report for a specific room,
+    scoped to the owning user for security.
+    """
+    if not db.client:
+        return None
+
+    try:
+        # Verify user owns this room first
+        node_check = await db.select(
+            table="nodes",
+            filters={"room_id": room_id, "user_id": user_id},
+            limit=1
+        )
+        if not node_check:
+            return None
+
+        # Fetch AI report data
+        result = await db.select(
+            table="interview_reports",
+            filters={"room_id": room_id},
+            limit=1
+        )
+        return result[0] if result else None
+    except Exception as e:
+        print(f"❌ [INTEGRA_CORE] Failed to fetch interview report: {e}")
+        return None

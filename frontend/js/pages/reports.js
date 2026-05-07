@@ -5,6 +5,8 @@
 
 import { supabase } from '../core/supabase-client.js';
 
+const API_BASE = 'http://127.0.0.1:8000'; // Backend base URL
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (window.lucide) lucide.createIcons();
 
@@ -29,9 +31,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- 1. Sync Archives From Supabase ---
     async function syncArchives() {
+        // ✅ Security: Get current authenticated user first
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            window.location.href = 'login.html';
+            return;
+        }
+
         const { data: nodes, error } = await supabase
             .from('nodes')
             .select('*')
+            .eq('user_id', user.id)  // ✅ Only fetch THIS user's nodes
             .order('created_at', { ascending: false });
 
         if (error || !nodes || nodes.length === 0) {
@@ -91,12 +101,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => reportDetail.style.opacity = '1', 50);
 
         try {
-            // Fetch Node Data
-            const { data: node, error: nodeError } = await supabase.from('nodes').select('*').eq('room_id', nodeId).single();
-            if (nodeError) throw nodeError;
+            // ✅ Security: Re-verify user ownership before loading any report
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { window.location.href = 'login.html'; return; }
+
+            // Fetch Node Data — scoped to current user only
+            const { data: node, error: nodeError } = await supabase
+                .from('nodes')
+                .select('*')
+                .eq('room_id', nodeId)
+                .eq('user_id', user.id)  // ✅ Ownership check
+                .single();
+            if (nodeError || !node) {
+                showToast("Access Denied: Node not in your archive", "error");
+                return;
+            }
 
             // Fetch Forensic Data (from join_requests)
-            const { data: joinReq, error: joinError } = await supabase
+            const { data: joinReq } = await supabase
                 .from('join_requests')
                 .select('*')
                 .eq('room_id', nodeId)
@@ -105,11 +127,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .maybeSingle();
 
             // Fetch Chat Logs (Transcript)
-            const { data: chatLogs, error: chatError } = await supabase
+            const { data: chatLogs } = await supabase
                 .from('chat_logs')
                 .select('*')
                 .eq('room_id', nodeId)
                 .order('created_at', { ascending: true });
+
+            // ✅ Fetch AI Interview Report from backend (scoped + secure)
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            let aiReport = null;
+            try {
+                const reportRes = await fetch(`${API_BASE}/api/nodes/${nodeId}/report`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (reportRes.ok) aiReport = await reportRes.json();
+            } catch (e) { console.warn('AI report not available:', e); }
 
             // Header Decryption
             document.getElementById('rep-name').innerText = node.candidate_name;
@@ -118,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById('rep-date').innerText = `TIMESTAMP: ${new Date(node.created_at).toLocaleString()}`;
 
             // Neural Visualization
-            visualizeNeuralData(node, joinReq, chatLogs);
+            visualizeNeuralData(node, joinReq, chatLogs, aiReport, token);
             showToast("Archive Decrypted Successfully", "success");
         } catch (e) {
             console.error("Neural Retrieval Failed:", e);
@@ -126,14 +159,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
-    function visualizeNeuralData(node, joinReq, chatLogs) {
-        // 1. Overall Stats
+    async function visualizeNeuralData(node, joinReq, chatLogs, aiReport, token) {
+        // 1. Overall Stats — use real AI report data if available, else fallback
         const deepfakeScore = joinReq ? (joinReq.deepfake_score || 0) : 0;
-        const confidence = 85; // Simulated/Derived from other metrics
+        const aiScore      = aiReport?.score ?? null;
+        const confidence   = aiScore !== null ? aiScore : 85;
         const integrityRisk = deepfakeScore;
-        const eyeStability = 90; // Placeholder
+        const eyeStability  = 90;
 
-        document.getElementById('rep-overall').innerText = 100 - Math.floor(deepfakeScore / 2);
+        document.getElementById('rep-overall').innerText = aiScore !== null ? aiScore : (100 - Math.floor(deepfakeScore / 2));
         document.getElementById('rep-confidence').innerText = confidence + '%';
         document.getElementById('rep-fraud').innerText = Math.round(integrityRisk) + '%';
         document.getElementById('rep-eye').innerText = eyeStability + '%';
@@ -173,10 +207,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         const videoPlaceholder = document.getElementById('video-placeholder');
         
         if (joinReq && joinReq.verification_video_path) {
-            videoEl.src = joinReq.verification_video_path; 
-            videoEl.load(); // Force browser to refresh video buffer
-            videoEl.classList.remove('hidden');
-            videoPlaceholder.classList.add('hidden');
+            // ✅ Security: Get a time-limited signed URL instead of using public URL directly
+            try {
+                const sigRes = await fetch(
+                    `${API_BASE}/api/nodes/signed-video-url?video_path=${encodeURIComponent(joinReq.verification_video_path)}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                if (sigRes.ok) {
+                    const { signed_url } = await sigRes.json();
+                    videoEl.src = signed_url;
+                    videoEl.load();
+                    videoEl.classList.remove('hidden');
+                    videoPlaceholder.classList.add('hidden');
+                } else {
+                    videoEl.classList.add('hidden');
+                    videoPlaceholder.classList.remove('hidden');
+                }
+            } catch (e) {
+                videoEl.classList.add('hidden');
+                videoPlaceholder.classList.remove('hidden');
+            }
         } else {
             videoEl.classList.add('hidden');
             videoPlaceholder.classList.remove('hidden');
@@ -196,7 +246,58 @@ document.addEventListener("DOMContentLoaded", async () => {
             `<img src="${joinReq.forensic_report_url}" class="w-full rounded-xl border border-white/5" />` : 
             (joinReq ? `Biometric analysis for ${joinReq.participant_name} shows a deepfake probability of ${deepfakeScore}%. ${deepfakeScore > 20 ? 'Visual inconsistencies detected in neural frame mapping.' : 'Neural patterns match biometric baseline.'}` : 'No forensic data available for this node.');
 
-        // 5. Transcript Logs
+        // 5. ✅ AI Interview Report — from interview_reports table
+        const aiReportContainer = document.getElementById('ai-report-container');
+        if (aiReportContainer) {
+            if (aiReport && (aiReport.ai_summary || aiReport.strengths || aiReport.weaknesses)) {
+                const strengths = Array.isArray(aiReport.strengths) ? aiReport.strengths : [];
+                const weaknesses = Array.isArray(aiReport.weaknesses) ? aiReport.weaknesses : [];
+                aiReportContainer.innerHTML = `
+                    <div class="space-y-6">
+                        ${aiReport.ai_summary ? `
+                        <div>
+                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30 mb-3">AI Summary</p>
+                            <p class="text-[12px] text-white/70 leading-relaxed">${aiReport.ai_summary}</p>
+                        </div>` : ''}
+
+                        ${strengths.length > 0 ? `
+                        <div>
+                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-emerald-500/60 mb-3">Strengths</p>
+                            <div class="space-y-2">
+                                ${strengths.map(s => `
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                        <p class="text-[11px] text-white/60">${s}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>` : ''}
+
+                        ${weaknesses.length > 0 ? `
+                        <div>
+                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-red-400/60 mb-3">Areas for Improvement</p>
+                            <div class="space-y-2">
+                                ${weaknesses.map(w => `
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></div>
+                                        <p class="text-[11px] text-white/60">${w}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>` : ''}
+                    </div>
+                `;
+            } else {
+                aiReportContainer.innerHTML = `
+                    <div class="p-8 text-center opacity-20">
+                        <i data-lucide="brain-circuit" class="w-8 h-8 mx-auto mb-3"></i>
+                        <p class="text-[10px] font-mono uppercase tracking-widest">AI analysis not yet generated for this session</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 6. Transcript Logs
         const transcriptContainer = document.getElementById('transcript-container');
         const candidateName = node.candidate_name;
 
