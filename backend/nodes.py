@@ -98,6 +98,12 @@ async def delete_node(room_id: str):
     )
     return len(res) > 0
 
+async def purge_completed_nodes(user_id: str):
+    """Marks all COMPLETED nodes as archived for a specific user."""
+    if not db.client: return 0
+    res = await db.client.table("nodes").update({"is_deleted": True}).eq("user_id", user_id).eq("status", "COMPLETED").eq("is_deleted", False).execute()
+    return len(res.data) if res.data else 0
+
 async def get_node_stats(user_id: str = None):
     """Calculates usage telemetry since the last payment and current live/completed counts."""
     if not user_id:

@@ -704,13 +704,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ã¢â€â‚¬Ã¢â€â‚¬ FIX 2: Single endSession with full HR termination logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     window.endSession = async function() {
         if (sessionEnding) return;
+        sessionEnding = true; // Prevents multiple rapid clicks
         
         const isHR = (localRole === 'hr' || localRole === 'admin');
         
         if (isHR) {
-            showToast("INITIATING TERMINATION VOTE...", "info");
+            showToast("LEAVING SESSION...", "info");
         } else {
-            sessionEnding = true;
             showToast("DISCONNECTING...", "info");
         }
 
@@ -720,7 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { data: { session } } = await window.supabase.auth.getSession();
                 const authHeader = session ? `Bearer ${session.access_token}` : null;
-                const identity = window.LiveKitSession?.getIdentity?.();
+                const lkState = window.LiveKitSession?.getState?.();
+                const identity = lkState?.localIdentity || localName;
 
                 if (authHeader && currentRoomId && identity) {
                     const res = await fetch(`${API_BASE}/api/livekit/vote-end`, {
@@ -739,18 +740,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (result.status === 'COMPLETED') {
                         sessionEnding = true;
-                        showToast("CONSENSUS REACHED. ROOM DECOMMISSIONED.", "success");
+                        showToast("ROOM CLOSED. ALL PARTICIPANTS DISCONNECTED.", "success");
                         window.LiveKitSession?.disconnect();
                         setTimeout(() => {
                             window.location.href = 'dashboard.html';
                         }, 1000);
-                    } else if (result.status === 'VOTED') {
-                        showToast(`VOTE RECORDED (${result.votes}/${result.total_hrs} HRs). WAITING FOR CONSENSUS.`, "info");
+                    } else if (result.status === 'LEFT_ROOM') {
+                        sessionEnding = true;
+                        showToast("YOU HAVE LEFT THE ROOM.", "success");
+                        window.LiveKitSession?.disconnect();
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1000);
+                    } else {
+                        // Fallback in case of unexpected backend output
+                        console.warn("Unexpected backend status:", result);
+                        sessionEnding = true;
+                        window.LiveKitSession?.disconnect();
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1000);
                     }
+                } else {
+                    console.warn("Missing required auth, room, or identity. Forcing disconnect.", { authHeader: !!authHeader, currentRoomId, identity });
+                    sessionEnding = true;
+                    window.LiveKitSession?.disconnect();
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
                 }
             } catch (e) {
-                console.error("Failed to execute termination vote:", e);
-                showToast("TERMINATION FAILED", "error");
+                console.error("Failed to execute session end:", e);
+                // If it fails completely, we should still allow the HR to disconnect.
+                sessionEnding = true;
+                window.LiveKitSession?.disconnect();
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
             }
         } else {
             window.LiveKitSession?.disconnect();

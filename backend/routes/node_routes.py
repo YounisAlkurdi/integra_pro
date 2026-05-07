@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from ..auth import get_current_user, get_user_profile_data
-from ..nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats, delete_node
+from ..nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats, delete_node, purge_completed_nodes
 
 router = APIRouter(prefix="/api/nodes", tags=["Nodes"])
 
@@ -26,6 +26,12 @@ async def create_node(node: NodeProtocol, user: dict = Depends(get_current_user)
 async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
     return await get_active_streams(user_id=user["sub"])
+
+@router.delete("/purge/completed")
+async def purge_nodes(user: dict = Depends(get_current_user)):
+    """Bulk Soft-Delete Protocol for Completed Nodes."""
+    count = await purge_completed_nodes(user_id=user["sub"])
+    return {"status": "PURGED", "count": count}
 
 @router.delete("/{room_id}")
 async def remove_node(room_id: str, user: dict = Depends(get_current_user)):

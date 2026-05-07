@@ -59,6 +59,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
             </div>
         `).join('');
+
+        // Auto-load specific report if room ID is in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoRoomId = urlParams.get('room');
+        if (autoRoomId) {
+            // Slight delay to ensure DOM is ready
+            setTimeout(() => {
+                window.viewArchive(autoRoomId);
+                // Optionally clean up the URL to look cleaner after loading
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 100);
+        }
     }
 
     // --- 2. Decrypt & Visualize Report ---

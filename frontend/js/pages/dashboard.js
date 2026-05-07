@@ -256,9 +256,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function renderInterviews() {
         const list = document.getElementById('interviews-list');
+        const btnPurge = document.getElementById('btn-purge');
         const sessions = await fetchNodes();
 
         if (!sessions || sessions.length === 0) {
+            if (btnPurge) btnPurge.classList.add('hidden');
             list.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-20 opacity-20">
                     <i data-lucide="inbox" class="w-12 h-12 mb-4"></i>
@@ -269,8 +271,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        let hasCompleted = false;
+
         list.innerHTML = sessions.map(s => {
             const isCompleted = s.status === 'COMPLETED';
+            if (isCompleted) hasCompleted = true;
+            
             const statusClass = isCompleted 
                 ? 'bg-green-500/10 border-green-500/30 text-green-400' 
                 : 'bg-cyan-400/5 border-cyan-400/20 text-cyan-400';
@@ -279,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const hoverEffect = isCompleted ? '' : 'hover:bg-white/[0.03] hover:border-cyan-400/20';
 
             return `
-                <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl ${hoverEffect} transition-all duration-500 overflow-hidden reveal active ${isCompleted ? '' : 'cursor-pointer'} ${cardOpacity}">
+                <div id="stream-${s.room_id}" class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl ${hoverEffect} transition-all duration-500 overflow-hidden reveal active ${isCompleted ? '' : 'cursor-pointer'} ${cardOpacity}">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 ${isCompleted ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20'} rounded-full flex items-center justify-center font-mono text-xs border">
@@ -301,9 +307,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 <span class="px-3 py-1 ${statusClass} text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
                                 
                                 ${isCompleted ? `
-                                    <button class="px-4 py-2 bg-white/5 text-white/40 text-[8px] font-bold uppercase rounded-lg border border-white/10 cursor-not-allowed flex items-center gap-2">
-                                        <i data-lucide="file-text" class="w-3 h-3"></i> Archived
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="window.location.href='reports.html?room=${s.room_id}'" class="px-4 py-2 bg-cyan-400/10 hover:bg-cyan-400 text-cyan-400 hover:text-obsidian text-[8px] font-bold uppercase rounded-lg border border-cyan-400/20 hover:border-cyan-400 transition-all cursor-pointer flex items-center gap-2 hover-target">
+                                            <i data-lucide="file-bar-chart" class="w-3 h-3"></i> View Report
+                                        </button>
+                                        <button onclick="window.deleteStream('${s.room_id}')" class="p-2 bg-red-500/5 hover:bg-red-500/20 border border-transparent hover:border-red-500/20 rounded-lg text-white/20 hover:text-red-500 transition-all hover-target" title="Purge Stream">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
                                 ` : `
                                     <div class="flex items-center gap-1">
                                         <button onclick="copyLink('${s.room_id}')" class="p-2 hover:text-cyan-400 transition-all text-white/40" title="Copy Candidate Link"><i data-lucide="link" class="w-4 h-4"></i></button>
@@ -321,9 +332,81 @@ document.addEventListener("DOMContentLoaded", async () => {
             `;
         }).join('');
         
+        if (btnPurge) {
+            if (hasCompleted) btnPurge.classList.remove('hidden');
+            else btnPurge.classList.add('hidden');
+        }
+
         lucide.createIcons();
         init3DTilt();
     }
+
+    // --- Soft Delete / Archiving Functions ---
+    window.deleteStream = async (roomId) => {
+        try {
+            const card = document.getElementById(`stream-${roomId}`);
+            if (card) {
+                // UI Magic: scale down and fade out
+                card.style.transform = "scale(0.95)";
+                card.style.opacity = "0";
+                card.style.pointerEvents = "none";
+            }
+            
+            const auth = await getAuthHeader();
+            await fetch(window.INTEGRA_SETTINGS.endpoint(`/api/nodes/${roomId}`), {
+                method: 'DELETE',
+                headers: { 'Authorization': auth }
+            });
+            
+            setTimeout(() => {
+                if (card) card.remove();
+                showToast("Stream successfully purged from view.", "info");
+                // Check if we need to hide the purge button
+                if (!document.querySelector('.bg-green-500\\/10')) {
+                    document.getElementById('btn-purge')?.classList.add('hidden');
+                }
+            }, 500);
+        } catch (e) {
+            showToast("Failed to purge stream.", "error");
+            renderInterviews();
+        }
+    };
+
+    window.purgeCompleted = async () => {
+        const btn = document.getElementById('btn-purge');
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="loader" class="w-3 h-3 animate-spin"></i> Purging...`;
+            lucide.createIcons();
+        }
+        
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes/purge/completed'), {
+                method: 'DELETE',
+                headers: { 'Authorization': auth }
+            });
+            const data = await res.json();
+            
+            // Animate all completed out
+            const completedCards = document.querySelectorAll('.opacity-60'); // Assuming completed cards have this class
+            completedCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.transform = "scale(0.95) translateY(10px)";
+                    card.style.opacity = "0";
+                    card.style.pointerEvents = "none";
+                }, index * 100);
+            });
+            
+            setTimeout(() => {
+                showToast(`Purged ${data.count || completedCards.length} completed streams.`, "success");
+                renderInterviews();
+            }, completedCards.length * 100 + 500);
+            
+        } catch (e) {
+            showToast("Failed to purge history.", "error");
+            renderInterviews();
+        }
+    };
 
 
 

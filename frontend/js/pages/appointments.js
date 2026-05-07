@@ -247,7 +247,13 @@ class TemporalEngine {
         }
 
         div.className += ` ${statusClass}`;
-        div.onclick = () => window.location.href = `integra-session.html?room=${node.room_id}&role=hr`;
+        
+        // Smart Routing: Go to report if completed, otherwise join session
+        if (node.status === 'COMPLETED') {
+            div.onclick = () => window.location.href = `reports.html?room=${node.room_id}`;
+        } else {
+            div.onclick = () => window.location.href = `integra-session.html?room=${node.room_id}&role=hr`;
+        }
 
         const timeStr = nDate.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:true});
 
@@ -288,8 +294,12 @@ class TemporalEngine {
             const isCompleted = new Date(n.scheduled_at) < new Date();
             const isActive = n.status === 'active';
 
+            const targetUrl = n.status === 'COMPLETED' 
+                ? `reports.html?room=${n.room_id}` 
+                : `integra-session.html?room=${n.room_id}&role=hr`;
+
             return `
-                <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] cursor-pointer group" onclick="window.location.href='integra-session.html?room=${n.room_id}&role=hr'">
+                <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] cursor-pointer group" onclick="window.location.href='${targetUrl}'">
                     <div class="flex items-start justify-between mb-3">
                         <span class="text-xl font-mono font-black text-white/20 group-hover:text-cyan-400 transition-colors tabular-nums">${time}</span>
                         <div class="flex items-center gap-2">

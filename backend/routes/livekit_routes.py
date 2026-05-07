@@ -316,52 +316,62 @@ async def vote_to_end_session(req: EndVoteRequest, user: dict = Depends(get_curr
     livekit_url = os.getenv("LIVEKIT_URL", "").replace("wss://", "https://").replace("ws://", "http://")
 
     async with LiveKitAPI(livekit_url, api_key, api_secret) as lk_api:
-        # 1. Update this participant's metadata to reflect they want to end
-        p_info = await lk_api.room.get_participant(req.room_id, req.identity)
-        metadata = json.loads(p_info.metadata or "{}")
-        metadata["wants_to_end"] = True
-        
-        await lk_api.room.update_participant(
-            req.room_id, 
-            req.identity, 
-            metadata=json.dumps(metadata)
-        )
-
-        # 2. Check if all OTHER HRs also want to end
-        all_p = await lk_api.room.list_participants(ListParticipantsRequest(room=req.room_id))
-        
-        hr_votes = []
-        total_hrs = 0
-        
-        for p in all_p.participants:
+        hr_participants = []
+        try:
+            # Try to list participants using the request object first
             try:
-                m = json.loads(p.metadata or "{}")
-                if m.get("role") == "hr":
-                    total_hrs += 1
-                    if m.get("wants_to_end"):
-                        hr_votes.append(True)
-                    else:
-                        hr_votes.append(False)
+                all_p = await lk_api.room.list_participants(ListParticipantsRequest(room=req.room_id))
             except Exception:
-                # Fallback to string matching if JSON fails, but log it
-                if '"role":"hr"' in (p.metadata or ""):
-                    total_hrs += 1
-                    hr_votes.append('"wants_to_end":true' in (p.metadata or ""))
+                # Fallback to direct string argument
+                all_p = await lk_api.room.list_participants(req.room_id)
+            
+            for p in all_p.participants:
+                try:
+                    m = json.loads(p.metadata or "{}")
+                    if m.get("role") in ["hr", "admin"]:
+                        hr_participants.append(p)
+                except Exception:
+                    # Fallback to string matching if JSON fails
+                    if '"role":"hr"' in (p.metadata or "") or '"role":"admin"' in (p.metadata or ""):
+                        hr_participants.append(p)
+        except Exception as e:
+            print(f"CRITICAL: Failed to list participants: {e}")
+            # If we absolutely cannot check participants, assume we must close the room safely.
 
-        consensus_reached = all(hr_votes) if total_hrs > 0 else True
+        # If there's more than 1 HR, just remove this specific HR from the room
+        if len(hr_participants) > 1:
+            try:
+                # Try removing with a constructed identity object if possible
+                from livekit.api import RoomParticipantIdentity
+                await lk_api.room.remove_participant(RoomParticipantIdentity(room=req.room_id, identity=req.identity))
+            except Exception as e1:
+                try:
+                    # Fallback to string args
+                    await lk_api.room.remove_participant(req.room_id, req.identity)
+                except Exception as e2:
+                    print(f"Failed to remove participant: {e2}")
+            
+            return {"status": "LEFT_ROOM", "consensus": False, "total_hrs": len(hr_participants)}
         
-        if consensus_reached:
-            # Finalize Session
+        # If this is the ONLY HR left, finalize and close the room completely.
+        try:
             await db.client.table("nodes").update({"status": "COMPLETED"}).eq("room_id", req.room_id).execute()
-            await lk_api.room.delete_room(DeleteRoomRequest(room=req.room_id))
-            return {"status": "COMPLETED", "consensus": True}
-        
-        return {
-            "status": "VOTED", 
-            "consensus": False, 
-            "votes": sum(1 for v in hr_votes if v), 
-            "total_hrs": total_hrs
-        }
+        except Exception as e:
+            print(f"Failed to update node to COMPLETED: {e}")
+            
+        try:
+            try:
+                from livekit.protocol.room import DeleteRoomRequest as ProtoDeleteRoomRequest
+                await lk_api.room.delete_room(ProtoDeleteRoomRequest(room=req.room_id))
+            except ImportError:
+                await lk_api.room.delete_room(DeleteRoomRequest(room=req.room_id))
+        except Exception:
+            try:
+                await lk_api.room.delete_room(req.room_id)
+            except Exception as e:
+                print(f"Failed to delete room: {e}")
+                
+        return {"status": "COMPLETED", "consensus": True}
 
 
 @router.post("/complete/{room_id}")
