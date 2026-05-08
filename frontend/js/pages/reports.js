@@ -151,8 +151,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById('rep-date').innerText = `TIMESTAMP: ${new Date(node.created_at).toLocaleString()}`;
             document.getElementById('report-id-display').innerText = `NODE-${nodeId.substring(0, 8).toUpperCase()}`;
 
+            // Get auth token for backend requests
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             // Neural Visualization
-            visualizeNeuralData(node, forensicReport, joinReq, chatLogs);
+            visualizeNeuralData(node, forensicReport, joinReq, chatLogs, token);
             showToast("Archive Decrypted Successfully", "success");
         } catch (e) {
             console.error("Neural Retrieval Failed:", e);
@@ -162,7 +166,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let forensicChartInstance = null;
 
-    async function visualizeNeuralData(node, forensicReport, joinReq, chatLogs) {
+    async function visualizeNeuralData(node, forensicReport, joinReq, chatLogs, token) {
         // 1. Data Mapping (Strict mapping - no misleading fallbacks)
         const focusScore = forensicReport?.focus_score_avg;
         const threatLevel = forensicReport?.threat_level_final;
@@ -233,10 +237,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // 4. AI Summary Section (Enhanced)
         const aiContainer = document.getElementById('ai-report-container');
-        if (forensicReport && forensicReport.ai_summary) {
+        // Forensic report URL is actually in join_requests table
+        const forensicImageUrl = joinReq?.forensic_report_url;
+
+        if (forensicReport && (forensicReport.ai_summary || forensicImageUrl)) {
             const verdict = nlp_results_verdict(aiProb, integrityRisk);
-            aiContainer.innerHTML = `
-                <div class="space-y-6">
+            
+            let htmlContent = '<div class="space-y-6">';
+            
+            if (forensicReport.ai_summary) {
+                htmlContent += `
                     <p class="text-white/80 italic text-sm border-l-2 border-cyan-400 pl-4 py-1">"${forensicReport.ai_summary}"</p>
                     <div class="grid grid-cols-1 gap-3">
                         <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
@@ -254,8 +264,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
+            
+            htmlContent += '</div>';
+            aiContainer.innerHTML = htmlContent;
         } else {
             aiContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-20">
@@ -265,17 +278,71 @@ document.addEventListener("DOMContentLoaded", async () => {
             `;
         }
 
-        // 5. Video Evidence
+        // 5. Video & Forensic Image Evidence
         const videoEl = document.getElementById('verification-video');
         const videoPlaceholder = document.getElementById('video-placeholder');
-        if (joinReq && joinReq.verification_video_path) {
-            videoEl.src = `https://ljnclcivnbhjjofsfyzm.supabase.co/storage/v1/object/public/verifications/${joinReq.verification_video_path}`;
-            videoEl.classList.remove('hidden');
-            videoPlaceholder.classList.add('hidden');
+        const forensicImgContainer = document.getElementById('forensic-image-container');
+
+        // Handle Forensic Image (Restored to Visual Evidence section)
+        if (forensicImageUrl) {
+            forensicImgContainer.innerHTML = `
+                <div class="relative group/img overflow-hidden rounded-2xl border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                    <img src="${forensicImageUrl}" alt="Forensic Analysis" class="w-full h-auto object-cover transition-transform duration-700 group-hover/img:scale-110">
+                    <div class="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-60"></div>
+                    <div class="absolute bottom-4 left-4 flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                        <span class="text-[8px] font-mono text-white/60 uppercase tracking-widest">Visual Evidence: Layer 01</span>
+                    </div>
+                </div>
+            `;
+            forensicImgContainer.classList.remove('hidden');
         } else {
+            forensicImgContainer.classList.add('hidden');
+            forensicImgContainer.innerHTML = '';
+        }
+        
+        // Prevents redundant requests if already loaded or currently loading for this node
+        if (joinReq && joinReq.verification_video_path) {
+            if (videoEl.dataset.loadedNode === node.room_id || videoEl.dataset.loading === node.room_id) {
+                return; 
+            }
+
+            videoEl.dataset.loading = node.room_id; // Set loading lock
+
+            try {
+                const sigRes = await fetch(
+                    `${API_BASE}/api/nodes/signed-video-url?video_path=${encodeURIComponent(joinReq.verification_video_path)}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                if (sigRes.ok) {
+                    const { signed_url } = await sigRes.json();
+                    if (videoEl.dataset.loading === node.room_id) { // Verify node hasn't changed during fetch
+                        videoEl.src = signed_url;
+                        videoEl.load();
+                        videoEl.dataset.loadedNode = node.room_id;
+                        videoEl.classList.remove('hidden');
+                        videoPlaceholder.classList.add('hidden');
+                    }
+                } else {
+                    videoEl.classList.add('hidden');
+                    videoPlaceholder.classList.remove('hidden');
+                    videoEl.dataset.loadedNode = "";
+                }
+            } catch (e) {
+                console.error("Video retrieval failed:", e);
+                videoEl.classList.add('hidden');
+                videoPlaceholder.classList.remove('hidden');
+                videoEl.dataset.loadedNode = "";
+            } finally {
+                delete videoEl.dataset.loading; // Remove loading lock
+            }
+        } else {
+            videoEl.src = "";
             videoEl.classList.add('hidden');
             videoPlaceholder.classList.remove('hidden');
+            videoEl.dataset.loadedNode = "";
         }
+
 
         // 6. Neural Fingerprint Generation (WOW element)
         generateNeuralFingerprint(node.room_id, forensicReport?.neural_signature);

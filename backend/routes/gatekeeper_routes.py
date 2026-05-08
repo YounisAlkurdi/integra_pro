@@ -10,9 +10,17 @@ from ..services.database_service import db
 
 router = APIRouter(tags=["Gatekeeper"])
 
-# Initialize the detector once to save memory and time
-print("🛡️ Gatekeeper: Initializing Deepfake Verification Engine...")
-detector = FullDeepfakeDetector()
+# Global detector instance for lazy loading
+_detector = None
+
+def get_detector():
+    """Lazy loader for the deepfake detector to prevent startup crashes on Windows."""
+    global _detector
+    if _detector is None:
+        print("🛡️ Gatekeeper: Initializing Deepfake Verification Engine (Lazy Load)...")
+        _detector = FullDeepfakeDetector()
+    return _detector
+
 
 async def process_video_and_update_db(request_id: str, video_path: str):
     """
@@ -28,7 +36,9 @@ async def process_video_and_update_db(request_id: str, video_path: str):
         
         # 2. Run Analysis (Heavy CPU task, run in thread)
         try:
+            detector = get_detector()
             results = await asyncio.to_thread(detector.analyze, video_path)
+
         except Exception as e:
             results = {"error": "SYSTEM_OFFLINE", "message": str(e)}
         

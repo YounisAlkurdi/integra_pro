@@ -1546,9 +1546,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[Forensics] Failed to get session token:", err);
         }
 
-        // 2. Build WebSocket URL with Token
+        // 2. Build WebSocket URL with Token and Room ID
         const wsUrl = new URL(window.APP_CONFIG.wsUrl);
         if (token) wsUrl.searchParams.set('token', token);
+        if (currentRoomId) wsUrl.searchParams.set('room_id', currentRoomId);
 
         // 3. Initialize WebSocket
         forensicWS = new WebSocket(wsUrl.toString());
