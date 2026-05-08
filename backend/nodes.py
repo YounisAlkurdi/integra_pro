@@ -159,14 +159,45 @@ async def get_signed_video_url(video_path: str, user_id: str):
         return None
 
     try:
+        # Sanitization: If video_path is a full URL, extract the relative path
+        # Pattern: .../public/verification_videos/ROOM_ID/FILE.mp4
+        if "verification_videos/" in video_path:
+            video_path = video_path.split("verification_videos/")[-1]
+
         # Security: Extract room_id from path (format: "room-uuid/filename.mp4")
+        # Now video_path is guaranteed to be "room-uuid/filename.mp4"
         room_id_from_path = video_path.split('/')[0]
 
+        # Validate that room_id_from_path is a valid UUID to avoid 22P02 error
+        try:
+            target_id = uuid.UUID(room_id_from_path)
+        except ValueError:
+            print(f"❌ [INTEGRA_SECURITY] Invalid ID format in path: {room_id_from_path}")
+            return None
+
+        # 1. Try to find directly as a Room ID
         ownership_check = await db.select(
             table="nodes",
             filters={"room_id": room_id_from_path, "user_id": user_id},
             limit=1
         )
+        
+        # 2. If not found, it might be a Join Request ID (Verification Video)
+        if not ownership_check:
+            jr_check = await db.select(
+                table="join_requests",
+                filters={"id": room_id_from_path},
+                limit=1
+            )
+            if jr_check:
+                actual_room_id = jr_check[0].get("room_id")
+                # Now check ownership of the parent room
+                ownership_check = await db.select(
+                    table="nodes",
+                    filters={"room_id": actual_room_id, "user_id": user_id},
+                    limit=1
+                )
+
         if not ownership_check:
             print(f"🚫 [INTEGRA_SECURITY] Unauthorized video access by user {user_id} for {video_path}")
             return None
