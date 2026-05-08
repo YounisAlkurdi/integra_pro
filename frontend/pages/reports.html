@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/reports.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-obsidian text-white relative min-h-screen">
     
@@ -37,6 +38,9 @@
         <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-400/20 blur-[120px] rounded-full mix-blend-screen animate-pulse-slow"></div>
         <div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-violet-400/20 blur-[150px] rounded-full mix-blend-screen animate-pulse-slow" style="animation-delay: 2s;"></div>
     </div>
+
+    <!-- Premium Noise Overlay -->
+    <div class="bg-noise"></div>
 
     <!-- Interactive Cursor -->
     <div class="custom-cursor hidden md:block" id="cursor"></div>
@@ -118,17 +122,24 @@
         <div class="max-w-7xl mx-auto">
             
             <!-- Page Header -->
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6 relative">
+                <div class="absolute -top-10 left-0 text-[10px] font-mono text-white/10 uppercase tracking-[0.5em] pointer-events-none">
+                    CONFIDENTIAL // INTEGRA_FORENSIC_PROTOCOL_v4.2
+                </div>
                 <div>
-                    <h1 class="text-4xl font-black uppercase tracking-tighter italic">Neural Archive <span class="text-cyan-400">Reports</span></h1>
-                    <p class="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mt-2">AI-Generated Intelligence Briefings & Telemetry</p>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="px-2 py-1 bg-cyan-400/10 border border-cyan-400/20 rounded text-[8px] font-mono text-cyan-400 uppercase tracking-widest">Classification: INTERNAL USE ONLY</div>
+                        <div class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[8px] font-mono text-white/30 uppercase tracking-widest">ARCHIVE ID: <span id="report-id-display" class="text-white/60">PRT-0000</span></div>
+                    </div>
+                    <h1 class="text-4xl font-black uppercase tracking-tighter italic">Forensic <span class="text-cyan-400">Intelligence</span></h1>
+                    <p class="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mt-2">Candidate Evaluation & Neural Telemetry Report</p>
                 </div>
                 <div id="report-actions" class="hidden w-full md:w-auto gap-3 flex-col md:flex-row flex-wrap animate-in fade-in slide-in-from-right-4 duration-500">
                     <button class="w-full md:w-auto justify-center px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2" onclick="window.print()">
-                        <i data-lucide="printer" class="w-4 h-4"></i> Export Archive
+                        <i data-lucide="printer" class="w-4 h-4"></i> Export Briefing
                     </button>
                     <button class="w-full md:w-auto justify-center px-6 py-4 bg-cyan-400 text-obsidian rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white hover:shadow-[0_0_40px_rgba(34,211,238,0.2)] transition-all flex items-center gap-2" id="btn-pdf">
-                        <i data-lucide="file-text" class="w-4 h-4"></i> Download Protocol
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> Validate Protocol
                     </button>
                 </div>
             </div>
@@ -136,177 +147,275 @@
             <div class="grid lg:grid-cols-12 gap-8">
                 <!-- Session Sidebar -->
                 <div class="lg:col-span-3">
-                    <div class="glass-panel rounded-[2rem] border border-white/5 overflow-hidden">
+                    <div class="glass-panel rounded-[2rem] border border-white/5 overflow-hidden sticky top-8">
                         <div class="p-6 md:p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                            <h3 class="text-[10px] font-mono text-white/40 uppercase tracking-widest">Recent Nodes</h3>
+                            <h3 class="text-[10px] font-mono text-white/40 uppercase tracking-widest">Candidate Nodes</h3>
                             <button onclick="window.location.reload()" class="hover:rotate-180 transition-transform duration-700">
-                                <i data-lucide="refresh-ccw" class="w-3 h-3 text-white/20"></i>
+                                <i data-lucide="rotate-cw" class="w-3 h-3 text-white/20"></i>
                             </button>
                         </div>
-                        <div class="divide-y divide-white/5 max-h-[30vh] lg:max-h-[60vh] overflow-y-auto custom-scrollbar" id="interviews-sidebar-list">
+                        <div class="divide-y divide-white/5 max-h-[30vh] lg:max-h-[70vh] overflow-y-auto custom-scrollbar" id="interviews-sidebar-list">
                             <!-- Populated via JS -->
-                            <div class="p-10 text-center opacity-40">
-                                <div class="animate-spin w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                <p class="text-[9px] font-mono uppercase tracking-widest">Accessing Data...</p>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Analysis Terminal -->
                 <div class="lg:col-span-9">
-                    <div id="empty-report" class="glass-panel h-[400px] md:h-[600px] rounded-3xl md:rounded-[3rem] border border-white/5 flex flex-col items-center justify-center text-center p-6 md:p-12">
-                        <div class="w-16 h-16 md:w-24 md:h-24 bg-cyan-400/5 rounded-full flex items-center justify-center mb-6 md:mb-8 border border-cyan-400/10 animate-pulse">
-                            <i data-lucide="shield" class="w-8 h-8 md:w-10 md:h-10 text-cyan-400/20"></i>
+                    <div id="empty-report" class="glass-panel h-[600px] rounded-[3rem] border border-white/5 flex flex-col items-center justify-center text-center p-12">
+                        <div class="w-24 h-24 bg-cyan-400/5 rounded-full flex items-center justify-center mb-8 border border-cyan-400/10 animate-pulse">
+                            <i data-lucide="fingerprint" class="w-10 h-10 text-cyan-400/20"></i>
                         </div>
-                        <h3 class="text-xl md:text-2xl font-black uppercase italic tracking-tighter">Initialize Analysis Buffer</h3>
-                        <p class="text-[9px] md:text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mt-3 max-w-sm leading-relaxed">System standby. Select a recorded node from the encrypted archive to begin deep analysis protocol.</p>
+                        <h3 class="text-2xl font-black uppercase italic tracking-tighter">System Ready for Retrieval</h3>
+                        <p class="text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] mt-3 max-w-sm leading-relaxed">Please select a neural node from the archive to generate a comprehensive intelligence briefing.</p>
                     </div>
 
-                    <div id="report-detail" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                        <!-- Summary Header Card -->
-                        <div class="glass-panel p-6 md:p-10 rounded-3xl md:rounded-[3rem] border border-white/5 relative overflow-hidden group hover:border-cyan-400/20 transition-all duration-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] hover:shadow-[0_0_60px_rgba(34,211,238,0.1)]">
-                            <div class="absolute top-0 right-0 p-6 md:p-10 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <i data-lucide="cpu" class="w-24 h-24 md:w-40 md:h-40"></i>
+                    <div id="report-detail" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-20">
+                        
+                        <!-- 1. Executive Identification Card -->
+                        <div class="glass-panel p-8 md:p-12 rounded-[3.5rem] border border-white/5 relative overflow-hidden group shadow-2xl">
+                            <div class="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+                                <i data-lucide="component" class="w-64 h-64"></i>
                             </div>
                             
-                            <div class="flex flex-col md:flex-row items-start justify-between relative z-10 mb-8 md:mb-12 gap-6">
-                                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-8">
-                                    <div id="rep-avatar" class="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center text-2xl md:text-4xl font-black text-obsidian shadow-[0_20px_50px_rgba(34,211,238,0.2)]">?</div>
+                            <div class="flex flex-col md:flex-row items-start justify-between relative z-10 mb-12 gap-8">
+                                <div class="flex flex-col sm:flex-row items-center gap-8 text-center sm:text-left">
+                                    <div id="rep-avatar" class="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-4xl md:text-5xl font-black text-obsidian shadow-[0_20px_60px_rgba(34,211,238,0.3)]">?</div>
                                     <div>
-                                        <h2 id="rep-name" class="text-2xl md:text-4xl font-black tracking-tighter uppercase italic leading-none mb-2 md:mb-3">Candidate Name</h2>
-                                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:gap-4">
-                                            <p id="rep-position" class="text-[9px] md:text-[11px] font-mono text-cyan-400 uppercase tracking-[.2em] bg-cyan-400/10 px-3 py-1 rounded-md">Position • Department</p>
-                                            <p id="rep-date" class="text-[9px] md:text-[10px] font-mono text-white/30 uppercase tracking-widest">Timestamp: --</p>
+                                        <div class="flex items-center gap-3 mb-3 justify-center sm:justify-start">
+                                            <span class="px-2 py-0.5 bg-cyan-400/10 border border-cyan-400/20 rounded text-[9px] font-mono text-cyan-400 uppercase tracking-widest">Forensic Node Active</span>
+                                            <span id="rep-date" class="text-[9px] font-mono text-white/30 uppercase tracking-widest">TIMESTAMP: 2024.05.08</span>
                                         </div>
+                                        <h2 id="rep-name" class="text-3xl md:text-5xl font-black tracking-tighter uppercase italic leading-none mb-4">Candidate Name</h2>
+                                        <p id="rep-position" class="text-xs md:text-sm font-mono text-white/40 uppercase tracking-[.3em]">Applied Position • Forensic Audit</p>
                                     </div>
                                 </div>
-                                <div id="rep-risk-badge" class="w-full md:w-auto text-center px-6 md:px-8 py-3 rounded-2xl border border-white/10 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] bg-white/5">-- Risk</div>
+                                <div class="w-full md:w-auto flex flex-col items-center md:items-end gap-4">
+                                    <div id="rep-risk-badge" class="px-10 py-4 rounded-2xl border border-white/10 text-[11px] font-black uppercase tracking-[0.4em] bg-white/5 transition-all duration-500">Scanning Metrics...</div>
+                                    <div class="flex gap-2">
+                                        <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                                        <span class="text-[8px] font-mono text-cyan-400/60 uppercase tracking-widest">Signal Integrity Verified</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                                <div class="p-4 md:p-8 bg-white/[0.02] border border-white/5 rounded-2xl md:rounded-3xl hover:border-cyan-400/30 transition-all duration-500">
-                                    <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2 md:mb-3">Overall Sync</p>
-                                    <div class="flex items-baseline gap-1 md:gap-2">
-                                        <span id="rep-overall" class="text-3xl md:text-5xl font-black text-white tracking-tighter">0</span>
-                                        <span class="text-[8px] md:text-[10px] font-mono text-white/20">/100</span>
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.04] transition-colors group/card">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-4">Overall Integrity</p>
+                                    <div class="flex items-baseline gap-2">
+                                        <span id="rep-overall" class="text-4xl md:text-6xl font-black text-white tracking-tighter group-hover/card:text-cyan-400 transition-colors">0</span>
+                                        <span class="text-xs font-mono text-white/20">/100</span>
                                     </div>
                                 </div>
-                                <div class="p-4 md:p-8 bg-white/[0.02] border border-white/5 rounded-2xl md:rounded-3xl">
-                                    <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2 md:mb-3">Neural Confidence</p>
-                                    <span id="rep-confidence" class="text-3xl md:text-5xl font-black tracking-tighter text-cyan-400">0%</span>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.04] transition-colors">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-4">Avg Focus</p>
+                                    <span id="rep-focus" class="text-4xl md:text-6xl font-black tracking-tighter text-emerald-400">0%</span>
                                 </div>
-                                <div class="p-4 md:p-8 bg-white/[0.02] border border-white/5 rounded-2xl md:rounded-3xl">
-                                    <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2 md:mb-3">Integrity Risk</p>
-                                    <span id="rep-fraud" class="text-3xl md:text-5xl font-black tracking-tighter text-red-500">0%</span>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.04] transition-colors">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-4">Threat Level</p>
+                                    <span id="rep-threat" class="text-2xl md:text-4xl font-black tracking-tighter text-white uppercase italic">LOW</span>
                                 </div>
-                                <div class="p-4 md:p-8 bg-white/[0.02] border border-white/5 rounded-2xl md:rounded-3xl">
-                                    <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2 md:mb-3">Gaze Stability</p>
-                                    <span id="rep-eye" class="text-3xl md:text-5xl font-black tracking-tighter text-blue-400">0%</span>
+                                <div class="p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.04] transition-colors">
+                                    <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-4">Neural Score</p>
+                                    <span id="rep-nlp" class="text-4xl md:text-6xl font-black tracking-tighter text-violet-400">0%</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid lg:grid-cols-2 gap-6 md:gap-8">
-                            <!-- Neural Metrics -->
-                            <div class="glass-panel p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] border border-white/5 hover:border-cyan-400/20 transition-all duration-700">
-                                <div class="flex items-center gap-3 md:gap-4 mb-8 md:mb-12">
-                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                                        <i data-lucide="activity" class="text-cyan-400 w-4 h-4 md:w-5 md:h-5"></i>
-                                    </div>
-                                    <h3 class="text-lg md:text-xl font-black uppercase italic tracking-tighter">Detailed Analysis</h3>
+                        <!-- 1.5 Forensic Components Breakdown -->
+                        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <div class="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-cyan-400/30 transition-colors">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Lexical Density</span>
+                                    <span id="score-lexical" class="text-[10px] font-bold text-cyan-400">0%</span>
                                 </div>
-                                <div class="space-y-10" id="metrics-container">
-                                    <!-- Populated via JS -->
+                                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div id="bar-lexical" class="h-full bg-cyan-400 transition-all duration-1000 shadow-[0_0_10px_#22d3ee]" style="width: 0%"></div>
                                 </div>
                             </div>
-
-                            <!-- Forensic & Video Evidence -->
-                            <div class="glass-panel p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] border border-white/5 bg-cyan-400/[0.01] hover:border-cyan-400/20 transition-all duration-700">
-                                <div class="flex items-center gap-3 md:gap-4 mb-8 md:mb-12">
-                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center">
-                                        <i data-lucide="video" class="text-cyan-400 w-4 h-4 md:w-5 md:h-5"></i>
-                                    </div>
-                                    <h3 class="text-lg md:text-xl font-black uppercase italic tracking-tighter">Verification Evidence</h3>
+                            <div class="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-violet-400/30 transition-colors">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Syntactic Flow</span>
+                                    <span id="score-syntactic" class="text-[10px] font-bold text-violet-400">0%</span>
                                 </div>
-                                
-                                <div id="verification-evidence-container" class="space-y-6 md:space-y-8">
-                                    <!-- Video Preview -->
-                                    <div class="aspect-video rounded-2xl md:rounded-[2rem] bg-obsidian border border-white/5 overflow-hidden relative group">
-                                        <video id="verification-video" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" controls></video>
-                                        <div id="video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-obsidian/80">
-                                            <i data-lucide="video-off" class="w-8 h-8 md:w-12 md:h-12 text-white/10 mb-2 md:mb-4"></i>
-                                            <p class="text-[9px] md:text-[10px] font-mono text-white/20 uppercase tracking-widest">No visual record</p>
+                                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div id="bar-syntactic" class="h-full bg-violet-400 transition-all duration-1000 shadow-[0_0_10px_#a78bfa]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-emerald-400/30 transition-colors">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Metadata Integrity</span>
+                                    <span id="score-metadata" class="text-[10px] font-bold text-emerald-400">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div id="bar-metadata" class="h-full bg-emerald-400 transition-all duration-1000 shadow-[0_0_10px_#34d399]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-amber-400/30 transition-colors">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Syntax Variance</span>
+                                    <span id="score-variance" class="text-[10px] font-bold text-amber-400">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div id="bar-variance" class="h-full bg-amber-400 transition-all duration-1000 shadow-[0_0_10px_#fbbf24]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-red-400/30 transition-colors">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Consistency</span>
+                                    <span id="score-consistency" class="text-[10px] font-bold text-red-400">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div id="bar-consistency" class="h-full bg-red-400 transition-all duration-1000 shadow-[0_0_10px_#f87171]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 1.7 Neural Fingerprint Scanner -->
+                        <div class="glass-panel p-10 rounded-[3.5rem] border border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent overflow-hidden relative">
+                            <div class="flex flex-col md:flex-row items-center gap-12 relative z-10">
+                                <div class="w-full md:w-64 h-64 bg-obsidian rounded-[2.5rem] border border-white/10 relative overflow-hidden group flex items-center justify-center">
+                                    <div id="neural-fingerprint" class="w-full h-full opacity-40 group-hover:opacity-80 transition-opacity">
+                                        <!-- Animated Canvas/SVG via JS -->
+                                    </div>
+                                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div class="w-48 h-48 border border-cyan-400/20 rounded-full animate-ping-slow"></div>
+                                        <div class="w-40 h-40 border border-cyan-400/10 rounded-full animate-ping-slower"></div>
+                                    </div>
+                                    <div class="absolute bottom-4 text-[8px] font-mono text-cyan-400 uppercase tracking-widest animate-pulse">Scanning Signature...</div>
+                                </div>
+                                <div class="flex-1 space-y-6">
+                                    <div>
+                                        <h4 class="text-2xl font-black uppercase italic tracking-tighter mb-2">Neural <span class="text-cyan-400">Fingerprint</span> Analysis</h4>
+                                        <p class="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em] leading-relaxed">Unique biometric signature derived from linguistic cadence, gaze micro-movements, and emotional response latency.</p>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                            <p class="text-[8px] font-mono text-white/20 uppercase tracking-widest mb-1">Signature Hash</p>
+                                            <p class="text-[10px] font-mono text-cyan-400 truncate" id="neural-sig-hash">GENERATING_HASH_...</p>
+                                        </div>
+                                        <div class="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                            <p class="text-[8px] font-mono text-white/20 uppercase tracking-widest mb-1">Verification Confidence</p>
+                                            <p class="text-[10px] font-mono text-emerald-400">98.4% HIGH</p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
 
-                                    <!-- Deepfake Score -->
-                                    <div class="grid grid-cols-2 gap-3 md:gap-4">
-                                        <div class="p-4 md:p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
-                                            <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1 md:mb-2">Deepfake Index</p>
-                                            <div class="flex items-baseline gap-1 md:gap-2">
-                                                <span id="forensic-score" class="text-2xl md:text-3xl font-black tracking-tighter">--</span>
-                                                <span class="text-[9px] md:text-[10px] font-mono text-white/20">/100</span>
+                        <!-- 2. The Intelligence Briefing (Main Content) -->
+                        <div class="grid lg:grid-cols-12 gap-8">
+                            <!-- Left: Behavioral Charts & Summary (7 Cols) -->
+                            <div class="lg:col-span-8 space-y-8">
+                                <!-- Forensic Timeline Chart -->
+                                <div class="glass-panel p-10 rounded-[3.5rem] border border-white/5">
+                                    <div class="flex items-center justify-between mb-8">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center">
+                                                <i data-lucide="activity" class="text-cyan-400 w-5 h-5"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-xl font-black uppercase italic tracking-tighter">Forensic Telemetry Timeline</h4>
+                                                <p class="text-[8px] font-mono text-white/30 uppercase tracking-widest">Focus vs Threat Correlation</p>
                                             </div>
                                         </div>
-                                        <div class="p-4 md:p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
-                                            <p class="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1 md:mb-2">Neural Status</p>
-                                            <span id="forensic-status" class="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/40 italic">STABLE</span>
+                                    </div>
+                                    <div class="h-[300px] w-full">
+                                        <canvas id="forensicChart"></canvas>
+                                    </div>
+                                </div>
+
+                                <div class="grid md:grid-cols-2 gap-8">
+                                    <!-- AI Summary -->
+                                    <div class="glass-panel p-10 rounded-[3rem] border border-white/5">
+                                        <div class="flex items-center gap-4 mb-8">
+                                            <div class="w-10 h-10 rounded-xl bg-violet-400/10 flex items-center justify-center">
+                                                <i data-lucide="brain" class="text-violet-400 w-5 h-5"></i>
+                                            </div>
+                                            <h4 class="text-lg font-black uppercase italic tracking-tighter">AI Assessment</h4>
+                                        </div>
+                                        <div id="ai-report-container" class="text-[12px] text-white/60 leading-relaxed space-y-4">
+                                            <!-- AI content -->
                                         </div>
                                     </div>
 
-                                    <!-- Forensic Brief -->
-                                    <div class="p-8 bg-cyan-400/5 border border-cyan-400/10 rounded-3xl">
-                                        <h4 class="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <i data-lucide="scroll-text" class="w-3 h-3"></i> AI Forensic Brief
-                                        </h4>
-                                    <div id="forensic-brief" class="text-[11px] font-mono text-white/50 leading-relaxed uppercase tracking-tight">
-                                        Analysis of biometric signals and neural patterns pending selection.
+                                    <!-- Visual Audit Snapshots -->
+                                    <div class="glass-panel p-10 rounded-[3rem] border border-white/5 bg-white/[0.01]">
+                                        <div class="flex items-center gap-4 mb-8">
+                                            <div class="w-10 h-10 rounded-xl bg-emerald-400/10 flex items-center justify-center">
+                                                <i data-lucide="camera" class="text-emerald-400 w-5 h-5"></i>
+                                            </div>
+                                            <h4 class="text-lg font-black uppercase italic tracking-tighter">Visual Evidence</h4>
+                                        </div>
+                                        <div class="aspect-video rounded-3xl bg-black border border-white/5 overflow-hidden relative group">
+                                            <video id="verification-video" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" controls></video>
+                                            <div id="video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-obsidian/80">
+                                                <i data-lucide="shield-off" class="w-12 h-12 text-white/5 mb-4"></i>
+                                                <p class="text-[10px] font-mono text-white/20 uppercase tracking-[0.3em]">No Stream Evidence</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex justify-between items-center text-[9px] font-mono text-white/30 uppercase tracking-widest">
+                                            <span>Encryption: AES-256</span>
+                                            <span>Status: VERIFIED</span>
+                                        </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Formal Transcript Log (4 Cols) -->
+                            <div class="lg:col-span-4 h-full">
+                                <div class="glass-panel rounded-[3.5rem] border border-white/5 flex flex-col h-full bg-obsidian/40 backdrop-blur-3xl overflow-hidden shadow-2xl relative">
+                                    <!-- Header -->
+                                    <div class="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 h-12 rounded-2xl bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
+                                                <i data-lucide="scroll-text" class="text-cyan-400 w-6 h-6"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-lg font-black uppercase italic tracking-tighter">Session Log</h3>
+                                                <p class="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Linguistic Forensic Stream</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Log Area -->
+                                    <div id="transcript-container" class="flex-1 min-h-[500px] max-h-[800px] overflow-y-auto custom-scrollbar p-8 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                                        <!-- Messages -->
+                                    </div>
+
+                                    <!-- Footer Info -->
+                                    <div class="p-6 border-t border-white/5 bg-white/[0.02] flex items-center justify-center">
+                                        <p class="text-[8px] font-mono text-white/20 uppercase tracking-[0.3em]">End of Forensic Stream</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- ✅ AI Interview Report Panel -->
-                        <div class="glass-panel p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] border border-white/5 hover:border-purple-400/20 transition-all duration-700">
-                            <div class="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
-                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-purple-400/10 flex items-center justify-center">
-                                    <i data-lucide="brain-circuit" class="text-purple-400 w-4 h-4 md:w-5 md:h-5"></i>
+                        <!-- 3. Technical Metadata Footer -->
+                        <div class="glass-panel p-10 rounded-[3rem] border border-white/5 bg-white/[0.01]">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 font-mono text-[9px]">
+                                <div class="space-y-3">
+                                    <p class="text-white/20 uppercase tracking-widest border-b border-white/5 pb-1">Biometric Hash</p>
+                                    <p class="text-white/40 break-all" id="rep-hash">0x8F2A...B9C1</p>
                                 </div>
-                                <h3 class="text-lg md:text-xl font-black uppercase italic tracking-tighter">AI Analysis <span class="text-white/20 text-sm">Report</span></h3>
-                            </div>
-                            <div id="ai-report-container">
-                                <!-- Populated via JS -->
-                                <div class="p-8 text-center opacity-20">
-                                    <i data-lucide="brain-circuit" class="w-8 h-8 mx-auto mb-3"></i>
-                                    <p class="text-[10px] font-mono uppercase tracking-widest">Select a node to view AI analysis</p>
+                                <div class="space-y-3">
+                                    <p class="text-white/20 uppercase tracking-widest border-b border-white/5 pb-1">Network Stability</p>
+                                    <div class="flex justify-between"><span>Latency Avg:</span> <span class="text-cyan-400">120ms</span></div>
+                                    <div class="flex justify-between"><span>Loss Rate:</span> <span class="text-emerald-500">0.01%</span></div>
+                                </div>
+                                <div class="space-y-3">
+                                    <p class="text-white/20 uppercase tracking-widest border-b border-white/5 pb-1">Node Analytics</p>
+                                    <div class="flex justify-between"><span>Gaze Delta:</span> <span class="text-white/60">0.024</span></div>
+                                    <div class="flex justify-between"><span>Pose Drift:</span> <span class="text-white/60">Low</span></div>
+                                </div>
+                                <div class="space-y-3">
+                                    <p class="text-white/20 uppercase tracking-widest border-b border-white/5 pb-1">Validation</p>
+                                    <div class="flex justify-between"><span>SSL/TLS:</span> <span class="text-emerald-500">Secure</span></div>
+                                    <div class="flex justify-between"><span>Report State:</span> <span class="text-emerald-500">Final</span></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Conversation Transcript -->
-                        <div class="glass-panel p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] border border-white/5 hover:border-cyan-400/20 transition-all duration-700">
-                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-12 gap-4">
-                                <div class="flex items-center gap-3 md:gap-4">
-                                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                                        <i data-lucide="message-square" class="text-cyan-400 w-4 h-4 md:w-5 md:h-5"></i>
-                                    </div>
-                                    <h3 class="text-lg md:text-xl font-black uppercase italic tracking-tighter">Neural Transcript <span class="text-white/20 text-sm md:text-xl">(TTS Logs)</span></h3>
-                                </div>
-                                <div class="flex gap-2">
-                                    <div class="px-3 md:px-4 py-2 bg-white/5 rounded-lg text-[8px] md:text-[9px] font-mono uppercase tracking-widest text-white/40">Encrypted</div>
-                                </div>
-                            </div>
-
-                            <div id="transcript-container" class="space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar pr-4">
-                                <!-- Messages will be injected here -->
-                                <div class="p-10 text-center opacity-20">
-                                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-4"></i>
-                                    <p class="text-[10px] font-mono uppercase tracking-widest">No communications logged in this session</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

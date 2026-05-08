@@ -91,6 +91,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll('.interview-item').forEach(el => el.classList.remove('active'));
         document.getElementById(`archive-${nodeId}`)?.classList.add('active');
 
+        const emptyReport = document.getElementById('empty-report');
+        const reportDetail = document.getElementById('report-detail');
+        const actionButtons = document.getElementById('report-actions');
+
         emptyReport.classList.add('hidden');
         reportDetail.classList.remove('hidden');
         actionButtons.classList.remove('hidden');
@@ -101,23 +105,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => reportDetail.style.opacity = '1', 50);
 
         try {
-            // ✅ Security: Re-verify user ownership before loading any report
+            // ✅ Security: Re-verify user ownership
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) { window.location.href = 'login.html'; return; }
 
-            // Fetch Node Data — scoped to current user only
+            // 1. Fetch Node Core Data
             const { data: node, error: nodeError } = await supabase
                 .from('nodes')
                 .select('*')
                 .eq('room_id', nodeId)
-                .eq('user_id', user.id)  // ✅ Ownership check
+                .eq('user_id', user.id)
                 .single();
             if (nodeError || !node) {
                 showToast("Access Denied: Node not in your archive", "error");
                 return;
             }
 
-            // Fetch Forensic Data (from join_requests)
+            // 2. Fetch Detailed Forensic Report (The new columns we added)
+            const { data: forensicReport } = await supabase
+                .from('interview_reports')
+                .select('*')
+                .eq('room_id', nodeId)
+                .maybeSingle();
+
+            // 3. Fetch Session Join Data (Biometrics)
             const { data: joinReq } = await supabase
                 .from('join_requests')
                 .select('*')
@@ -126,32 +137,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .limit(1)
                 .maybeSingle();
 
-            // Fetch Chat Logs (Transcript)
+            // 4. Fetch Transcript Logs
             const { data: chatLogs } = await supabase
                 .from('chat_logs')
                 .select('*')
                 .eq('room_id', nodeId)
                 .order('created_at', { ascending: true });
 
-            // ✅ Fetch AI Interview Report from backend (scoped + secure)
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            let aiReport = null;
-            try {
-                const reportRes = await fetch(`${API_BASE}/api/nodes/${nodeId}/report`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (reportRes.ok) aiReport = await reportRes.json();
-            } catch (e) { console.warn('AI report not available:', e); }
-
-            // Header Decryption
+            // Update Header
             document.getElementById('rep-name').innerText = node.candidate_name;
             document.getElementById('rep-position').innerText = `${node.position} • NEURAL NODE`;
             document.getElementById('rep-avatar').innerText = node.candidate_name[0];
             document.getElementById('rep-date').innerText = `TIMESTAMP: ${new Date(node.created_at).toLocaleString()}`;
+            document.getElementById('report-id-display').innerText = `NODE-${nodeId.substring(0, 8).toUpperCase()}`;
 
             // Neural Visualization
-            visualizeNeuralData(node, joinReq, chatLogs, aiReport, token);
+            visualizeNeuralData(node, forensicReport, joinReq, chatLogs);
             showToast("Archive Decrypted Successfully", "success");
         } catch (e) {
             console.error("Neural Retrieval Failed:", e);
@@ -159,189 +160,224 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
-    async function visualizeNeuralData(node, joinReq, chatLogs, aiReport, token) {
-        // 1. Overall Stats — use real AI report data if available, else fallback
-        const deepfakeScore = joinReq ? (joinReq.deepfake_score || 0) : 0;
-        const aiScore      = aiReport?.score ?? null;
-        const confidence   = aiScore !== null ? aiScore : 85;
-        const integrityRisk = deepfakeScore;
-        const eyeStability  = 90;
+    let forensicChartInstance = null;
 
-        document.getElementById('rep-overall').innerText = aiScore !== null ? aiScore : (100 - Math.floor(deepfakeScore / 2));
-        document.getElementById('rep-confidence').innerText = confidence + '%';
-        document.getElementById('rep-fraud').innerText = Math.round(integrityRisk) + '%';
-        document.getElementById('rep-eye').innerText = eyeStability + '%';
+    async function visualizeNeuralData(node, forensicReport, joinReq, chatLogs) {
+        // 1. Data Mapping (Strict mapping - no misleading fallbacks)
+        const focusScore = forensicReport?.focus_score_avg;
+        const threatLevel = forensicReport?.threat_level_final;
+        const aiProb = forensicReport?.ai_generated_prob;
+        
+        const integrityRisk = forensicReport?.integrity_risk_score;
+        const linguisticConsist = forensicReport?.linguistic_consistency;
+        const syntaxVar = forensicReport?.syntax_variance;
+        const metaIntegrity = forensicReport?.metadata_integrity;
 
-        // 2. Risk Assessment
-        const riskBadge = document.getElementById('rep-risk-badge');
-        if (integrityRisk > 30) {
-            riskBadge.className = 'px-8 py-3 rounded-2xl border border-red-500/20 text-[10px] font-black uppercase tracking-[0.3em] bg-red-500/10 text-red-500';
-            riskBadge.innerText = 'CRITICAL RISK';
+        const hasData = (forensicReport !== null && forensicReport !== undefined);
+        
+        // Update Stats Cards
+        document.getElementById('rep-overall').innerText = hasData ? Math.round(100 - (integrityRisk || 0)) : '--';
+        document.getElementById('rep-focus').innerText = focusScore !== undefined ? Math.round(focusScore) + '%' : '0%';
+        document.getElementById('rep-threat').innerText = threatLevel || 'N/A';
+        document.getElementById('rep-nlp').innerText = aiProb !== undefined ? Math.round(aiProb) + '%' : '0%';
+
+        // Set Threat Colors
+        const threatEl = document.getElementById('rep-threat');
+        if (threatLevel === 'HIGH') {
+            threatEl.className = 'text-2xl md:text-4xl font-black tracking-tighter text-red-500 uppercase italic';
+        } else if (threatLevel === 'MEDIUM') {
+            threatEl.className = 'text-2xl md:text-4xl font-black tracking-tighter text-yellow-400 uppercase italic';
         } else {
-            riskBadge.className = 'px-8 py-3 rounded-2xl border border-emerald-500/20 text-[10px] font-black uppercase tracking-[0.3em] bg-emerald-500/10 text-emerald-500';
+            threatEl.className = 'text-2xl md:text-4xl font-black tracking-tighter text-emerald-400 uppercase italic';
+        }
+
+        // Risk Badge & Hash
+        const riskBadge = document.getElementById('rep-risk-badge');
+        const hashEl = document.getElementById('rep-hash');
+        if (hashEl) hashEl.innerText = `0x${btoa(node.room_id).substring(0, 16).toUpperCase()}`;
+
+        if (!hasData) {
+            riskBadge.className = 'px-10 py-4 rounded-2xl border border-white/10 text-[11px] font-black uppercase tracking-[0.4em] bg-white/5 text-white/40';
+            riskBadge.innerText = 'NO DATA DETECTED';
+        } else if (integrityRisk > 40) {
+            riskBadge.className = 'px-10 py-4 rounded-2xl border border-red-500/20 text-[11px] font-black uppercase tracking-[0.4em] bg-red-500/10 text-red-500';
+            riskBadge.innerText = 'CRITICAL ANOMALY';
+        } else if (integrityRisk > 15) {
+            riskBadge.className = 'px-10 py-4 rounded-2xl border border-yellow-500/20 text-[11px] font-black uppercase tracking-[0.4em] bg-yellow-500/10 text-yellow-500';
+            riskBadge.innerText = 'ELEVATED RISK';
+        } else {
+            riskBadge.className = 'px-10 py-4 rounded-2xl border border-emerald-500/20 text-[11px] font-black uppercase tracking-[0.4em] bg-emerald-500/10 text-emerald-500';
             riskBadge.innerText = 'STABLE NODE';
         }
 
-        // 3. Metrics Bars
-        const metrics = [
-            { label: 'Neural Authenticity', val: 100 - Math.round(deepfakeScore), color: 'text-cyan-400' },
-            { label: 'Integrity Pulse', val: 100 - Math.round(integrityRisk), color: 'text-emerald-500' },
-            { label: 'Liveness Confidence', val: confidence, color: 'text-purple-400' },
-            { label: 'Signal Stability', val: eyeStability, color: 'text-blue-400' }
-        ];
+        // 2. Forensic Components Breakdown (Updated for 5 components)
+        const nlp = forensicReport?.nlp_scores || {};
+        const components = {
+            lexical: Math.round((nlp.lexical || 0) * 100),
+            syntactic: Math.round((nlp.syntactic || 0) * 100),
+            metadata: Math.round(metaIntegrity || 0),
+            variance: Math.round(syntaxVar || 0),
+            consistency: Math.round(linguisticConsist || 0)
+        };
 
-        document.getElementById('metrics-container').innerHTML = metrics.map(m => `
-            <div class="metric-row">
-                <div class="flex justify-between items-center text-[10px] font-mono uppercase tracking-[0.4em]">
-                    <span class="text-white/30">${m.label}</span>
-                    <span class="text-white font-bold">${m.val}%</span>
-                </div>
-                <div class="metric-bar-bg">
-                    <div class="metric-fill" style="width: ${m.val}%; background: currentColor; box-shadow: 0 0 20px currentColor; opacity: 0.8; color: ${m.color.includes('cyan') ? '#22d3ee' : (m.color.includes('emerald') ? '#10b981' : (m.color.includes('purple') ? '#a855f7' : '#60a5fa'))}"></div>
-                </div>
-            </div>
-        `).join('');
+        Object.keys(components).forEach(comp => {
+            const score = components[comp];
+            const scoreEl = document.getElementById(`score-${comp}`);
+            const barEl = document.getElementById(`bar-${comp}`);
+            if (scoreEl) scoreEl.innerText = score + '%';
+            if (barEl) barEl.style.width = score + '%';
+        });
 
-        // 4. Forensic Evidence
+        // 3. Initialize Forensic Chart
+        initForensicChart(forensicReport);
+
+        // 4. AI Summary Section (Enhanced)
+        const aiContainer = document.getElementById('ai-report-container');
+        if (forensicReport && forensicReport.ai_summary) {
+            const verdict = nlp_results_verdict(aiProb, integrityRisk);
+            aiContainer.innerHTML = `
+                <div class="space-y-6">
+                    <p class="text-white/80 italic text-sm border-l-2 border-cyan-400 pl-4 py-1">"${forensicReport.ai_summary}"</p>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <h5 class="text-[9px] font-mono text-cyan-400 uppercase tracking-widest mb-2">Neural Verdict</h5>
+                            <p class="text-[11px] text-white/60">${verdict}</p>
+                        </div>
+                        <div class="flex items-center justify-between px-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full ${focusScore > 70 ? 'bg-emerald-500' : 'bg-red-500'}"></div>
+                                <span class="text-white/40 uppercase tracking-widest text-[8px]">Cognitive Focus: ${focusScore > 70 ? 'High' : 'Erratic'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full ${aiProb < 30 ? 'bg-emerald-500' : 'bg-yellow-500'}"></div>
+                                <span class="text-white/40 uppercase tracking-widest text-[8px]">Authenticity: ${aiProb < 30 ? 'Verified' : 'Flagged'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            aiContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 opacity-20">
+                    <i data-lucide="brain-circuit" class="w-8 h-8 mb-4"></i>
+                    <p class="text-[9px] font-mono uppercase tracking-widest">Processing Intelligence...</p>
+                </div>
+            `;
+        }
+
+        // 5. Video Evidence
         const videoEl = document.getElementById('verification-video');
         const videoPlaceholder = document.getElementById('video-placeholder');
-        
         if (joinReq && joinReq.verification_video_path) {
-            // ✅ Security: Get a time-limited signed URL instead of using public URL directly
-            try {
-                const sigRes = await fetch(
-                    `${API_BASE}/api/nodes/signed-video-url?video_path=${encodeURIComponent(joinReq.verification_video_path)}`,
-                    { headers: { 'Authorization': `Bearer ${token}` } }
-                );
-                if (sigRes.ok) {
-                    const { signed_url } = await sigRes.json();
-                    videoEl.src = signed_url;
-                    videoEl.load();
-                    videoEl.classList.remove('hidden');
-                    videoPlaceholder.classList.add('hidden');
-                } else {
-                    videoEl.classList.add('hidden');
-                    videoPlaceholder.classList.remove('hidden');
-                }
-            } catch (e) {
-                videoEl.classList.add('hidden');
-                videoPlaceholder.classList.remove('hidden');
-            }
+            videoEl.src = `https://ljnclcivnbhjjofsfyzm.supabase.co/storage/v1/object/public/verifications/${joinReq.verification_video_path}`;
+            videoEl.classList.remove('hidden');
+            videoPlaceholder.classList.add('hidden');
         } else {
             videoEl.classList.add('hidden');
             videoPlaceholder.classList.remove('hidden');
         }
 
-        document.getElementById('forensic-score').innerText = Math.round(deepfakeScore);
-        const forensicStatus = document.getElementById('forensic-status');
-        if (deepfakeScore > 30) {
-            forensicStatus.innerText = 'ANOMALOUS';
-            forensicStatus.className = 'text-xs font-black uppercase tracking-widest text-red-500 italic';
-        } else {
-            forensicStatus.innerText = 'AUTHENTIC';
-            forensicStatus.className = 'text-xs font-black uppercase tracking-widest text-emerald-500 italic';
-        }
+        // 6. Neural Fingerprint Generation (WOW element)
+        generateNeuralFingerprint(node.room_id, forensicReport?.neural_signature);
 
-        document.getElementById('forensic-brief').innerHTML = joinReq && joinReq.forensic_report_url ? 
-            `<img src="${joinReq.forensic_report_url}" class="w-full rounded-xl border border-white/5" />` : 
-            (joinReq ? `Biometric analysis for ${joinReq.participant_name} shows a deepfake probability of ${deepfakeScore}%. ${deepfakeScore > 20 ? 'Visual inconsistencies detected in neural frame mapping.' : 'Neural patterns match biometric baseline.'}` : 'No forensic data available for this node.');
-
-        // 5. ✅ AI Interview Report — from interview_reports table
-        const aiReportContainer = document.getElementById('ai-report-container');
-        if (aiReportContainer) {
-            if (aiReport && (aiReport.ai_summary || aiReport.strengths || aiReport.weaknesses)) {
-                const strengths = Array.isArray(aiReport.strengths) ? aiReport.strengths : [];
-                const weaknesses = Array.isArray(aiReport.weaknesses) ? aiReport.weaknesses : [];
-                aiReportContainer.innerHTML = `
-                    <div class="space-y-6">
-                        ${aiReport.ai_summary ? `
-                        <div>
-                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30 mb-3">AI Summary</p>
-                            <p class="text-[12px] text-white/70 leading-relaxed">${aiReport.ai_summary}</p>
-                        </div>` : ''}
-
-                        ${strengths.length > 0 ? `
-                        <div>
-                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-emerald-500/60 mb-3">Strengths</p>
-                            <div class="space-y-2">
-                                ${strengths.map(s => `
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                        <p class="text-[11px] text-white/60">${s}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>` : ''}
-
-                        ${weaknesses.length > 0 ? `
-                        <div>
-                            <p class="text-[9px] font-mono uppercase tracking-[0.3em] text-red-400/60 mb-3">Areas for Improvement</p>
-                            <div class="space-y-2">
-                                ${weaknesses.map(w => `
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0"></div>
-                                        <p class="text-[11px] text-white/60">${w}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>` : ''}
-                    </div>
-                `;
-            } else {
-                aiReportContainer.innerHTML = `
-                    <div class="p-8 text-center opacity-20">
-                        <i data-lucide="brain-circuit" class="w-8 h-8 mx-auto mb-3"></i>
-                        <p class="text-[10px] font-mono uppercase tracking-widest">AI analysis not yet generated for this session</p>
-                    </div>
-                `;
-            }
-        }
-
-        // 6. Transcript Logs
+        // 5. Phone-Style Transcript
         const transcriptContainer = document.getElementById('transcript-container');
-        const candidateName = node.candidate_name;
-
         if (chatLogs && chatLogs.length > 0) {
             transcriptContainer.innerHTML = chatLogs.map(log => {
-                // Heuristic: LiveKit identities (HR) often have # or explicit tags
                 const s = log.sender?.toLowerCase() || '';
                 const isHR = s.includes('#') || s.includes('hr') || s.includes('admin');
-                const isCandidate = !isHR;
-
+                
                 return `
-                    <div class="flex flex-col ${isHR ? 'items-end' : 'items-start'} gap-2">
-                        <div class="flex items-center gap-2 mb-1 ${isHR ? 'flex-row-reverse' : ''}">
-                            <span class="text-[8px] font-mono uppercase tracking-widest ${isHR ? 'text-cyan-400/60' : 'text-white/30'}">${log.sender}</span>
-                            <span class="text-[8px] font-mono text-white/10 italic">${new Date(log.created_at).toLocaleTimeString()}</span>
-                        </div>
-                        <div class="px-5 py-3 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[80%] ${isHR 
-                            ? 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 rounded-tr-none ml-auto' 
-                            : 'bg-white/5 border border-white/10 text-white/70 rounded-tl-none mr-auto'}">
+                    <div class="flex flex-col ${isHR ? 'items-end' : 'items-start'} gap-1">
+                        <div class="max-w-[85%] px-4 py-3 rounded-2xl text-[11px] leading-relaxed shadow-lg transition-all hover:scale-[1.02] ${isHR 
+                            ? 'bg-cyan-500 text-obsidian font-medium rounded-tr-none shadow-cyan-500/10' 
+                            : 'bg-white/10 text-white/90 border border-white/5 rounded-tl-none shadow-black/20'}">
                             ${log.message}
                         </div>
+                        <span class="text-[7px] font-mono text-white/20 uppercase tracking-widest px-2">${new Date(log.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
                 `;
             }).join('');
+            // Scroll to bottom
+            transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         } else {
-            transcriptContainer.innerHTML = `
-                <div class="p-10 text-center opacity-20">
-                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-4"></i>
-                    <p class="text-[10px] font-mono uppercase tracking-widest">No communications logged in this session</p>
-                </div>
-            `;
+            transcriptContainer.innerHTML = `<div class="h-full flex items-center justify-center text-white/10 text-[10px] uppercase tracking-widest italic">Encrypted Silence</div>`;
         }
 
         if (window.lucide) lucide.createIcons();
     }
 
-    function generateAnalysisCluster() {
-        return {
-            overall: Math.floor(Math.random() * 20) + 78,
-            confidence: 81 + Math.floor(Math.random() * 15),
-            fraud: 2 + Math.floor(Math.random() * 15),
-            eye: 85 + Math.floor(Math.random() * 12),
-            velocity: 75 + Math.floor(Math.random() * 20)
-        };
+    function initForensicChart(report) {
+        const ctx = document.getElementById('forensicChart');
+        if (!ctx) return;
+
+        if (forensicChartInstance) {
+            forensicChartInstance.destroy();
+        }
+
+        const series = report?.forensic_data_series || [];
+        const labels = series.length > 0 ? series.map((_, i) => `${i}s`) : ['0s', '10s', '20s', '30s', '40s', '50s', '60s'];
+        const focusData = series.length > 0 ? series.map(d => d.focus) : [0, 0, 0, 0, 0, 0, 0];
+        const threatData = series.length > 0 ? series.map(d => d.threat) : [0, 0, 0, 0, 0, 0, 0];
+
+        forensicChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'NEURAL FOCUS',
+                        data: focusData,
+                        borderColor: '#22d3ee',
+                        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: 'THREAT PROBABILITY',
+                        data: threatData,
+                        borderColor: '#f43f5e',
+                        backgroundColor: 'rgba(244, 63, 94, 0.05)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(10, 10, 10, 0.9)',
+                        titleFont: { family: 'Space Mono', size: 10 },
+                        bodyFont: { family: 'Space Mono', size: 10 },
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: 'rgba(255, 255, 255, 0.2)', font: { size: 8, family: 'Space Mono' } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'rgba(255, 255, 255, 0.2)', font: { size: 8, family: 'Space Mono' } }
+                    }
+                }
+            }
+        });
     }
 
     function showToast(msg, type) {
@@ -349,14 +385,71 @@ document.addEventListener("DOMContentLoaded", async () => {
         const indicator = document.getElementById('toast-indicator');
         const text = document.getElementById('toast-msg');
 
+        if (!toast) return;
+
         indicator.className = `w-2 h-2 rounded-full ${type === 'success' ? 'bg-cyan-400' : 'bg-red-500'}`;
         text.innerText = msg;
         
         toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
-        setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none'), 4000);
+        setTimeout(() => {
+            toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+        }, 4000);
     }
 
-    // Setup
+    function nlp_results_verdict(aiProb, integrityRisk) {
+        if (aiProb > 70) return "High probability of synthetic text generation detected. Patterns suggest LLM structural consistency.";
+        if (integrityRisk > 40) return "Multiple anomalies detected in behavioral and linguistic telemetry. Manual review highly recommended.";
+        if (aiProb > 40) return "Mixed signals detected. Linguistic flow contains non-human variance markers.";
+        return "Behavioral and linguistic signatures match established human baselines. Node integrity verified.";
+    }
+
+    function generateNeuralFingerprint(id, existingSig) {
+        const container = document.getElementById('neural-fingerprint');
+        const sigHashEl = document.getElementById('neural-sig-hash');
+        if (!container) return;
+
+        const seed = Array.from(id).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const sigHash = existingSig || `SIG-${btoa(id).substring(0, 24).toUpperCase()}`;
+        if (sigHashEl) sigHashEl.innerText = sigHash;
+
+        // Generate dynamic SVG fingerprint
+        const paths = Array.from({length: 12}).map((_, i) => {
+            const angle = (i / 12) * Math.PI * 2;
+            const x1 = 50 + Math.cos(angle) * 10;
+            const y1 = 50 + Math.sin(angle) * 10;
+            const x2 = 50 + Math.cos(angle + (seed % 10) / 20) * 40;
+            const y2 = 50 + Math.sin(angle + (seed % 10) / 20) * 40;
+            return `<path d="M ${x1} ${y1} Q ${50 + Math.sin(seed+i)*10} ${50 + Math.cos(seed+i)*10} ${x2} ${y2}" stroke="currentColor" stroke-width="0.5" fill="none" class="text-cyan-400" />`;
+        }).join('');
+
+        container.innerHTML = `
+            <svg viewBox="0 0 100 100" class="w-full h-full">
+                <circle cx="50" cy="50" r="45" stroke="rgba(34, 211, 238, 0.1)" stroke-width="0.2" fill="none" />
+                <circle cx="50" cy="50" r="30" stroke="rgba(34, 211, 238, 0.05)" stroke-width="0.2" fill="none" />
+                ${paths}
+                <circle cx="50" cy="50" r="5" fill="#22d3ee" class="animate-pulse" />
+            </svg>
+        `;
+        
+        // Also update the small avatar fingerprint
+        const avatarContainer = document.getElementById('rep-avatar');
+        if (avatarContainer) {
+            const oldOverlay = avatarContainer.querySelector('.fingerprint-overlay');
+            if (oldOverlay) oldOverlay.remove();
+
+            const overlay = document.createElement('div');
+            overlay.className = 'absolute inset-0 fingerprint-overlay opacity-30';
+            overlay.innerHTML = `
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="40" stroke="white" stroke-width="0.2" fill="none" stroke-dasharray="2 2" />
+                </svg>
+            `;
+            avatarContainer.style.position = 'relative';
+            avatarContainer.appendChild(overlay);
+        }
+    }
+
+    // --- System Setup ---
     initUser();
     syncArchives();
 });
