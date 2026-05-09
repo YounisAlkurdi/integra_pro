@@ -1,11 +1,11 @@
 from langchain_core.tools import tool
 import json
-import integra_mcp
+from backend import integra_mcp
 
 # --- UNIVERSAL PROTOCOL TOOL ---
 
 @tool
-def execute_establish_secure_link(candidate_name: str = "", position: str = "", user_id: str = "", candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
+async def execute_establish_secure_link(candidate_name: str = "", position: str = "", user_id: str = "", candidate_email: str = None, scheduled_at: str = None, questions: list[str] = None) -> str:
     """
     Initialize a secure interview node session.
     Use this when requested to set up an interview.
@@ -23,7 +23,7 @@ def execute_establish_secure_link(candidate_name: str = "", position: str = "", 
             pass
 
     try:
-        return integra_mcp.establish_secure_link(
+        return await integra_mcp.establish_secure_link(
             candidate_name=candidate_name,
             position=position,
             user_id=str(user_id),
@@ -35,7 +35,7 @@ def execute_establish_secure_link(candidate_name: str = "", position: str = "", 
         return f"CRITICAL_FAILURE: Protocol corruption. Error: {str(e)}"
 
 @tool
-def execute_transmit_invitation(candidate_name: str = "", candidate_email: str = "", scheduled_at: str = "", room_id: str = "") -> str:
+async def execute_transmit_invitation(candidate_name: str = "", candidate_email: str = "", scheduled_at: str = "", room_id: str = "") -> str:
     """
     Dispatch an interview invitation email to the candidate.
     """
@@ -50,7 +50,7 @@ def execute_transmit_invitation(candidate_name: str = "", candidate_email: str =
             pass
 
     try:
-        return integra_mcp.transmit_invitation_protocol(
+        return await integra_mcp.transmit_invitation_protocol(
             candidate_name=candidate_name,
             candidate_email=candidate_email,
             scheduled_at=scheduled_at,
@@ -60,23 +60,23 @@ def execute_transmit_invitation(candidate_name: str = "", candidate_email: str =
         return f"CRITICAL_FAILURE: Transmission failed. Error: {str(e)}"
 
 @tool
-def get_neural_telemetry(user_id: str = "") -> str:
+async def get_neural_telemetry(user_id: str = "") -> str:
     """Retrieve system stats for a user_id."""
     if "{" in user_id:
         try: user_id = json.loads(user_id).get("user_id", user_id)
         except: pass
-    return integra_mcp.get_neural_link_status(str(user_id))
+    return await integra_mcp.get_neural_link_status(str(user_id))
 
 @tool
-def sync_neural_quotas(user_id: str = "") -> str:
+async def sync_neural_quotas(user_id: str = "") -> str:
     """Sync plan limits for a user_id."""
     if "{" in user_id:
         try: user_id = json.loads(user_id).get("user_id", user_id)
         except: pass
-    return integra_mcp.sync_neural_quotas(str(user_id))
+    return await integra_mcp.sync_neural_quotas(str(user_id))
 
 @tool
-def execute_purge_protocol(room_id: str = "", user_id: str = "") -> str:
+async def execute_purge_protocol(room_id: str = "", user_id: str = "") -> str:
     """Terminate and purge an active interview node session."""
     if user_id == "" and "{" in room_id:
         try:
@@ -86,12 +86,12 @@ def execute_purge_protocol(room_id: str = "", user_id: str = "") -> str:
         except Exception:
             pass
     try:
-        return integra_mcp.purge_node(room_id, str(user_id))
+        return await integra_mcp.purge_node(room_id, str(user_id))
     except Exception as e:
         return f"CRITICAL_FAILURE: Purge aborted. Error: {str(e)}"
 
 @tool
-def get_external_matrix_nodes(user_id: str = "") -> str:
+async def get_external_matrix_nodes(user_id: str = "") -> str:
     """
     RETRIEVE_EXTERNAL_LOGS: Use this to check for linked third-party services like Stripe or Slack.
     It returns the server name and available configuration.
@@ -99,13 +99,14 @@ def get_external_matrix_nodes(user_id: str = "") -> str:
     if "{" in user_id:
         try: user_id = json.loads(user_id).get("user_id", user_id)
         except: pass
-    return integra_mcp.get_external_matrix_nodes(str(user_id))
+    return await integra_mcp.get_external_matrix_nodes(str(user_id))
+
 
 # --- UNIVERSAL NEURAL GATEWAY ---
-import api_bridge
+from backend import api_bridge
 
 @tool
-def matrix_gateway(target_service: str = "", operation_goal: str = "", payload_json: str = "{}", user_id: str = ""):
+async def matrix_gateway(target_service: str = "", operation_goal: str = "", payload_json: str = "{}", user_id: str = ""):
     """
     Execute an API operation for any linked matrix service.
     
@@ -128,8 +129,9 @@ def matrix_gateway(target_service: str = "", operation_goal: str = "", payload_j
             pass
     try:
         # 1. Fetch the node to get credentials
-        nodes = get_external_matrix_nodes(str(user_id))
-        node = next((n for n in json.loads(nodes) if n['mcp_name'].lower() == target_service.lower()), None)
+        nodes_raw = await get_external_matrix_nodes(str(user_id))
+        nodes = json.loads(nodes_raw)
+        node = next((n for n in nodes if n['mcp_name'].lower() == target_service.lower()), None)
         
         if not node:
             return f"PROTOCOL ERROR: Service '{target_service}' is not linked to this neural matrix."
@@ -161,7 +163,7 @@ def matrix_gateway(target_service: str = "", operation_goal: str = "", payload_j
         except:
             pass
 
-        result = api_bridge.dispatch_sync(provider, config, operation_goal, payload)
+        result = await api_bridge.dispatch(provider, config, operation_goal, payload)
         
         if "error" in result:
              return f"GATEWAY ERROR: {result['error']}"
@@ -172,7 +174,7 @@ def matrix_gateway(target_service: str = "", operation_goal: str = "", payload_j
         return f"MATRIX CRITICAL ERROR: {str(e)}"
 
 @tool
-def analyze_web_link(url: str) -> str:
+async def analyze_web_link(url: str) -> str:
     """
     THE WEB SENSOR: Fetches a URL and returns a summary. Use for dealing with links output.
     """
@@ -202,7 +204,7 @@ def analyze_web_link(url: str) -> str:
         return f"Web Sensor Failure: {str(e)}"
 
 @tool
-def analyze_image(image_path_or_url: str) -> str:
+async def analyze_image(image_path_or_url: str) -> str:
     """
     THE VISION SENSOR: Downloads an image, extracts tech data, and returns path for display.
     """
@@ -238,7 +240,7 @@ def analyze_image(image_path_or_url: str) -> str:
         return f"Vision Sensor Failure: {str(e)}"
 
 @tool
-def analyze_local_file(filepath: str) -> str:
+async def analyze_local_file(filepath: str) -> str:
     """
     THE DOCUMENT SENSOR: Reads a local file up to 500KB. Fails securely if reading sensitive env files.
     """

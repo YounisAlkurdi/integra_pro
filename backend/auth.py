@@ -4,8 +4,8 @@ import os
 import base64
 from fastapi import HTTPException, Depends, status, Request
 from typing import Optional
-from .utils import get_env_safe
-from .services.database_service import db
+from backend.utils import get_env_safe
+from backend.services.database_service import db
 
 # ─────────────────────────────────────────────
 # Configuration
@@ -168,15 +168,47 @@ async def get_active_subscription(user_id: str):
 # ─────────────────────────────────────────────
 # User Profile
 # ─────────────────────────────────────────────
+async def get_user_role_and_org(user_id: str):
+    """Fetches role and org info from the access_registry sidecar table."""
+    try:
+        res = await db.select(
+            table="access_registry",
+            filters={"user_id": user_id},
+            limit=1
+        )
+        if res:
+            return res[0].get("role", "RECRUITER"), res[0].get("org_id")
+        return "RECRUITER", None # Default for legacy users
+    except Exception as e:
+        print(f"=> Neural Trace Error: Failed to fetch role: {e}")
+        return "RECRUITER", None
+
+# ─────────────────────────────────────────────
+# User Profile
+# ─────────────────────────────────────────────
 async def get_user_profile_data(user: dict):
-    """Assembles the full user profile with live subscription data."""
+    """Assembles the full user profile with live subscription data and RBAC roles."""
     user_id = user.get("sub")
+    user_email = user.get("email")
     subscription = await get_active_subscription(user_id)
+    role, org_id = await get_user_role_and_org(user_id)
+    
+    # Professional Bootstrap: Auto-promote superadmin based on environment variable
+    superadmin_email = os.environ.get("SUPERADMIN_EMAIL")
+    if superadmin_email and user_email == superadmin_email and role != "ADMIN":
+        try:
+            await db.client.table("access_registry").update({"role": "ADMIN"}).eq("user_id", user_id).execute()
+            role = "ADMIN"
+            print(f"=> Neural Trace: Auto-promoted {user_email} to SUPERADMIN")
+        except Exception as e:
+            print(f"=> Neural Trace Error: Failed to auto-promote {user_email}: {e}")
 
     return {
         "status": "AUTHORIZED",
         "node_id": user_id,
         "operator_email": user.get("email"),
-        "access_level": "COMMANDER",
+        "access_level": "COMMANDER", # Legacy support
+        "role": role,
+        "org_id": org_id,
         "subscription": subscription
     }
