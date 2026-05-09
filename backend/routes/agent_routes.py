@@ -48,23 +48,50 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             # Identity Injection
             user_id = user.get("sub", "")
             
-            # --- NEW: Cloud-Linked Settings Fetch ---
-            # If the request doesn't have a key, check the DB
-            if not req.config.get("apiKey"):
+            # --- Cloud-Linked Settings Fetch ---
+            # If the frontend didn't send a key, pull it from DB (same config saved by llm-config.js)
+            if not req.config.get("apiKey") and not req.config.get("hfTokenCustom"):
                 from backend.services.database_service import DatabaseService
                 db = DatabaseService()
                 try:
-                    # Optimized async fetch
                     db_res = await db.select("user_settings", "*", filters={"user_id": user_id})
                     if db_res and len(db_res) > 0:
                         db_conf = db_res[0]
-                        req.config["apiKey"] = db_conf.get("llm_api_key")
+                        saved_provider = db_conf.get("llm_provider", "")
+                        saved_model    = db_conf.get("llm_model", "")
+                        saved_key      = db_conf.get("llm_api_key", "")
+
+                        # Fill only what's missing — keep frontend values if present
+                        if not req.config.get("apiKey"):
+                            req.config["apiKey"] = saved_key
                         if not req.config.get("apiProvider"):
-                            req.config["apiProvider"] = db_conf.get("llm_provider", "openai")
+                            req.config["apiProvider"] = saved_provider
                         if not req.config.get("apiModel"):
-                            req.config["apiModel"] = db_conf.get("llm_model", "gpt-4o")
+                            req.config["apiModel"] = saved_model
+
+                        # ✅ Infer 'source' from provider so get_llm() routes correctly
+                        # (mirrors the logic in llm-config.js syncToCloud)
+                        if not req.config.get("source"):
+                            hf_providers = {"kie", "nvidia", "hf", "huggingface"}
+                            local_providers = {"ollama", "local", "lmstudio"}
+                            p = saved_provider.lower()
+                            if p in hf_providers:
+                                req.config["source"] = "hf"
+                                req.config["hfProviderType"] = p
+                                req.config["hfModelCustom"]  = saved_model
+                                req.config["hfTokenCustom"]  = saved_key
+                            elif p in local_providers:
+                                req.config["source"] = "local"
+                            else:
+                                req.config["source"] = "api"  # openai, groq, anthropic, etc.
                 except Exception as e:
                     print(f"[Supabase] Failed to fetch cloud settings: {e}")
+
+            # Safety: abort if still no key and not a local provider
+            provider_check = (req.config.get("apiProvider") or req.config.get("hfProviderType") or "").lower()
+            key_check = req.config.get("apiKey") or req.config.get("hfTokenCustom")
+            if not key_check and provider_check not in {"local", "ollama", "lmstudio", ""}:
+                return {"response": "⚠️ No LLM API key configured. Please set your key in Settings → AI Engine.", "status": "NO_KEY"}
 
             llm = get_llm(req.config)
             
@@ -189,3 +216,70 @@ async def agent_status(user: dict = Depends(get_current_user)):
         "engine": "LangChain",
         "providers": ["openai", "anthropic", "groq", "google", "local", "hf"]
     }
+
+
+@router.post("/analyze")
+async def agent_analyze(req: ChatRequest, user: dict = Depends(get_current_user)):
+    """
+    Interview Room Neural Copilot — direct LLM chain, no tools, no agent overhead.
+    Used by integra-session.js for real-time insights during live interviews.
+    Reads the same LLM config the HR set in the LangChain settings page.
+    """
+    if not req.prompt.strip():
+        raise HTTPException(status_code=400, detail="Empty prompt received")
+
+    try:
+        user_id = user.get("sub", "")
+
+        # --- Load config: prefer what frontend sends, fill gaps from DB ---
+        config = dict(req.config)
+
+        if not config.get("apiKey") and not config.get("hfTokenCustom"):
+            from backend.services.database_service import DatabaseService
+            db = DatabaseService()
+            try:
+                db_res = await db.select("user_settings", "*", filters={"user_id": user_id})
+                if db_res and len(db_res) > 0:
+                    db_conf = db_res[0]
+                    saved_provider = db_conf.get("llm_provider", "")
+                    saved_model    = db_conf.get("llm_model", "")
+                    saved_key      = db_conf.get("llm_api_key", "")
+
+                    config["apiKey"]      = config.get("apiKey") or saved_key
+                    config["apiProvider"] = config.get("apiProvider") or saved_provider
+                    config["apiModel"]    = config.get("apiModel") or saved_model
+
+                    # Infer correct source for get_llm() routing
+                    if not config.get("source"):
+                        hf_providers    = {"kie", "nvidia", "hf", "huggingface"}
+                        local_providers = {"ollama", "local", "lmstudio"}
+                        p = saved_provider.lower()
+                        if p in hf_providers:
+                            config["source"]         = "hf"
+                            config["hfProviderType"] = p
+                            config["hfModelCustom"]  = saved_model
+                            config["hfTokenCustom"]  = saved_key
+                        elif p in local_providers:
+                            config["source"] = "local"
+                        else:
+                            config["source"] = "api"
+            except Exception as e:
+                print(f"[Analyze] DB settings fetch failed: {e}")
+
+        # Safety check
+        key_check = config.get("apiKey") or config.get("hfTokenCustom")
+        provider_check = (config.get("apiProvider") or config.get("hfProviderType") or "").lower()
+        if not key_check and provider_check not in {"local", "ollama", "lmstudio", ""}:
+            return {"response": "⚠️ No LLM API key configured. Please set your key in Settings → AI Engine.", "status": "NO_KEY"}
+
+        # Direct chain — no tools, no agent, fast
+        chain = get_analysis_chain(config)
+        result = await chain.ainvoke({"text": req.prompt})
+        content = result.content if hasattr(result, "content") else str(result)
+
+        return {"response": content, "status": "OK"}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")

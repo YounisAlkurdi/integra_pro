@@ -240,12 +240,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Forensic report URL is actually in join_requests table
         const forensicImageUrl = joinReq?.forensic_report_url;
 
-        if (forensicReport && (forensicReport.ai_summary || forensicImageUrl)) {
+        const agentLogs = (chatLogs || []).filter(log => log.sender === 'NEURAL_COPILOT');
+
+        if (forensicReport || agentLogs.length > 0) {
             const verdict = nlp_results_verdict(aiProb, integrityRisk);
             
             let htmlContent = '<div class="space-y-6">';
             
-            if (forensicReport.ai_summary) {
+            if (forensicReport && forensicReport.ai_summary) {
                 htmlContent += `
                     <p class="text-white/80 italic text-sm border-l-2 border-cyan-400 pl-4 py-1">"${forensicReport.ai_summary}"</p>
                     <div class="grid grid-cols-1 gap-3">
@@ -263,6 +265,33 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 <span class="text-white/40 uppercase tracking-widest text-[8px]">Authenticity: ${aiProb < 30 ? 'Verified' : 'Flagged'}</span>
                             </div>
                         </div>
+                    </div>
+                `;
+            } else if (agentLogs.length > 0) {
+                htmlContent += `
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="p-4 bg-white/5 rounded-2xl border border-cyan-400/20">
+                            <h5 class="text-[9px] font-mono text-cyan-400 uppercase tracking-widest mb-4">Live Neural Insights Captured:</h5>
+                            <ul class="space-y-3">
+                `;
+                agentLogs.forEach(log => {
+                    const cleanText = log.message ? log.message.replace(/\n/g, '<br/>') : '';
+                    htmlContent += `
+                        <li class="flex items-start gap-3 text-[11px] text-white/70">
+                            <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1 shadow-[0_0_8px_rgba(34,211,238,0.4)]"></div>
+                            <span>${cleanText}</span>
+                        </li>`;
+                });
+                htmlContent += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                htmlContent += `
+                    <div class="flex flex-col items-center justify-center py-10 opacity-20">
+                        <i data-lucide="brain-circuit" class="w-8 h-8 mb-4"></i>
+                        <p class="text-[9px] font-mono uppercase tracking-widest">No Intelligence Data Found</p>
                     </div>
                 `;
             }
@@ -347,10 +376,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 6. Neural Fingerprint Generation (WOW element)
         generateNeuralFingerprint(node.room_id, forensicReport?.neural_signature);
 
-        // 5. Phone-Style Transcript
+        // 5. Phone-Style Transcript — exclude AI agent logs
         const transcriptContainer = document.getElementById('transcript-container');
-        if (chatLogs && chatLogs.length > 0) {
-            transcriptContainer.innerHTML = chatLogs.map(log => {
+        const humanLogs = (chatLogs || []).filter(log => log.sender !== 'NEURAL_COPILOT');
+        if (humanLogs.length > 0) {
+            transcriptContainer.innerHTML = humanLogs.map(log => {
                 const s = log.sender?.toLowerCase() || '';
                 const isHR = s.includes('#') || s.includes('hr') || s.includes('admin');
                 
@@ -365,7 +395,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 `;
             }).join('');
-            // Scroll to bottom
             transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         } else {
             transcriptContainer.innerHTML = `<div class="h-full flex items-center justify-center text-white/10 text-[10px] uppercase tracking-widest italic">Encrypted Silence</div>`;

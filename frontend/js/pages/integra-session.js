@@ -1197,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const speakerLabel = speakerRole === 'hr' ? 'HR (Interviewer)' : 'Candidate';
             const prompt = `[INTERVIEW TRANSCRIPT]\nSpeaker: ${speakerLabel}\nText: "${text}"\n\nTask: Analyze this input. If it's a candidate's answer, highlight a strength or potential red flag. If it's an HR question, suggest a follow-up or provide context. Return exactly 2-3 short, professional bullet points for the dashboard.`;
 
-            const response = await fetch(`${API_BASE}/api/agent/chat`, {
+            const response = await fetch(`${API_BASE}/api/agent/analyze`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -1223,17 +1223,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Remove any technical markers the LLM might still include
                 let cleanRes = data.response.replace(/Thought:|Final Answer:|Action:|Action Input:/gi, "").trim();
                 updateAgentSuggestions(cleanRes);
+                
+                // Save AI insight to the database for the final report
+                saveLogToServer('NEURAL_COPILOT', cleanRes);
             }
         } catch (err) {
             console.error("[Agent] Link Failed:", err);
         } finally {
             isAgentThinking = false;
-            if (statusText) statusText.textContent = "Active & Monitoring";
+            if (statusText) {
+                statusText.innerHTML = `<span class="flex items-center gap-2"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span></span> Active & Monitoring</span>`;
+            }
         }
     }
 
     function updateAgentSuggestions(response) {
-        const container = $('agent-suggestions');
+        const container = document.getElementById('agent-suggestions');
         if (!container) return;
 
         const suggestions = response.split('\n')
@@ -1241,13 +1246,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(line => line.replace(/^[*-]\s*/, '').trim());
 
         // Neural Pulse Update
-        const statusText = $('agent-status-text');
+        const statusText = document.getElementById('agent-status-text');
         if (statusText) {
             statusText.innerHTML = `<span class="flex items-center gap-2"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span></span> Analysis Synced</span>`;
         }
 
         container.innerHTML = '';
-        container.className = "flex flex-col gap-2 p-1 overflow-y-auto max-h-[160px]"; 
+        container.className = "flex flex-col gap-2 p-1 overflow-y-auto max-h-[160px] custom-scrollbar"; 
 
         suggestions.forEach((s, i) => {
             const el = document.createElement('div');

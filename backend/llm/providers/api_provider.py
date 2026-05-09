@@ -32,5 +32,16 @@ def get_api_llm(provider_name: str, model: str, api_key: str, temperature: float
             temperature=0.0
         )
 
+    elif provider_name in ("hf", "huggingface", "kie", "nvidia"):
+        # Neural Matrix providers — use HF-compatible OpenAI base URL routing
+        from backend.llm.providers.hf_provider import get_universal_llm
+        return get_universal_llm(
+            provider_type=provider_name,
+            model=model,
+            api_key=api_key,
+            temperature=temperature
+        )
+
     else:
-        raise ValueError(f"Unsupported API provider: {provider_name}")
+        raise ValueError(f"Unsupported API provider: '{provider_name}'. Supported: openai, groq, anthropic, google, hf, kie, nvidia, local")
+
