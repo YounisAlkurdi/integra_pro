@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Body
-from ..services.forensic_service import perform_forensic_analysis
+from backend.services.forensic_service import perform_forensic_analysis
 
 router = APIRouter(tags=["NLP Analysis Engine"])
 

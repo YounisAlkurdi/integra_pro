@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ..auth import get_current_user, get_user_profile_data
-from ..nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats, delete_node, purge_completed_nodes, get_signed_video_url, get_interview_report
+from backend.auth import get_current_user, get_user_profile_data
+from backend.nodes import NodeProtocol, create_neural_node, get_active_streams, get_node_stats, delete_node, purge_completed_nodes, get_signed_video_url, get_interview_report
 
 router = APIRouter(prefix="/api/nodes", tags=["Nodes"])
 

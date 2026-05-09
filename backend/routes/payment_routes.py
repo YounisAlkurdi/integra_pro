@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
-from ..auth import get_current_user
-from ..payments import PaymentRequest, execute_payment, handle_stripe_webhook
-from ..utils import get_env_safe
+from backend.auth import get_current_user
+from backend.payments import PaymentRequest, execute_payment, handle_stripe_webhook
+from backend.utils import get_env_safe
 
 router = APIRouter(tags=["Payments"])
 

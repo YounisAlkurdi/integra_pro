@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // System State
     let createdInterview = null;
     let userSubscription = null;
+    let userRole = 'RECRUITER';
+    let orgId = null;
 
     // --- 0. Security Protocol (URL Cleaning) ---
     const urlParams = new URLSearchParams(window.location.search);
@@ -41,6 +43,49 @@ document.addEventListener("DOMContentLoaded", async () => {
             const avatar = document.getElementById('user-avatar');
             const userNameEl = document.getElementById('user-name-display');
             const userIdEl = document.getElementById('user-id-display');
+
+            // --- 0.2 RBAC Check (Role Discovery) ---
+            const auth = await getAuthHeader();
+            const profileRes = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user/profile'), {
+                headers: { 'Authorization': auth }
+            });
+            if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                userRole = profileData.role || 'RECRUITER';
+                orgId = profileData.org_id;
+                userSubscription = profileData.subscription;
+
+                // Inject Role-Specific Navigation
+                const sidebarNav = document.querySelector('aside nav');
+                if (sidebarNav) {
+                    if (userRole === 'MANAGER' || userRole === 'ADMIN') {
+                        // Manager Dashboard Link
+                        const managerLink = document.createElement('a');
+                        managerLink.href = 'manager-dashboard.html';
+                        managerLink.className = 'sidebar-link hover-target';
+                        managerLink.title = 'Executive Intelligence';
+                        managerLink.innerHTML = '<i data-lucide="users" class="w-5 h-5 text-cyan-400"></i>';
+                        sidebarNav.appendChild(managerLink);
+                    }
+                    if (userRole === 'ADMIN') {
+                        // Admin Center Link
+                        const adminLink = document.createElement('a');
+                        adminLink.href = 'admin-center.html';
+                        adminLink.className = 'sidebar-link hover-target';
+                        adminLink.title = 'System Overseer';
+                        adminLink.innerHTML = '<i data-lucide="activity" class="w-5 h-5 text-amber-400"></i>';
+                        sidebarNav.appendChild(adminLink);
+                    }
+                    if (window.lucide) lucide.createIcons();
+                }
+
+                // Show Manager Toggle if applicable (Legacy support)
+                const toggleContainer = document.getElementById('manager-toggle-container');
+                if (toggleContainer && (userRole === 'MANAGER' || userRole === 'ADMIN')) {
+                    toggleContainer.classList.remove('hidden');
+                    if(typeof setupManagerView === 'function') setupManagerView();
+                }
+            }
 
             // 1. Show Name
             if (userNameEl) {
@@ -140,7 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function fetchSubscription() {
         try {
             const auth = await getAuthHeader();
-            const response = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user-profile'), {
+            const response = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user/profile'), {
                 headers: { 'Authorization': auth }
             });
             
@@ -223,6 +268,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error("Transmission Error:", e);
             showToast("Network Error: Invitation Failed", "error");
         }
+    }
+
+    async function fetchManagerStats() {
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/manager/stats'), {
+                headers: { 'Authorization': auth }
+            });
+            return await res.json();
+        } catch (e) { return null; }
+    }
+
+    async function fetchRecruiters() {
+        try {
+            const auth = await getAuthHeader();
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/manager/recruiters'), {
+                headers: { 'Authorization': auth }
+            });
+            return await res.json();
+        } catch (e) { return []; }
     }
 
     // --- 4. UI Rendering Engine ---
@@ -339,6 +404,107 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         lucide.createIcons();
         init3DTilt();
+    }
+
+    async function renderRecruiters() {
+        const grid = document.getElementById('recruiters-grid');
+        const recruiters = await fetchRecruiters();
+
+        if (!recruiters || recruiters.length === 0) {
+            grid.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 opacity-20">
+                    <p class="text-[8px] font-mono uppercase tracking-[0.3em]">No subordinate recruiters detected</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = recruiters.map(r => {
+            const conversion = r.total_interviews > 0 
+                ? Math.round((r.completed_interviews / r.total_interviews) * 100) 
+                : 0;
+            
+            return `
+                <div class="glass-panel p-6 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all group reveal active">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
+                                <i data-lucide="user" class="w-5 h-5 text-cyan-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-white">${r.full_name || r.email}</h4>
+                                <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest">${r.email}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xl font-black tracking-tighter text-white">${conversion}%</div>
+                            <div class="text-[8px] font-mono text-cyan-400/50 uppercase tracking-widest">Efficiency Rate</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+                        <div>
+                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Total</p>
+                            <p class="text-xs font-bold text-white/60">${r.total_interviews}</p>
+                        </div>
+                        <div>
+                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Live</p>
+                            <p class="text-xs font-bold text-cyan-400">${r.active_interviews}</p>
+                        </div>
+                        <div>
+                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Archived</p>
+                            <p class="text-xs font-bold text-green-400">${r.completed_interviews}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        lucide.createIcons();
+    }
+
+    function setupManagerView() {
+        const btnPersonal = document.getElementById('btn-view-personal');
+        const btnTeam = document.getElementById('btn-view-team');
+        const personalList = document.getElementById('interviews-list');
+        const teamView = document.getElementById('manager-team-view');
+        const viewTitle = document.getElementById('view-title');
+
+        btnPersonal.addEventListener('click', () => {
+            btnPersonal.classList.add('bg-white', 'text-obsidian', 'shadow-lg');
+            btnPersonal.classList.remove('text-white/40');
+            btnTeam.classList.remove('bg-white', 'text-obsidian', 'shadow-lg');
+            btnTeam.classList.add('text-white/40');
+
+            personalList.classList.remove('hidden');
+            teamView.classList.add('hidden');
+            viewTitle.textContent = "Active Data Streams";
+            renderInterviews();
+        });
+
+        btnTeam.addEventListener('click', async () => {
+            btnTeam.classList.add('bg-white', 'text-obsidian', 'shadow-lg');
+            btnTeam.classList.remove('text-white/40');
+            btnPersonal.classList.remove('bg-white', 'text-obsidian', 'shadow-lg');
+            btnPersonal.classList.add('text-white/40');
+
+            personalList.classList.add('hidden');
+            teamView.classList.remove('hidden');
+            viewTitle.textContent = "Team Intelligence Hub";
+            
+            // Show Loading state
+            document.getElementById('team-conversion').textContent = "---";
+            document.getElementById('team-recruiter-count').textContent = "---";
+            
+            const stats = await fetchManagerStats();
+            if (stats) {
+                const conv = stats.total_interviews > 0 ? Math.round((stats.completed_interviews / stats.total_interviews) * 100) : 0;
+                document.getElementById('team-conversion').textContent = `${conv}%`;
+                document.getElementById('team-recruiter-count').textContent = stats.recruiter_count;
+            }
+            
+            renderRecruiters();
+        });
     }
 
     // --- Soft Delete / Archiving Functions ---
