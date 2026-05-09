@@ -6,15 +6,15 @@ LLM Chat endpoint معتمد على llm/langchain_setup.py
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from ..auth import get_current_user
-from ..llm.langchain_setup import get_analysis_chain, get_llm
+from backend.auth import get_current_user
+from backend.llm.langchain_setup import get_analysis_chain, get_llm
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import create_react_agent, create_tool_calling_agent, AgentExecutor
 from typing import Optional
 
 router = APIRouter(prefix="/api/agent", tags=["Neural Agent"])
 
-from ..services.memory_service import SupabaseChatMessageHistory
+from backend.services.memory_service import SupabaseChatMessageHistory
 
 # MEMORY_BUFFER is now deprecated in favor of Supabase persistent storage
 # Phase 4 Migration Complete
@@ -43,7 +43,7 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     try:
         # Check if the model supports tools
         try:
-            from ..agent_tools import INTEGRA_TOOLS
+            from backend.agent_tools import INTEGRA_TOOLS
             
             # Identity Injection
             user_id = user.get("sub", "")
@@ -51,7 +51,7 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             # --- NEW: Cloud-Linked Settings Fetch ---
             # If the request doesn't have a key, check the DB
             if not req.config.get("apiKey"):
-                from ..services.database_service import DatabaseService
+                from backend.services.database_service import DatabaseService
                 db = DatabaseService()
                 try:
                     # Optimized async fetch
@@ -93,9 +93,13 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             
             final_system_instruction = f"{core_instruction}\n\n{user_custom_prompt}"
             
+            source = req.config.get("source", "api").lower()
             provider = req.config.get("apiProvider", "openai").lower()
             
-            if provider == "google":
+            # Use ReAct agent for Google, Local (Ollama), and Neural Matrix (Universal)
+            use_react = (provider == "google") or (source == "local") or (source == "hf")
+            
+            if use_react:
                 template = (
                     final_system_instruction + "\n\n"
                     "TOOLS:\n"
@@ -140,9 +144,18 @@ async def agent_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             history = SupabaseChatMessageHistory(user_id)
             await history.aload_messages()
             
+            # Format history for ReAct if needed
+            if use_react:
+                chat_history_data = ""
+                for m in history.messages:
+                    prefix = "Human" if hasattr(m, "type") and m.type == "human" else "AI"
+                    chat_history_data += f"{prefix}: {m.content}\n"
+            else:
+                chat_history_data = history.messages
+
             result = await agent_executor.ainvoke({
                 "input": req.prompt,
-                "chat_history": history.messages
+                "chat_history": chat_history_data
             })
             
             content = result["output"]

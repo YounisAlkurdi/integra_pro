@@ -1,16 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-try:
-    from tracker import BehavioralTracker
-except ImportError:
-    from ..tracker import BehavioralTracker
+from backend.tracker import BehavioralTracker
 import asyncio
 import cv2
 import numpy as np
 import json
 
-from ..auth import verify_token
-from ..services.session_manager import session_manager
+from backend.auth import verify_token
+from backend.services.session_manager import session_manager
 import jwt
 
 router = APIRouter(tags=["Behavioral Analysis"])
@@ -27,7 +24,7 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.bool_):    return bool(obj)
         return super().default(obj)
 
-from ..auth import verify_token
+from backend.auth import verify_token
 import jwt
 
 @router.websocket("/ws/behavioral/{room_id}")

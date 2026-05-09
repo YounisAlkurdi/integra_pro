@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from ..auth import get_current_user
-from ..mailer import send_interview_invitation
+from backend.auth import get_current_user
+from backend.mailer import send_interview_invitation
 
 router = APIRouter(prefix="/api", tags=["Mail"])
 

@@ -40,13 +40,29 @@ window.PROVIDER_MODELS = {
     "gemma2-9b-it",
     "deepseek-r1-distill-llama-70b",
   ],
+
+  // ─── Neural Matrix (Universal) ───
+  kie: [
+    "google/gemini-2.0-flash",
+    "google/gemini-2.0-flash-lite",
+    "deepseek/deepseek-chat",
+    "openai/gpt-4o",
+  ],
+
+  nvidia: [
+    "mistralai/mistral-7b-instruct-v0.3",
+    "meta/llama-3.1-405b-instruct",
+    "meta/llama-4-maverick-17b-128e-instruct",
+    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "google/gemma-2-27b-it",
+  ],
+
+  hf: [
+    "mistralai/Mistral-7B-Instruct-v0.3",
+    "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "meta-llama/Meta-Llama-3-8B-Instruct",
+    "Qwen/Qwen2.5-7B-Instruct",
+    "google/gemma-2-9b-it",
+  ]
 };
 
-// قائمة نماذج HuggingFace الشائعة
-window.HF_MODELS = [
-  "mistralai/Mistral-7B-Instruct-v0.3",
-  "mistralai/Mixtral-8x7B-Instruct-v0.1",
-  "meta-llama/Meta-Llama-3-8B-Instruct",
-  "Qwen/Qwen2.5-7B-Instruct",
-  "google/gemma-2-9b-it",
-];
