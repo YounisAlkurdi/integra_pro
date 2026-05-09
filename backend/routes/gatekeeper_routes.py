@@ -4,9 +4,9 @@ import uuid
 import shutil
 import tempfile
 import asyncio
-from ..engine.deepfake_Video.processor import FullDeepfakeDetector
-from ..nodes import upload_to_supabase_storage
-from ..services.database_service import db
+from backend.engine.deepfake_Video.processor import FullDeepfakeDetector
+from backend.nodes import upload_to_supabase_storage
+from backend.services.database_service import db
 
 router = APIRouter(tags=["Gatekeeper"])
 

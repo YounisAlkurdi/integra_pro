@@ -4,9 +4,9 @@ import json
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
-from ..nodes import get_node_by_room_id
-from ..services.database_service import db
-from ..auth import get_current_user
+from backend.nodes import get_node_by_room_id
+from backend.services.database_service import db
+from backend.auth import get_current_user
 
 try:
     from livekit.api import AccessToken, VideoGrants, LiveKitAPI, ListParticipantsRequest, DeleteRoomRequest, ListRoomsRequest
@@ -509,7 +509,7 @@ async def cleanup_sessions():
 @router.delete("/room/{room_name}")
 async def end_room(room_name: str):
     """Force-terminate a LiveKit room and mark node as deleted."""
-    from ..nodes import delete_node
+    from backend.nodes import delete_node
     
     # 1. Update DB
     await delete_node(room_name)
