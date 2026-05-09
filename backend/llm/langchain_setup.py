@@ -24,22 +24,23 @@ def get_llm(llm_config: dict):
     temperature = float(llm_config.get("temperature", 0.1))
 
     if source == "local":
-        from llm.providers.local_provider import get_local_llm
+        from backend.llm.providers.local_provider import get_local_llm
         return get_local_llm(
             model=llm_config.get("localModel"),
             base_url=llm_config.get("localUrl"),
             temperature=temperature
         )
     elif source == "hf":
-        from llm.providers.hf_provider import get_hf_llm
-        return get_hf_llm(
-            hf_model=llm_config.get("hfModel"),
-            hf_token=llm_config.get("hfToken"),
-            hf_mode=llm_config.get("hfMode", "inference_api"),
+        from backend.llm.providers.hf_provider import get_universal_llm
+        # Mapping new frontend keys for Universal Provider
+        return get_universal_llm(
+            provider_type=llm_config.get("hfProviderType") or llm_config.get("apiProvider", "hf"),
+            model=llm_config.get("hfModelCustom") or llm_config.get("apiModel"),
+            api_key=llm_config.get("hfTokenCustom") or llm_config.get("apiKey"),
             temperature=temperature
         )
     else:  # api (default)
-        from llm.providers.api_provider import get_api_llm
+        from backend.llm.providers.api_provider import get_api_llm
         return get_api_llm(
             provider_name=llm_config.get("apiProvider", "openai"),
             model=llm_config.get("apiModel", "gpt-4o"),
