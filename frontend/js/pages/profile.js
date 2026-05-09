@@ -40,6 +40,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Identity Synchronization Failed:", e);
     }
 
+    // --- NEW: Organization State Check ---
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user/profile'), {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            if (res.ok) {
+                const profileData = await res.json();
+                
+                if (profileData.org_id) {
+                    // Hide creation/join cards, show active state
+                    const orgCards = document.getElementById('org-cards-container');
+                    const activeOrgState = document.getElementById('active-org-state');
+                    if (orgCards) orgCards.style.display = 'none';
+                    if (activeOrgState) {
+                        activeOrgState.classList.remove('hidden');
+                        document.getElementById('active-org-name').textContent = profileData.org_name || profileData.org_id;
+                        document.getElementById('active-org-role').textContent = profileData.role;
+                    }
+
+                    // Hide External Matrix Creation ONLY for Recruiter in Org, allow Manager/Admin to keep it
+                    const matrixForm = document.querySelector('#external-matrix-section .glass-panel');
+                    const managedBanner = document.getElementById('managed-by-org-banner');
+                    
+                    if (profileData.role === 'RECRUITER') {
+                        if (matrixForm) matrixForm.style.display = 'none';
+                        if (managedBanner) managedBanner.classList.remove('hidden');
+                    } else {
+                        // Manager/Admin can see it
+                        if (matrixForm) matrixForm.style.display = 'block';
+                        if (managedBanner) managedBanner.classList.add('hidden');
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Failed to sync organization state:", err);
+    }
+
     // --- NEW: Neural Matrix Logic ---
     
     // Auto-populate MCP Config with real credentials
@@ -375,3 +415,70 @@ function showToast(msg, type = "info") {
         setTimeout(() => toast.remove(), 500);
     }, 2500);
 }
+
+// Join Organization Logic
+window.joinOrganization = async () => {
+    const inviteCode = document.getElementById('org-invite-code')?.value?.trim();
+    if (!inviteCode) {
+        showToast("Please provide a valid Invite Code", "error");
+        return;
+    }
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if(!session) { showToast("Not authenticated", "error"); return; }
+
+        const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user/join-org'), {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${session.access_token}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ invite_code: inviteCode })
+        });
+        
+        const result = await res.json();
+        if (result.status === "SUCCESS") {
+            showToast("Organization Link Established", "success");
+            setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+            showToast(result.detail || "Invalid Organization Invite Code", "error");
+        }
+    } catch (err) {
+        showToast(`Network error: ${err.message}`, "error");
+    }
+};
+
+// Create Organization (Manager Path)
+window.createOrganization = async () => {
+    const orgName = document.getElementById('new-org-name')?.value?.trim();
+    if (!orgName) {
+        showToast("Please provide an Organization Name", "error");
+        return;
+    }
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if(!session) { showToast("Not authenticated", "error"); return; }
+
+        const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/user/create-org'), {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${session.access_token}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ name: orgName })
+        });
+        
+        const result = await res.json();
+        if (result.status === "SUCCESS") {
+            showToast("Workspace Initialized! Promoting to MANAGER...", "success");
+            // Redirect to manager dashboard to finalize setup and get invite codes
+            setTimeout(() => { window.location.href = 'manager-dashboard.html'; }, 1500);
+        } else {
+            showToast(result.detail || "Failed to create organization", "error");
+        }
+    } catch (err) {
+        showToast(`Network error: ${err.message}`, "error");
+    }
+};
