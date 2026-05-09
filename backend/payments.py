@@ -3,7 +3,7 @@ import json
 import os
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
-from .utils import get_env_safe
+from backend.utils import get_env_safe
 
 # Initialize Stripe Node
 stripe.api_key = get_env_safe("STRIPE_SECRET_KEY")
@@ -12,7 +12,7 @@ WEBHOOK_SECRET = get_env_safe("STRIPE_WEBHOOK_SECRET")
 SUPABASE_URL = get_env_safe("SUPABASE_URL")
 SUPABASE_KEY = get_env_safe("SUPABASE_SERVICE_ROLE_KEY")
 
-from .services.database_service import DatabaseService
+from backend.services.database_service import DatabaseService
 
 async def _update_subscription_in_db(user_id, plan_id, cycle, customer_id=None):
     """Internal database update after payment confirmation."""

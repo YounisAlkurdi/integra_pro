@@ -51,7 +51,7 @@ async def add_discovery_headers(request: Request, call_next):
     return response
 
 # --- 2. Route Registration (Modular) ---
-from .routes import (
+from backend.routes import (
     user_routes,
     node_routes,
     log_routes,
@@ -61,7 +61,9 @@ from .routes import (
     behavioral_routes,
     nlp_routes,
     payment_routes,
-    mail_routes
+    mail_routes,
+    manager_routes,
+    admin_routes
 )
 
 app.include_router(user_routes.router)
@@ -74,6 +76,8 @@ app.include_router(behavioral_routes.router)
 app.include_router(nlp_routes.router)
 app.include_router(payment_routes.router)
 app.include_router(mail_routes.router)
+app.include_router(manager_routes.router)
+app.include_router(admin_routes.router)
 
 # --- 3. System Health Node ---
 @app.get("/health")

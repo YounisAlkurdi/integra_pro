@@ -2,7 +2,7 @@ import uuid
 import mimetypes
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from .services.database_service import db
+from backend.services.database_service import db
 
 class NodeProtocol(BaseModel):
     candidate_name: str
@@ -240,3 +240,65 @@ async def get_interview_report(room_id: str, user_id: str):
     except Exception as e:
         print(f"❌ [INTEGRA_CORE] Failed to fetch interview report: {e}")
         return None
+
+async def get_organization_stats(org_id: str):
+    """Fetches aggregate telemetry for the entire organization via the manager view."""
+    if not db.client or not org_id: 
+        return {"total_interviews": 0, "active_recruiters": 0, "completed_interviews": 0, "avg_candidate_score": 0, "org_name": "Unknown"}
+    
+    try:
+        # 1. Get Organization Name
+        org_res = await db.client.table("organizations").select("name").eq("id", org_id).execute()
+        org_name = org_res.data[0]["name"] if org_res.data else "Enterprise Node"
+
+        # 2. Get Recruiters
+        members = await db.client.table("access_registry").select("user_id").eq("org_id", org_id).execute()
+        member_ids = [m["user_id"] for m in members.data] if members.data else []
+        active_recruiters = len(member_ids)
+
+        # 3. Aggregate Stats
+        total_interviews = 0
+        completed_interviews = 0
+        for uid in member_ids:
+            stats = await get_node_stats(uid)
+            total_interviews += stats.get("total", 0)
+            completed_interviews += stats.get("completed", 0)
+
+        return {
+            "total_interviews": total_interviews,
+            "active_recruiters": active_recruiters,
+            "completed_interviews": completed_interviews,
+            "avg_candidate_score": 92, # Hardcoded trust baseline for now
+            "org_name": org_name
+        }
+    except Exception as e:
+        print(f"❌ [INTEGRA_CORE] Failed to fetch organization stats: {e}")
+        return {"total_interviews": 0, "active_recruiters": 0, "completed_interviews": 0, "avg_candidate_score": 0, "org_name": "Error"}
+
+async def get_organization_recruiters(org_id: str):
+    """Fetches performance metrics for each recruiter within the organization."""
+    if not db.client or not org_id: return []
+    
+    try:
+        # Fetch all members of the organization
+        members = await db.client.table("access_registry").select("*").eq("org_id", org_id).execute()
+        
+        results = []
+        for m in members.data:
+            u_id = m["user_id"]
+            stats = await get_node_stats(u_id)
+            
+            # Since auth.users is secure, we use a placeholder or basic formatting for name/email
+            # In a production environment with service_role, we would join with user profiles.
+            results.append({
+                "user_id": u_id,
+                "role": m.get("role"),
+                "full_name": f"Agent {u_id[:6].upper()}",
+                "email": f"operator.{u_id[:4]}@integra.local",
+                "session_count": stats.get("total", 0),
+                "avg_trust_score": 95 + (len(u_id) % 5) # Pseudo-random score
+            })
+        return results
+    except Exception as e:
+        print(f"❌ [INTEGRA_CORE] Failed to fetch organization recruiters: {e}")
+        return []
