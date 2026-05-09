@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from .services.database_service import db
+from backend.services.database_service import db
 
 class ChatLogEntry(BaseModel):
     node_id: str

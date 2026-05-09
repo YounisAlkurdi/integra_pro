@@ -7,12 +7,12 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
 # Import project modules
-from nodes import get_active_streams, get_node_by_room_id, create_neural_node, get_node_stats, NodeProtocol
-from logs import get_node_chat_logs
-from mailer import send_interview_invitation
-from auth import get_active_subscription
-from payments import PRICING_DATA
-from services.database_service import DatabaseService
+from backend.nodes import get_active_streams, get_node_by_room_id, create_neural_node, get_node_stats, NodeProtocol
+from backend.logs import get_node_chat_logs
+from backend.mailer import send_interview_invitation
+from backend.auth import get_active_subscription
+from backend.payments import PRICING_DATA
+from backend.services.database_service import DatabaseService
 
 # Load environment
 load_dotenv()
@@ -169,7 +169,7 @@ async def get_external_matrix_nodes(user_id: str) -> str:
 @mcp.tool()
 async def purge_node(room_id: str, user_id: str) -> str:
     """EXECUTE PURGE PROTOCOL (Terminate Session). Permanently deletes a node."""
-    from nodes import delete_node
+    from backend.nodes import delete_node
     if await delete_node(room_id):
         return json.dumps({"status": "PURGED", "room_id": room_id})
     return "Error: Termination Signal Failed."
