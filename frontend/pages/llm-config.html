@@ -186,10 +186,10 @@
                                 <input type="radio" name="source" value="hf" class="sr-only">
                                 <div class="card-inner p-8 rounded-[2.5rem] border border-white/5 bg-white/[0.01] transition-all duration-500 flex flex-col items-center group-hover:bg-white/[0.03] group-hover:border-amber-400/20 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
                                     <div class="w-12 h-12 rounded-2xl bg-amber-400/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                                        <span class="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🤗</span>
+                                        <i data-lucide="network" class="w-6 h-6 text-amber-400 transition-all"></i>
                                     </div>
-                                    <p class="text-[12px] font-bold text-white/40 mb-1 group-hover:text-white transition-colors uppercase tracking-widest">Open Source</p>
-                                    <p class="text-[9px] font-mono text-amber-400/30 uppercase tracking-[0.2em]">Open Weights</p>
+                                    <p class="text-[12px] font-bold text-white/40 mb-1 group-hover:text-white transition-colors uppercase tracking-widest">Neural Matrix</p>
+                                    <p class="text-[9px] font-mono text-amber-400/30 uppercase tracking-[0.2em]">Universal Links</p>
                                 </div>
                             </label>
                         </div>
@@ -253,13 +253,24 @@
 
                     <section id="hf-section" class="hidden mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-6">
-                            <div class="space-y-2">
-                                <label class="text-[9px] font-mono text-white/30 uppercase tracking-widest">Open Source Model Name</label>
-                                <select id="hf-model" class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3.5 text-[12px] font-mono text-amber-300 outline-none focus:border-amber-400/60 transition-all hover-target cursor-pointer" dir="ltr"></select>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-[9px] font-mono text-white/30 uppercase tracking-widest">Protocol Provider</label>
+                                    <select id="hf-provider-type" class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3.5 text-[12px] font-mono text-amber-300 outline-none focus:border-amber-400/60 transition-all hover-target cursor-pointer">
+                                        <option value="kie">Kie.ai (Gemini Flash)</option>
+                                        <option value="nvidia">NVIDIA (Mistral/Llama)</option>
+                                        <option value="hf">Hugging Face (OpenAI Interface)</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[9px] font-mono text-white/30 uppercase tracking-widest">Neural Model ID</label>
+                                    <select id="hf-model-custom" class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3.5 text-[12px] font-mono text-amber-300 outline-none focus:border-amber-400/60 transition-all hover-target cursor-pointer">
+                                    </select>
+                                </div>
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[9px] font-mono text-white/30 uppercase tracking-widest">HuggingFace Token (Optional)</label>
-                                <input type="password" id="hf-token" placeholder="hf_••••••••••••••••"
+                                <label class="text-[9px] font-mono text-white/30 uppercase tracking-widest">Access Token (Universal Key)</label>
+                                <input type="password" id="hf-token-custom" placeholder="sk-••••••••••••••••"
                                     class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3.5 text-[12px] font-mono text-amber-300 outline-none focus:border-amber-400/60 transition-all" dir="ltr">
                             </div>
                         </div>

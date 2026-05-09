@@ -3,8 +3,8 @@ import asyncio
 import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-from .database_service import db
-from .forensic_service import perform_forensic_analysis
+from backend.services.database_service import db
+from backend.services.forensic_service import perform_forensic_analysis
 
 class ForensicSessionManager:
     _instance: Optional['ForensicSessionManager'] = None

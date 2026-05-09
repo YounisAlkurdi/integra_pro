@@ -1,7 +1,9 @@
 from typing import List
+# pyrefly: ignore [missing-import]
 from langchain_core.chat_history import BaseChatMessageHistory
+# pyrefly: ignore [missing-import]
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from .database_service import db
+from backend.services.database_service import db
 
 class SupabaseChatMessageHistory(BaseChatMessageHistory):
     """

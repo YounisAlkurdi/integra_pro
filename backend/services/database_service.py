@@ -2,7 +2,7 @@ import os
 from typing import List, Dict, Any, Optional
 from supabase import create_client, Client
 from supabase.client import AsyncClient, ClientOptions
-from ..utils import get_env_safe
+from backend.utils import get_env_safe
 
 class DatabaseService:
     _instance: Optional['DatabaseService'] = None
