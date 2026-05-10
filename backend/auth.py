@@ -177,11 +177,18 @@ async def get_user_role_and_org(user_id: str):
             limit=1
         )
         if res:
-            return res[0].get("role", "RECRUITER"), res[0].get("org_id")
-        return "RECRUITER", None # Default for legacy users
+            role = res[0].get("role", "RECRUITER")
+            org_id = res[0].get("org_id")
+            org_name = None
+            if org_id:
+                org_res = await db.select(table="organizations", filters={"id": org_id}, limit=1)
+                if org_res:
+                    org_name = org_res[0].get("name")
+            return role, org_id, org_name
+        return "RECRUITER", None, None # Default for legacy users
     except Exception as e:
         print(f"=> Neural Trace Error: Failed to fetch role: {e}")
-        return "RECRUITER", None
+        return "RECRUITER", None, None
 
 # ─────────────────────────────────────────────
 # User Profile
@@ -191,7 +198,7 @@ async def get_user_profile_data(user: dict):
     user_id = user.get("sub")
     user_email = user.get("email")
     subscription = await get_active_subscription(user_id)
-    role, org_id = await get_user_role_and_org(user_id)
+    role, org_id, org_name = await get_user_role_and_org(user_id)
     
     # Professional Bootstrap: Auto-promote superadmin based on environment variable
     superadmin_email = os.environ.get("SUPERADMIN_EMAIL")
@@ -210,5 +217,6 @@ async def get_user_profile_data(user: dict):
         "access_level": "COMMANDER", # Legacy support
         "role": role,
         "org_id": org_id,
+        "org_name": org_name,
         "subscription": subscription
     }

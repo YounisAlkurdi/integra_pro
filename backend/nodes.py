@@ -276,7 +276,7 @@ async def get_organization_stats(org_id: str):
         return {"total_interviews": 0, "active_recruiters": 0, "completed_interviews": 0, "avg_candidate_score": 0, "org_name": "Error"}
 
 async def get_organization_recruiters(org_id: str):
-    """Fetches performance metrics for each recruiter within the organization."""
+    """Fetches performance metrics for each recruiter within the organization, including their real profiles."""
     if not db.client or not org_id: return []
     
     try:
@@ -288,17 +288,92 @@ async def get_organization_recruiters(org_id: str):
             u_id = m["user_id"]
             stats = await get_node_stats(u_id)
             
-            # Since auth.users is secure, we use a placeholder or basic formatting for name/email
-            # In a production environment with service_role, we would join with user profiles.
+            # Fetch real profile data
+            profile_res = await db.client.table("profiles").select("email, full_name, avatar_url").eq("id", u_id).execute()
+            profile = profile_res.data[0] if profile_res.data else {}
+            
             results.append({
                 "user_id": u_id,
                 "role": m.get("role"),
-                "full_name": f"Agent {u_id[:6].upper()}",
-                "email": f"operator.{u_id[:4]}@integra.local",
-                "session_count": stats.get("total", 0),
-                "avg_trust_score": 95 + (len(u_id) % 5) # Pseudo-random score
+                "full_name": profile.get("full_name") or f"Agent {u_id[:6].upper()}",
+                "email": profile.get("email") or f"operator.{u_id[:4]}@integra.local",
+                "avatar_url": profile.get("avatar_url"),
+                "total_interviews": stats.get("total", 0),
+                "active_interviews": stats.get("active", 0),
+                "completed_interviews": stats.get("completed", 0),
+                "avg_trust_score": 95 + (len(u_id) % 5) # Pseudo-random score for now unless calculated
             })
         return results
     except Exception as e:
         print(f"❌ [INTEGRA_CORE] Failed to fetch organization recruiters: {e}")
         return []
+
+async def get_organization_rooms(org_id: str, manager_user_id: str = None):
+    """Fetches rooms created by RECRUITER members of the org, only AFTER they joined.
+    
+    Rules:
+    - Only RECRUITER role members (not MANAGER/ADMIN)
+    - Only rooms created after the recruiter's join date (access_registry.created_at)
+    - Excludes deleted rooms
+    """
+    if not db.client or not org_id: return []
+    try:
+        # 1. Get only RECRUITER members with their join date
+        members_res = await db.client.table("access_registry") \
+            .select("user_id, role, created_at") \
+            .eq("org_id", org_id) \
+            .eq("role", "RECRUITER") \
+            .execute()
+        
+        members = members_res.data or []
+        
+        if not members:
+            print(f"🔍 [INTEGRA_MANAGER] No RECRUITER members found in org {org_id}")
+            return []
+        
+        print(f"🔍 [INTEGRA_MANAGER] Found {len(members)} recruiters in org {org_id}")
+        
+        # 2. For each recruiter, fetch only rooms created AFTER their join date
+        all_rooms = []
+        profile_cache = {}
+        
+        for member in members:
+            u_id = member["user_id"]
+            joined_at = member.get("created_at")  # ISO timestamp of when they joined
+            
+            # Build query: non-deleted rooms by this recruiter
+            query = db.client.table("nodes") \
+                .select("*") \
+                .eq("user_id", u_id) \
+                .eq("is_deleted", False)
+            
+            # Only include rooms created AFTER the recruiter joined the org
+            if joined_at:
+                query = query.gte("created_at", joined_at)
+            
+            rooms_res = await query.order("created_at", desc=True).execute()
+            recruiter_rooms = rooms_res.data or []
+            
+            # Attach creator name
+            if u_id not in profile_cache:
+                profile_res = await db.client.table("profiles").select("full_name").eq("id", u_id).execute()
+                if profile_res.data and profile_res.data[0].get("full_name"):
+                    profile_cache[u_id] = profile_res.data[0]["full_name"]
+                else:
+                    profile_cache[u_id] = "HR Agent"
+            
+            for room in recruiter_rooms:
+                room["creator_name"] = profile_cache[u_id]
+            
+            all_rooms.extend(recruiter_rooms)
+        
+        # 3. Sort all rooms by created_at descending
+        all_rooms.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        
+        print(f"✅ [INTEGRA_MANAGER] Returning {len(all_rooms)} recruiter rooms for org {org_id}")
+        return all_rooms
+        
+    except Exception as e:
+        print(f"❌ [INTEGRA_CORE] Failed to fetch organization rooms: {e}")
+        return []
+
