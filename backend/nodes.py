@@ -264,11 +264,18 @@ async def get_organization_stats(org_id: str):
             total_interviews += stats.get("total", 0)
             completed_interviews += stats.get("completed", 0)
 
+        # 4. Calculate Average Trust Score
+        recruiters_data = await get_organization_recruiters(org_id)
+        if recruiters_data:
+            avg_trust = sum([r["avg_trust_score"] for r in recruiters_data]) / len(recruiters_data)
+        else:
+            avg_trust = 0
+
         return {
             "total_interviews": total_interviews,
             "active_recruiters": active_recruiters,
             "completed_interviews": completed_interviews,
-            "avg_candidate_score": 92, # Hardcoded trust baseline for now
+            "avg_candidate_score": round(avg_trust),
             "org_name": org_name
         }
     except Exception as e:
@@ -285,27 +292,57 @@ async def get_organization_recruiters(org_id: str):
         
         results = []
         for m in members.data:
-            u_id = m["user_id"]
-            stats = await get_node_stats(u_id)
-            
-            # Fetch real profile data
-            profile_res = await db.client.table("profiles").select("email, full_name, avatar_url").eq("id", u_id).execute()
-            profile = profile_res.data[0] if profile_res.data else {}
-            
-            results.append({
-                "user_id": u_id,
-                "role": m.get("role"),
-                "full_name": profile.get("full_name") or f"Agent {u_id[:6].upper()}",
-                "email": profile.get("email") or f"operator.{u_id[:4]}@integra.local",
-                "avatar_url": profile.get("avatar_url"),
-                "total_interviews": stats.get("total", 0),
-                "active_interviews": stats.get("active", 0),
-                "completed_interviews": stats.get("completed", 0),
-                "avg_trust_score": 95 + (len(u_id) % 5) # Pseudo-random score for now unless calculated
-            })
+            try:
+                u_id = m["user_id"]
+                stats = await get_node_stats(u_id)
+                
+                # 1. Fetch real profile data
+                profile_res = await db.client.table("profiles").select("email, full_name, avatar_url, updated_at").eq("id", u_id).execute()
+                profile = profile_res.data[0] if profile_res.data else {}
+                
+                # 2. Calculate real Trust Score from evaluations
+                evals_res = await db.client.table("recruiter_evaluations").select("rating_efficiency, rating_quality").eq("recruiter_id", u_id).execute()
+                evals = evals_res.data or []
+                
+                if evals:
+                    total_pts = sum([e["rating_efficiency"] + e["rating_quality"] for e in evals])
+                    max_pts = len(evals) * 10
+                    trust_score = round((total_pts / max_pts) * 100)
+                else:
+                    trust_score = None  # No evaluations yet — show as '--' on frontend
+                
+                # 3. Determine status
+                is_active = False
+                last_seen = profile.get("updated_at")
+                if last_seen:
+                    from datetime import datetime, timezone
+                    try:
+                        last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                        diff = (datetime.now(timezone.utc) - last_seen_dt).total_seconds()
+                        if diff < 600: # 10 minutes
+                            is_active = True
+                    except: pass
+
+                results.append({
+                    "user_id": u_id,
+                    "role": m.get("role") or "RECRUITER",
+                    "full_name": profile.get("full_name") or f"Agent {u_id[:6].upper()}",
+                    "email": profile.get("email") or f"operator.{u_id[:4]}@integra.local",
+                    "avatar_url": profile.get("avatar_url"),
+                    "total_interviews": stats.get("total", 0),
+                    "active_interviews": stats.get("active", 0),
+                    "completed_interviews": stats.get("completed", 0),
+                    "avg_trust_score": trust_score,
+                    "is_active": is_active,
+                    "last_seen": last_seen
+                })
+            except Exception as member_err:
+                print(f"⚠️ [INTEGRA_CORE] Skipping corrupted recruiter record {m.get('user_id')}: {member_err}")
+                continue
+
         return results
     except Exception as e:
-        print(f"❌ [INTEGRA_CORE] Failed to fetch organization recruiters: {e}")
+        print(f"❌ [INTEGRA_CORE] Critical failure in organization recruiters fetch: {e}")
         return []
 
 async def get_organization_rooms(org_id: str, manager_user_id: str = None):

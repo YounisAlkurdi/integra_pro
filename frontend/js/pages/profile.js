@@ -59,6 +59,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                         activeOrgState.classList.remove('hidden');
                         document.getElementById('active-org-name').textContent = profileData.org_name || profileData.org_id;
                         document.getElementById('active-org-role').textContent = profileData.role;
+                        
+                        // Show invite code for Managers
+                        if (profileData.role === 'MANAGER' || profileData.role === 'ADMIN') {
+                            const inviteSection = document.getElementById('manager-invite-section');
+                            if (inviteSection) inviteSection.classList.remove('hidden');
+                            
+                            const inviteCodeEl = document.getElementById('active-org-invite-code');
+                            if (inviteCodeEl) inviteCodeEl.textContent = profileData.org_id;
+                        }
                     }
 
                     // Hide External Matrix Creation ONLY for Recruiter in Org, allow Manager/Admin to keep it
@@ -341,6 +350,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         navigator.clipboard.writeText(id).then(() => {
             showToast("ID Copied Securely", "info");
         });
+    };
+
+    // Utility: Copy Invite Code
+    window.copyInviteCode = () => {
+        const code = document.getElementById('active-org-invite-code')?.textContent;
+        if (code) {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast("Invite Code Copied", "success");
+            });
+        }
     };
 
     // Initial Load

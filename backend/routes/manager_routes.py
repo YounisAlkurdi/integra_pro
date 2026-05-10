@@ -89,3 +89,136 @@ async def get_recruiter_nodes(recruiter_id: str, profile: dict = Depends(verify_
         return nodes.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.get("/rooms")
+async def organization_rooms(profile: dict = Depends(verify_manager)):
+    """Returns all interview nodes/rooms created by the organization's recruiters."""
+    from backend.nodes import get_organization_rooms
+    org_id = profile.get("org_id")
+    manager_user_id = profile.get("node_id")  # Manager's own user ID
+    if not org_id:
+        return []
+    return await get_organization_rooms(org_id, manager_user_id=manager_user_id)
+
+@router.delete("/recruiters/{recruiter_id}")
+async def remove_recruiter(recruiter_id: str, profile: dict = Depends(verify_manager)):
+    """Removes a recruiter from the organization's access registry."""
+    org_id = profile.get("org_id")
+    
+    # Verify the recruiter belongs to this org before removing
+    recruiter_check = await db.client.table("access_registry") \
+        .select("id, role") \
+        .eq("user_id", recruiter_id) \
+        .eq("org_id", org_id) \
+        .execute()
+        
+    if not recruiter_check.data:
+        raise HTTPException(status_code=404, detail="Recruiter not found in your organization")
+        
+    # Prevent a manager from removing themselves if they are the only manager
+    if recruiter_check.data[0]["role"] == "MANAGER" and recruiter_id == profile.get("node_id"):
+        raise HTTPException(status_code=400, detail="Cannot remove yourself from the organization")
+
+    try:
+        await db.client.table("access_registry").delete().eq("user_id", recruiter_id).eq("org_id", org_id).execute()
+        return {"status": "SUCCESS", "message": "Recruiter removed from organization"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.get("/billing")
+async def organization_billing(profile: dict = Depends(verify_manager)):
+    """Returns the organization's subscription billing usage and limits."""
+    user_id = profile.get("node_id")
+    org_id = profile.get("org_id")
+    try:
+        sub_res = await db.client.table("subscriptions").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        sub = sub_res.data[0] if sub_res.data else {}
+        
+        # Aggregate org-wide interviews consumed this cycle
+        total_used = 0
+        if org_id:
+            members_res = await db.client.table("access_registry").select("user_id").eq("org_id", org_id).execute()
+            member_ids = [m["user_id"] for m in (members_res.data or [])]
+            for uid in member_ids:
+                from backend.nodes import get_node_stats
+                stats = await get_node_stats(uid)
+                total_used += stats.get("total", 0)
+        
+        plan_map = {
+            'free': {'label': 'Free Tier', 'price': 0},
+            'starter': {'label': 'Starter', 'price': 29},
+            'professional': {'label': 'Professional', 'price': 99},
+            'nexus': {'label': 'Nexus', 'price': 149},
+            'enterprise': {'label': 'Enterprise', 'price': 499},
+        }
+        plan_id = sub.get("plan_id", "free")
+        plan_info = plan_map.get(plan_id.lower(), {'label': plan_id.upper(), 'price': 0})
+        
+        return {
+            "plan_id": plan_id,
+            "plan_label": plan_info['label'],
+            "plan_price": plan_info['price'],
+            "interviews_limit": sub.get("interviews_limit", 10),
+            "interviews_used": total_used,
+            "max_duration_mins": sub.get("max_duration_mins", 10),
+            "max_participants": sub.get("max_participants", 2),
+            "next_billing_date": sub.get("next_billing_date", "N/A"),
+            "status": sub.get("status", "ACTIVE")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/invite-code")
+async def get_invite_code(profile: dict = Depends(verify_manager)):
+    """Returns the organization's unique invite code (org_id) for member onboarding."""
+    org_id = profile.get("org_id")
+    if not org_id:
+        raise HTTPException(status_code=404, detail="No organization found for this manager")
+    
+    try:
+        org_res = await db.client.table("organizations").select("id, name").eq("id", org_id).execute()
+        if not org_res.data:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        org = org_res.data[0]
+        return {
+            "org_id": org["id"],
+            "org_name": org.get("name", "Your Organization"),
+            "invite_code": org["id"]  # The invite code IS the org_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/audit-logs")
+async def get_audit_logs(profile: dict = Depends(verify_manager)):
+    """Returns recent security and audit events for the organization."""
+    org_id = profile.get("org_id")
+    if not org_id:
+        return []
+    
+    try:
+        # Get org members first
+        members_res = await db.client.table("access_registry").select("user_id").eq("org_id", org_id).execute()
+        member_ids = [m["user_id"] for m in (members_res.data or [])]
+        
+        if not member_ids:
+            return []
+
+        # Try fetching from audit_logs if table exists
+        try:
+            logs_res = await db.client.table("audit_logs") \
+                .select("*") \
+                .in_("user_id", member_ids) \
+                .order("created_at", desc=True) \
+                .limit(10) \
+                .execute()
+            return logs_res.data or []
+        except Exception:
+            # Table might not exist yet — return empty (no mock data)
+            return []
+    except Exception as e:
+        print(f"❌ [MANAGER] Failed to fetch audit logs: {e}")
+        return []

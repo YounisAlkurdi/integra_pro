@@ -107,6 +107,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             }
         }
+        // Start Heartbeat for activity tracking
+        startHeartbeat();
     } catch (e) {
         console.error("Failed to load user information.");
     }
@@ -148,6 +150,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         cursor.classList.remove('hovering');
     });
 
+    // --- 2. Heartbeat (Activity Tracking) ---
+    async function startHeartbeat() {
+        const updateActivity = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            await supabase.from('profiles').update({ updated_at: new Date().toISOString() }).eq('id', user.id);
+        };
+        
+        // Initial beat
+        updateActivity();
+        // Beat every minute
+        setInterval(updateActivity, 60000);
+    }
+
     // --- 3. Backend Communication Engine ---
     async function getAuthHeader() {
         const { data: { session } } = await supabase.auth.getSession();
@@ -160,8 +176,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/nodes/stats'), {
                 headers: { 'Authorization': auth }
             });
-            return await res.json();
-        } catch (e) { return null; }
+            if (!res.ok) return { total: 0, active: 0, completed: 0, threats: 0 };
+            const data = await res.json();
+            // Ensure we return an object with expected keys even if backend structure changes
+            return {
+                total: data.total ?? 0,
+                active: data.active ?? 0,
+                completed: data.completed ?? 0,
+                threats: data.threats ?? 0
+            };
+        } catch (e) { 
+            console.error("Failed to fetch node stats:", e);
+            return { total: 0, active: 0, completed: 0, threats: 0 }; 
+        }
     }
 
     async function fetchNodes() {
@@ -280,10 +307,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (e) { return null; }
     }
 
-    async function fetchRecruiters() {
+    async function fetchTeamRooms() {
         try {
             const auth = await getAuthHeader();
-            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/manager/recruiters'), {
+            const res = await fetch(window.INTEGRA_SETTINGS.endpoint('/api/manager/rooms'), {
                 headers: { 'Authorization': auth }
             });
             return await res.json();
@@ -296,9 +323,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         const sub = userSubscription || await fetchSubscription();
         
         if (stats) {
-            document.getElementById('stat-total').textContent = `${stats.total}/${sub?.interviews_limit || 5}`;
-            document.getElementById('stat-active').textContent = stats.active;
-            document.getElementById('stat-completed').textContent = stats.completed;
+            const totalEl = document.getElementById('stat-total');
+            const activeEl = document.getElementById('stat-active');
+            const completedEl = document.getElementById('stat-completed');
+
+            if (totalEl) {
+                const limit = sub?.interviews_limit || 5;
+                const used = stats.total || 0;
+                totalEl.textContent = `${used}/${limit}`;
+            }
+            if (activeEl) activeEl.textContent = stats.active || 0;
+            if (completedEl) completedEl.textContent = stats.completed || 0;
             
             // Update Node Capacity display
             const capacityEl = document.getElementById('stat-capacity');
@@ -310,11 +345,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Legacy support for flagged element
             const flaggedEl = document.getElementById('stat-flagged');
-            if (flaggedEl) flaggedEl.textContent = stats.threats.toString().padStart(2, '0');
+            if (flaggedEl) flaggedEl.textContent = (stats.threats || 0).toString().padStart(2, '0');
             
             // Highlight limit if reached
-            if (sub && stats.total >= sub.interviews_limit) {
-                document.getElementById('stat-total').classList.add('text-red-500', 'animate-pulse');
+            if (sub && stats.total >= sub.interviews_limit && totalEl) {
+                totalEl.classList.add('text-red-500', 'animate-pulse');
             }
         }
     }
@@ -406,61 +441,74 @@ document.addEventListener("DOMContentLoaded", async () => {
         init3DTilt();
     }
 
-    async function renderRecruiters() {
+    async function renderTeamRooms() {
         const grid = document.getElementById('recruiters-grid');
-        const recruiters = await fetchRecruiters();
+        const rooms = await fetchTeamRooms();
 
-        if (!recruiters || recruiters.length === 0) {
+        if (!rooms || rooms.length === 0) {
             grid.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 opacity-20">
-                    <p class="text-[8px] font-mono uppercase tracking-[0.3em]">No subordinate recruiters detected</p>
+                <div class="flex flex-col items-center justify-center py-10 opacity-20 col-span-full">
+                    <p class="text-[8px] font-mono uppercase tracking-[0.3em]">No team streams detected</p>
                 </div>
             `;
             return;
         }
 
-        grid.innerHTML = recruiters.map(r => {
-            const conversion = r.total_interviews > 0 
-                ? Math.round((r.completed_interviews / r.total_interviews) * 100) 
-                : 0;
+        grid.innerHTML = rooms.map(s => {
+            const isCompleted = s.status === 'COMPLETED';
             
+            const statusClass = isCompleted 
+                ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                : 'bg-cyan-400/5 border-cyan-400/20 text-cyan-400';
+            
+            const cardOpacity = isCompleted ? 'opacity-60' : 'opacity-100';
+            const hoverEffect = isCompleted ? '' : 'hover:bg-white/[0.03] hover:border-cyan-400/20';
+
             return `
-                <div class="glass-panel p-6 rounded-2xl border border-white/5 hover:border-cyan-400/20 transition-all group reveal active">
-                    <div class="flex items-center justify-between">
+                <div class="group relative bg-white/[0.01] border border-white/5 p-6 rounded-2xl ${hoverEffect} transition-all duration-500 overflow-hidden reveal active ${isCompleted ? '' : 'cursor-pointer'} ${cardOpacity}">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20">
-                                <i data-lucide="user" class="w-5 h-5 text-cyan-400"></i>
+                            <div class="w-10 h-10 ${isCompleted ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20'} rounded-full flex items-center justify-center font-mono text-xs border">
+                                ${(s.candidate_name || 'N').charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <h4 class="text-sm font-bold text-white">${r.full_name || r.email}</h4>
-                                <p class="text-[9px] font-mono text-white/30 uppercase tracking-widest">${r.email}</p>
+                                <h4 class="text-sm font-bold tracking-tight text-white ${isCompleted ? '' : 'group-hover:text-cyan-400'} transition-colors">${s.candidate_name || 'Unknown'}</h4>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <p class="text-[9px] font-mono text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-1">
+                                        <i data-lucide="user" class="w-3 h-3"></i> ${s.creator_name || 'Unknown HR'}
+                                    </p>
+                                    <span class="text-[8px] text-white/10">•</span>
+                                    <p class="text-[9px] font-mono ${isCompleted ? 'text-white/20' : 'text-cyan-400/40'} uppercase tracking-[0.2em]">📅 ${formatDate(s.scheduled_at)}</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <div class="text-xl font-black tracking-tighter text-white">${conversion}%</div>
-                            <div class="text-[8px] font-mono text-cyan-400/50 uppercase tracking-widest">Efficiency Rate</div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
-                        <div>
-                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Total</p>
-                            <p class="text-xs font-bold text-white/60">${r.total_interviews}</p>
-                        </div>
-                        <div>
-                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Live</p>
-                            <p class="text-xs font-bold text-cyan-400">${r.active_interviews}</p>
-                        </div>
-                        <div>
-                            <p class="text-[7px] font-mono text-white/20 uppercase tracking-widest mb-1">Archived</p>
-                            <p class="text-xs font-bold text-green-400">${r.completed_interviews}</p>
+                        
+                        <div class="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                            <span class="text-[8px] font-mono text-white/20 uppercase tracking-widest hidden lg:block">ID: ${s.room_id.substring(0, 8)}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="px-3 py-1 ${statusClass} text-[8px] font-bold uppercase rounded-full tracking-[0.2em]">${s.status}</span>
+                                
+                                ${isCompleted ? `
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="window.location.href='reports.html?room=${s.room_id}'" class="px-4 py-2 bg-cyan-400/10 hover:bg-cyan-400 text-cyan-400 hover:text-obsidian text-[8px] font-bold uppercase rounded-lg border border-cyan-400/20 hover:border-cyan-400 transition-all cursor-pointer flex items-center gap-2 hover-target">
+                                            <i data-lucide="file-bar-chart" class="w-3 h-3"></i> View Report
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="joinAsHR('${s.room_id}')" class="px-4 py-2 bg-white/5 hover:bg-white text-white hover:text-obsidian text-[8px] font-bold uppercase rounded-lg transition-all hover-target flex items-center gap-2 border border-white/10 hover:border-white">
+                                            <i data-lucide="play" class="w-3 h-3"></i> Join
+                                        </button>
+                                    </div>
+                                `}
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
 
-        lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
     }
 
     function setupManagerView() {
@@ -503,7 +551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById('team-recruiter-count').textContent = stats.recruiter_count;
             }
             
-            renderRecruiters();
+            renderTeamRooms();
         });
     }
 
@@ -647,6 +695,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
     // --- 7. Utility Functions ---
+       // --- Security Alerts (Watchdog) ---
+    async function renderSecurityAlerts() {
+        if (!securityAlertsContainer) return;
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/manager/audit-logs`, { headers: authHeaders });
+            const logs = res.ok ? await res.json() : [];
+            
+            if (logs.length === 0) {
+                securityAlertsContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 opacity-20">
+                        <i data-lucide="shield-check" class="w-10 h-10 mb-4 text-green-400"></i>
+                        <p class="text-[8px] font-mono uppercase tracking-[0.3em]">No security threats detected</p>
+                    </div>
+                `;
+            } else {
+                securityAlertsContainer.innerHTML = logs.map(log => `
+                    <div class="p-4 bg-red-500/5 border border-red-500/10 rounded-xl mb-3 flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-white">${log.message || log.type || 'Anomaly Detected'}</p>
+                            <p class="text-[8px] font-mono text-white/30 uppercase mt-1">${log.user_name || 'System'} • ${new Date(log.created_at).toLocaleTimeString()}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            securityAlertsContainer.innerHTML = `<p class="text-[8px] text-center opacity-20">SYSTEM_WATCHDOG_OFFLINE</p>`;
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return 'TBD';
         const date = new Date(dateStr);

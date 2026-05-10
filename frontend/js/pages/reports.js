@@ -38,10 +38,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const { data: nodes, error } = await supabase
-            .from('nodes')
-            .select('*')
-            .eq('user_id', user.id)  // ✅ Only fetch THIS user's nodes
+        // Fetch user role and org_id for potential manager access
+        const { data: access } = await supabase
+            .from('access_registry')
+            .select('role, org_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        const isManager = access?.role === 'MANAGER' || access?.role === 'ADMIN';
+
+        let query = supabase.from('nodes').select('*');
+
+        if (isManager && access.org_id) {
+            // Manager can see all nodes in their org (RLS should handle the details)
+            // But we need a way to filter nodes by org_id. 
+            // If nodes table doesn't have org_id, we might need a more complex join or just rely on RLS.
+            // Assuming RLS is correctly configured for the org_id context.
+            // For now, let's keep the sidebar to the user's own nodes, but ALLOW viewing others via ID.
+            query = query.eq('user_id', user.id); 
+        } else {
+            query = query.eq('user_id', user.id);
+        }
+
+        const { data: nodes, error } = await query
             .order('created_at', { ascending: false });
 
         if (error || !nodes || nodes.length === 0) {
@@ -57,13 +76,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="interview-item p-8 border-b border-white/5 group" onclick="window.viewArchive('${node.room_id}')" id="archive-${node.room_id}">
                 <div class="flex items-center gap-5">
                     <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-cyan-400 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] transition-all">
-                        ${node.candidate_name[0]}
+                        ${node.candidate_name ? node.candidate_name[0] : '?'}
                     </div>
                     <div>
-                        <h4 class="text-xs font-black uppercase tracking-tight italic">${node.candidate_name}</h4>
+                        <h4 class="text-xs font-black uppercase tracking-tight italic">${node.candidate_name || 'Anonymous'}</h4>
                         <div class="flex items-center gap-2 mt-2">
                              <div class="w-1.5 h-1.5 rounded-full bg-emerald-500/40"></div>
-                             <p class="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em]">${node.position}</p>
+                             <p class="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em]">${node.position || 'Unknown Position'}</p>
                         </div>
                     </div>
                 </div>
@@ -76,7 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (autoRoomId) {
             // Slight delay to ensure DOM is ready
             setTimeout(() => {
-                window.viewArchive(autoRoomId);
+                window.viewArchive(autoRoomId, isManager);
                 // Optionally clean up the URL to look cleaner after loading
                 window.history.replaceState({}, document.title, window.location.pathname);
             }, 100);
@@ -84,7 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // --- 2. Decrypt & Visualize Report ---
-    window.viewArchive = async (nodeId) => {
+    window.viewArchive = async (nodeId, isManagerOverride = false) => {
         selectedNodeId = nodeId;
 
         // Visual Feedback
@@ -110,14 +129,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!user) { window.location.href = 'login.html'; return; }
 
             // 1. Fetch Node Core Data
-            const { data: node, error: nodeError } = await supabase
-                .from('nodes')
-                .select('*')
-                .eq('room_id', nodeId)
-                .eq('user_id', user.id)
-                .single();
+            let query = supabase.from('nodes').select('*').eq('room_id', nodeId);
+            
+            // If not a manager, strictly enforce ownership
+            // Note: We check role again or use the passed override
+            if (!isManagerOverride) {
+                const { data: access } = await supabase
+                    .from('access_registry')
+                    .select('role')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+                if (access?.role !== 'MANAGER' && access?.role !== 'ADMIN') {
+                    query = query.eq('user_id', user.id);
+                }
+            }
+            
+            const { data: node, error: nodeError } = await query.single();
+
             if (nodeError || !node) {
                 showToast("Access Denied: Node not in your archive", "error");
+                reportDetail.classList.add('hidden');
+                emptyReport.classList.remove('hidden');
                 return;
             }
 

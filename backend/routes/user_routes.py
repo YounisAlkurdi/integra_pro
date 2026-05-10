@@ -43,7 +43,7 @@ async def join_organization(req: JoinOrgRequest, user: dict = Depends(get_curren
         registry_res = await db.client.table("access_registry").select("id").eq("user_id", user_id).execute()
         if registry_res.data:
             await db.client.table("access_registry") \
-                .update({"org_id": org_id}) \
+                .update({"org_id": org_id, "role": "RECRUITER"}) \
                 .eq("user_id", user_id) \
                 .execute()
         else:

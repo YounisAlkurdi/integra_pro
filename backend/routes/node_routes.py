@@ -27,6 +27,11 @@ async def list_nodes(user: dict = Depends(get_current_user)):
     """Data Stream Synchronization."""
     return await get_active_streams(user_id=user["sub"])
 
+@router.get("/stats")
+async def sys_stats(user: dict = Depends(get_current_user)):
+    """Telemetry Reporting Node. Must be before /{room_id} to avoid wildcard conflict."""
+    return await get_node_stats(user_id=user["sub"])
+
 @router.delete("/purge/completed")
 async def purge_nodes(user: dict = Depends(get_current_user)):
     """Bulk Soft-Delete Protocol for Completed Nodes."""
@@ -39,11 +44,6 @@ async def remove_node(room_id: str, user: dict = Depends(get_current_user)):
     if await delete_node(room_id):
         return {"status": "PURGED", "room_id": room_id}
     raise HTTPException(status_code=404, detail="Node not found")
-
-@router.get("/stats")
-async def sys_stats(user: dict = Depends(get_current_user)):
-    """Telemetry Reporting Node."""
-    return await get_node_stats(user_id=user["sub"])
 
 @router.get("/signed-video-url")
 async def signed_video_url(video_path: str, user: dict = Depends(get_current_user)):
