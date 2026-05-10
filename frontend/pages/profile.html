@@ -258,6 +258,18 @@
                                 Role: <span id="active-org-role" class="text-white">USER</span>
                             </div>
                         </div>
+
+                        <!-- Manager Invite Code Section -->
+                        <div id="manager-invite-section" class="mt-6 pt-6 border-t border-white/5 hidden">
+                            <label class="text-[8px] font-mono text-emerald-400/70 uppercase tracking-[0.2em] block mb-2">Organization Invite Code</label>
+                            <div class="flex items-center gap-3">
+                                <code id="active-org-invite-code" class="flex-1 bg-obsidian/60 border border-white/10 p-4 rounded-xl text-[10px] font-mono text-white/80">Fetching...</code>
+                                <button onclick="copyInviteCode()" class="p-4 bg-emerald-400/10 hover:bg-emerald-400 hover:text-obsidian text-emerald-400 rounded-xl border border-emerald-400/20 transition-all">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <p class="text-[9px] font-mono text-white/40 mt-3 uppercase tracking-wider">Share this code with HR recruiters so they can join your organization.</p>
+                        </div>
                     </div>
                 </section>
 
