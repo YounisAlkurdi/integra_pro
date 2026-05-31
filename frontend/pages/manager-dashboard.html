@@ -390,7 +390,7 @@
             
             // Verify MANAGER role
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/user/profile', {
+                const response = await fetch(`${window.INTEGRA_SETTINGS?.BASE_URL || 'http://127.0.0.1:8000'}/api/user/profile`, {
                     headers: {
                         'Authorization': `Bearer ${session.access_token}`
                     }

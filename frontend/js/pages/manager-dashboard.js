@@ -5,7 +5,7 @@
 
 import { supabase } from '../core/supabase-client.js';
 
-const API_BASE = window.INTEGRA_SETTINGS?.backend_url || 'http://127.0.0.1:8000';
+const API_BASE = window.INTEGRA_SETTINGS?.BASE_URL || 'http://127.0.0.1:8000';
 const endpoint = (path) => `${API_BASE}${path}`;
 
 document.addEventListener('DOMContentLoaded', async () => {
