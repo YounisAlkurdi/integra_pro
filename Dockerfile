@@ -64,8 +64,6 @@ RUN apt-get purge -y --auto-remove \
 
 # --- Copy Backend Source Code ---
 COPY backend/ ./backend/
-COPY tracker.py .
-
 # --- Expose API Port ---
 EXPOSE 8000
 
