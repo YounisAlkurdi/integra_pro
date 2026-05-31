@@ -16,10 +16,15 @@
     { "src": "/css/(.*)", "dest": "/frontend/css/$1" },
     { "src": "/js/(.*)", "dest": "/frontend/js/$1" },
     { "src": "/pages/(.*)", "dest": "/frontend/pages/$1" },
+    
     { "src": "/", "dest": "/frontend/pages/index.html" },
     { "src": "/index", "dest": "/frontend/pages/index.html" },
     { "src": "/login", "dest": "/frontend/pages/login.html" },
     { "src": "/dashboard", "dest": "/frontend/pages/dashboard.html" },
+    
+    { "src": "/manager-dashboard", "dest": "/frontend/pages/manager-dashboard.html" },
+    { "src": "/admin-center", "dest": "/frontend/pages/admin-center.html" },
+    
     { "src": "/appointments", "dest": "/frontend/pages/appointments.html" },
     { "src": "/billing", "dest": "/frontend/pages/billing.html" },
     { "src": "/checkout", "dest": "/frontend/pages/checkout.html" },
@@ -28,6 +33,9 @@
     { "src": "/pricing", "dest": "/frontend/pages/pricing.html" },
     { "src": "/profile", "dest": "/frontend/pages/profile.html" },
     { "src": "/reports", "dest": "/frontend/pages/reports.html" },
+    
+    { "src": "/error", "dest": "/frontend/error.html" },
+    
     { "src": "/(.*)\\.html", "dest": "/frontend/pages/$1.html" },
     { "src": "/(.*)", "dest": "/frontend/pages/index.html" }
   ]
