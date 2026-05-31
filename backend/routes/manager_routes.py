@@ -40,7 +40,8 @@ async def organization_recruiters(profile: dict = Depends(verify_manager)):
 @router.post("/evaluate")
 async def evaluate_recruiter(req: RecruiterEvaluationRequest, profile: dict = Depends(verify_manager)):
     """Allows a manager to submit a formal evaluation for a recruiter in their organization."""
-    manager_id = profile.get("node_id")
+    # تعديل: قراءة الـ ID الصحيح للمدير لحل مشكلة الـ NoneType وطرد السيرفر
+    manager_id = profile.get("id") or profile.get("user_id")
     org_id = profile.get("org_id")
 
     # 1. Verify recruiter belongs to the same org
@@ -55,12 +56,13 @@ async def evaluate_recruiter(req: RecruiterEvaluationRequest, profile: dict = De
     # 2. Insert evaluation
     try:
         res = await db.client.table("recruiter_evaluations").insert({
-            "manager_id": manager_id,
+            "manager_id": manager_id,  
             "recruiter_id": req.recruiter_id,
             "rating_efficiency": req.rating_efficiency,
             "rating_quality": req.rating_quality,
             "notes": req.notes
         }).execute()
+        
         return {"status": "SUCCESS", "evaluation_id": res.data[0]["id"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -95,11 +97,13 @@ async def organization_rooms(profile: dict = Depends(verify_manager)):
     """Returns all interview nodes/rooms created by the organization's recruiters."""
     from backend.nodes import get_organization_rooms
     org_id = profile.get("org_id")
-    manager_user_id = profile.get("node_id")  # Manager's own user ID
+    
+    # تعديل: بدلاً من node_id نأخذ المعرف الحقيقي للمدير لمنع انهيار الـ API
+    manager_user_id = profile.get("id") or profile.get("user_id") 
     if not org_id:
         return []
     return await get_organization_rooms(org_id, manager_user_id=manager_user_id)
-
+    
 @router.delete("/recruiters/{recruiter_id}")
 async def remove_recruiter(recruiter_id: str, profile: dict = Depends(verify_manager)):
     """Removes a recruiter from the organization's access registry."""
@@ -115,8 +119,9 @@ async def remove_recruiter(recruiter_id: str, profile: dict = Depends(verify_man
     if not recruiter_check.data:
         raise HTTPException(status_code=404, detail="Recruiter not found in your organization")
         
-    # Prevent a manager from removing themselves if they are the only manager
-    if recruiter_check.data[0]["role"] == "MANAGER" and recruiter_id == profile.get("node_id"):
+    # تعديل: استخدام المعرف الصحيح للمدير لحل مشكلة الـ node_id القديمة ومنع حذف نفسه بالخطأ
+    current_manager_id = profile.get("id") or profile.get("user_id")
+    if recruiter_check.data[0]["role"] == "MANAGER" and recruiter_id == current_manager_id:
         raise HTTPException(status_code=400, detail="Cannot remove yourself from the organization")
 
     try:
@@ -128,10 +133,13 @@ async def remove_recruiter(recruiter_id: str, profile: dict = Depends(verify_man
 @router.get("/billing")
 async def organization_billing(profile: dict = Depends(verify_manager)):
     """Returns the organization's subscription billing usage and limits."""
-    user_id = profile.get("node_id")
+    # 1. تعديل: القراءة من الحقل الصحيح لمعرف المستخدم
+    user_id = profile.get("id") or profile.get("user_id")
     org_id = profile.get("org_id")
     try:
         sub_res = await db.client.table("subscriptions").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        
+        # 2. حماية الكود: لو جدول الاشتراكات فاضي على AWS ما يضرب الـ API ويرجع ديكشنري فارغ
         sub = sub_res.data[0] if sub_res.data else {}
         
         # Aggregate org-wide interviews consumed this cycle
@@ -142,7 +150,9 @@ async def organization_billing(profile: dict = Depends(verify_manager)):
             for uid in member_ids:
                 from backend.nodes import get_node_stats
                 stats = await get_node_stats(uid)
-                total_used += stats.get("total", 0)
+                # حماية إضافية لو الـ stats رجعت None
+                if stats:
+                    total_used += stats.get("total", 0)
         
         plan_map = {
             'free': {'label': 'Free Tier', 'price': 0},
