@@ -1,17 +1,21 @@
 integra-ai.duckdns.org {
-    # تمرير الطلبات للـ Backend مع دعم كامل للـ WebSockets والـ IPs الحقيقية
     reverse_proxy integra-backend:8000 {
-        header_up Host {upstream_host_header}
+        header_up Host {host}
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
     }
 
-    # هيدرز الـ CORS لضمان استقبال الطلبات من الـ Frontend على Vercel
     header {
-        Access-Control-Allow-Origin "https://integra-pro.vercel.app"
+        # غيرنا الدومين هنا ليتطابق مع رابط موقعك الحالي في فيرسيل
+        Access-Control-Allow-Origin "https://integra-pro-puce.vercel.app"
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, Origin, X-Requested-With"
+        Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+        Access-Control-Allow-Credentials "true"
         defer
     }
+
+    # معالجة طلبات الـ OPTIONS (البريفلايت)
+    @options {
+        method OPTIONS
+    }
+    respond @options 204
 }
